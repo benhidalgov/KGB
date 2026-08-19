@@ -1,0 +1,38 @@
+﻿# Entornos virtuales de Python
+.venv/
+venv/
+env/
+ENV/
+
+# Contenido de la carpeta de datos y documentos (ignora archivos de datos, mantiene carpetas)
+data/*
+!data/.gitkeep
+!data/inbox/
+data/inbox/*
+!data/inbox/.gitkeep
+!data/docs/
+data/docs/*
+!data/docs/.gitkeep
+data/mantenimientos.csv
+data/ingestion_manifest.json
+
+# Cache de Python y bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Variables de entorno y llaves
+.env
+*.env
+*.key
+*.pem
+
+# Archivos temporales de sistema e IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
