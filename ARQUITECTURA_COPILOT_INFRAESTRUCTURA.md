@@ -64,14 +64,15 @@ graph TD
 
 ---
 
-## 3. Pipeline de Ingesta y Procesamiento Documental
+### 3. Pipeline de Ingesta y Procesamiento Documental
 
 ```text
 [ Fuentes de Entrada ]
        │
-       ├── Documentos Ofimaticos (.docx, .xlsx, .pptx, .pdf, .md) ──► MarkItDown Engine
-       ├── Fichas Tecnicas y Matrices de Monitoreo PRTG ───────────► Extraccion Estructurada
-       └── Excels de Mantenimiento e Inventario ───────────────────► CSV Normalizado (DuckDB)
+       ├── Documentos Ofimaticos (.docx, .pptx, .pdf, .txt, .md) ──► MarkItDown Engine
+       ├── Libros Excel y CMDBs Complejas (.xlsx, .xls) ─────────► excel_cleaner.py (Multihoja)
+       ├── Fichas Tecnicas y Matrices de Monitoreo PRTG ─────────► Extraccion Estructurada
+       └── Excels de Mantenimiento e Inventario ─────────────────► CSV Normalizado (DuckDB)
                                                                            │
                                                                            ▼
                                                              [ Pipeline de Ingesta Masiva ]
@@ -81,6 +82,7 @@ graph TD
 ```
 
 ### Componentes de Ingesta
+* **Procesador Excel Limpio (`excel_cleaner.py`):** Parser y extractor que preserva encabezados, omite ruido estructural y segmenta libros complejos por hojas individuales (`## Hoja: ...`).
 * **MarkItDown (Microsoft):** Motor multiformato para conversion de Word (`mammoth`), Excel (`openpyxl`), PDF (`pypdf`), PowerPoint (`python-pptx`) y Markdown.
 * **Worker de Ingesta Masiva (`batch_ingest.py`):** Script para conversion por lotes en paralelo con deteccion automatica de cambios mediante firmas SHA-256 registradas en `data/ingestion_manifest.json`.
 * **Fichas Tecnicas Complejas de Servidores:** Estandarizacion de matrices de celdas combinadas con datos de monitoreo PRTG (sensores de CPU, Memoria, PING, Disco, HTTP), umbrales (Warning/Critical), criticidad de ambiente y matrices de escalamiento (ej. `BALANCER001`).
@@ -94,7 +96,7 @@ Para resolver el punto ciego de los RAGs vectoriales tradicionales al procesar i
 | Tipo de Consulta | Motor Implementado | Caso de Uso |
 | :--- | :--- | :--- |
 | **Busqueda Exacta / Analitica** | **DuckDB (en memoria)** | Consultas por numero de serie (`SN-8842-A`), direccion IP (`10.24.0.125`), identificador de servidor (`BALANCER001`), conteos por nivel, filtrado SQL y diagnostico de SLAs. |
-| **Busqueda Contextual / Documental** | **MarkItDown + Full-Text Fragment Engine** | Procedimientos de rollback, manuales de contingencia de WSO2, guias de recuperacion de Veeam, reportes postmortem P1 y politicas de seguridad con navegacion por fragmentos y lineas. |
+| **Busqueda Contextual / Documental** | **MarkItDown + Full-Text Fragment Engine** | Procedimientos de rollback, manuales de contingencia de WSO2, guias de recuperacion de Veeam, reportes postmortem P1, CMDBs y politicas de seguridad con navegacion por fragmentos y lineas. |
 
 ---
 
@@ -102,16 +104,22 @@ Para resolver el punto ciego de los RAGs vectoriales tradicionales al procesar i
 
 ```text
 Prototipo/
-├── app.py                             # Aplicacion interactiva Streamlit (Chat, Analitica, Topologia, Docs)
+├── app.py                             # Aplicacion interactiva Streamlit (5 Tabs: Chat, Analitica, Topologia, Docs, Plantillas)
 ├── batch_ingest.py                    # Worker de conversion masiva multihilo con cache SHA-256
-├── requirements.txt                   # Dependencias del entorno virtual
+├── excel_cleaner.py                   # Motor de extraccion y limpieza de CMDBs y libros Excel
+├── requirements.txt                   # Dependencias del entorno virtual (DuckDB, Pandas, MarkItDown, Google-GenAI)
 ├── run_app.bat                        # Lanzador de ejecucion en Windows (Batch)
 ├── run_app.ps1                        # Lanzador de ejecucion en Windows (PowerShell)
+├── README.md                          # Manual de uso e instrucciones del sistema
 ├── ARQUITECTURA_COPILOT_INFRAESTRUCTURA.md # Especificacion tecnica y documentacion de arquitectura
+├── HOJA_DE_RUTA_DIAGRAMAS_E_INGESTA.md     # Planificacion de diagramas, OCR y sincronizacion de red
+├── GEMINI.md                          # Reglas y directrices de desarrollo para el asistente
 └── data/
     ├── mantenimientos.csv             # Base estructurada de inventario y mantenimientos
     ├── ingestion_manifest.json        # Manifiesto de firmas SHA-256 de archivos procesados
+    ├── audit_log.json                 # Registro centralizado de auditoria y trazabilidad global
     ├── inbox/                         # Carpeta de entrada para ingesta masiva desatendida
+    ├── history/                       # Repositorio inmutable de snapshots versionados (v1, v2...)
     └── docs/                          # Repositorio de documentacion tecnica indexada
         ├── ficha_tecnica_BALANCER001.md
         ├── datacenter_chasis_blade_hpe.md
@@ -166,6 +174,8 @@ Para convertir volumenes grandes de documentos en la carpeta `data/inbox/`:
 ## 8. Consideraciones de Seguridad y Buenas Practicas
 
 1. **Operacion Autonoma Local (Air-Gapped Ready):** Capacidad de operar 100% desconectado de nubes publicas utilizando DuckDB y busqueda local sin requerir envio de datos a proveedores externos.
-2. **Inmutabilidad de Registros (*Append-Only*):** Los historiales y firmas de documentos no se sobreescriben; se registran con hashes SHA-256 para auditoria.
+2. **Inmutabilidad de Registros (*Append-Only*):** Los historiales y firmas de documentos no se sobreescriben; se registran con hashes SHA-256 para auditoria y copias históricas en `data/history/`.
 3. **Modo Solo Lectura (*Read-Only by Default*):** El asistente sugiere diagnósticos, comandos y runbooks sin ejecutar modificaciones directas en produccion sin aprobacion humana (*Human-in-the-Loop*).
-4. **Compatibilidad Visual Total:** Diseno libre de dependencias de tema rigidas, adaptandose dinamicamente a la configuracion del usuario.
+4. **Compatibilidad Visual Total:** Diseno libre de dependencias de tema rigidas, adaptandose dinamicamente a la configuracion del usuario (Light/Dark).
+5. **Politica Estricta Sin Emojis:** Prohibicion total del uso de emojis en interfaces, botones, mensajes del sistema, codigo y respuestas del asistente, priorizando un estilo sobrio, formal y corporativo con etiquetas textuales estructuradas (`[OK]`, `[WARN]`, `[CRIT]`, etc.).
+6. **Auditoria Obligatoria de Cambios y Reversiones:** Exigencia estricta de registro del Editor Responsable y la Justificacion Tecnica en cualquier modificacion o Rollback, consolidando la trazabilidad en `data/audit_log.json`.

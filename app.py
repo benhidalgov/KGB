@@ -1,6 +1,10 @@
 from excel_cleaner import procesar_excel_limpio
+from datetime import datetime
+import difflib
 import glob
+import json
 import os
+import shutil
 
 import duckdb
 import pandas as pd
@@ -35,6 +39,23 @@ st.markdown("""
     .badge-ok { background-color: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
     .badge-warn { background-color: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
     .badge-crit { background-color: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+
+    /* Estilos del Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #F8FAFC !important;
+        border-right: 1px solid #E2E8F0 !important;
+    }
+    [data-testid="stSidebar"] div[data-testid="stFileUploader"] {
+        background-color: #FFFFFF;
+        border: 1.5px dashed #CBD5E1;
+        border-radius: 8px;
+        padding: 8px;
+        transition: all 0.2s ease;
+    }
+    [data-testid="stSidebar"] div[data-testid="stFileUploader"]:hover {
+        border-color: #3B82F6;
+        background-color: #EFF6FF;
+    }
 
     /* Tablas Responsivas con Desplazamiento Horizontal Suave */
     .stMarkdown table {
@@ -117,6 +138,267 @@ st.markdown("""
 # Rutas de datos
 CSV_PATH = os.path.join("data", "mantenimientos.csv")
 DOCS_DIR = os.path.join("data", "docs")
+HISTORY_DIR = os.path.join("data", "history")
+AUDIT_LOG_PATH = os.path.join("data", "audit_log.json")
+
+
+def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, version_nueva: int, autor: str, motivo: str):
+    """Registra un evento inmutable de trazabilidad en el log central de auditoria."""
+    eventos = []
+    if os.path.exists(AUDIT_LOG_PATH):
+        try:
+            with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
+                eventos = json.load(f)
+        except Exception:
+            eventos = []
+
+    evento = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "documento": doc_name,
+        "accion": accion,
+        "version_anterior": f"v{version_ant}" if version_ant > 0 else "-",
+        "version_nueva": f"v{version_nueva}",
+        "editor_responsable": autor.strip() if autor and autor.strip() else "Desconocido",
+        "motivo_justificacion": motivo.strip() if motivo and motivo.strip() else "Sin justificacion"
+    }
+    eventos.append(evento)
+
+    try:
+        os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
+        with open(AUDIT_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(eventos, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def generar_diff_texto(texto_ant: str, texto_nuevo: str, label_ant: str = "Version A", label_nuevo: str = "Version B") -> str:
+    """Genera una representacion diff unificada para comparar dos versiones."""
+    lineas_ant = texto_ant.splitlines(keepends=True)
+    lineas_nuevo = texto_nuevo.splitlines(keepends=True)
+    diff = difflib.unified_diff(
+        lineas_ant,
+        lineas_nuevo,
+        fromfile=label_ant,
+        tofile=label_nuevo,
+        n=2
+    )
+    diff_text = "".join(diff)
+    if not diff_text.strip():
+        return "No se detectaron diferencias de contenido entre estas dos versiones."
+    return diff_text
+
+
+def obtener_historial_versiones(doc_name: str) -> list:
+    """Obtiene el registro cronologico de versiones de un documento."""
+    meta_path = os.path.join(HISTORY_DIR, doc_name, "metadata.json")
+    if os.path.exists(meta_path):
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+
+def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: str, autor: str = "Sistema", comentario: str = "Versión base inicial"):
+    """Inicializa la version v1 si no existe registro historico previo."""
+    doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
+    meta_path = os.path.join(doc_hist_dir, "metadata.json")
+    if not os.path.exists(meta_path):
+        os.makedirs(doc_hist_dir, exist_ok=True)
+        v1_filename = "v1.md"
+        with open(os.path.join(doc_hist_dir, v1_filename), "w", encoding="utf-8") as f:
+            f.write(contenido_actual)
+
+        historial = [
+            {
+                "version": 1,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "autor": autor,
+                "comentario": comentario,
+                "archivo_snapshot": v1_filename,
+                "caracteres": len(contenido_actual)
+            }
+        ]
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(historial, f, indent=2, ensure_ascii=False)
+
+        registrar_evento_auditoria(
+            doc_name=doc_name,
+            accion="CREACION",
+            version_ant=0,
+            version_nueva=1,
+            autor=autor,
+            motivo=comentario
+        )
+        return historial
+    return obtener_historial_versiones(doc_name)
+
+
+def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comentario: str) -> int:
+    """Guarda una nueva revision incrementando la version (vN+1) y preservando snapshots inmutables."""
+    doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
+    os.makedirs(doc_hist_dir, exist_ok=True)
+    meta_path = os.path.join(doc_hist_dir, "metadata.json")
+
+    historial = obtener_historial_versiones(doc_name)
+    if not historial:
+        contenido_previo = st.session_state.doc_store.get(doc_name, nuevo_contenido)
+        v1_filename = "v1.md"
+        with open(os.path.join(doc_hist_dir, v1_filename), "w", encoding="utf-8") as f:
+            f.write(contenido_previo)
+        historial = [
+            {
+                "version": 1,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "autor": "Sistema / Creador",
+                "comentario": "Versión base inicial",
+                "archivo_snapshot": v1_filename,
+                "caracteres": len(contenido_previo)
+            }
+        ]
+
+    version_ant_num = len(historial)
+    nueva_v_num = version_ant_num + 1
+    snapshot_fname = f"v{nueva_v_num}.md"
+
+    with open(os.path.join(doc_hist_dir, snapshot_fname), "w", encoding="utf-8") as f:
+        f.write(nuevo_contenido)
+
+    nueva_entry = {
+        "version": nueva_v_num,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "autor": autor.strip() if autor and autor.strip() else "Técnico",
+        "comentario": comentario.strip() if comentario and comentario.strip() else "Actualización de contenido",
+        "archivo_snapshot": snapshot_fname,
+        "caracteres": len(nuevo_contenido)
+    }
+    historial.append(nueva_entry)
+
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(historial, f, indent=2, ensure_ascii=False)
+
+    # Actualizar archivo activo en DOCS_DIR
+    target_path = os.path.join(DOCS_DIR, doc_name)
+    ext = os.path.splitext(doc_name)[1].lower()
+    if ext in ('.docx', '.pdf', '.pptx', '.xlsx', '.xls'):
+        md_name = f"{os.path.splitext(doc_name)[0]}.md"
+        target_path = os.path.join(DOCS_DIR, md_name)
+        st.session_state.doc_store[md_name] = nuevo_contenido
+    else:
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(nuevo_contenido)
+
+    st.session_state.doc_store[doc_name] = nuevo_contenido
+
+    accion_tipo = "ROLLBACK" if "rollback" in comentario.lower() else "EDICION"
+    registrar_evento_auditoria(
+        doc_name=doc_name,
+        accion=accion_tipo,
+        version_ant=version_ant_num,
+        version_nueva=nueva_v_num,
+        autor=autor,
+        motivo=comentario
+    )
+
+    return nueva_v_num
+
+
+def obtener_contenido_version(doc_name: str, snapshot_fname: str) -> str:
+    """Recupera el contenido exacto de un snapshot historico."""
+    snap_path = os.path.join(HISTORY_DIR, doc_name, snapshot_fname)
+    if os.path.exists(snap_path):
+        with open(snap_path, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read()
+    return ""
+
+
+def cargar_hoja_excel_dataframe(filepath: str, sheet_name: str) -> pd.DataFrame:
+    """Carga una hoja de calculo Excel en un DataFrame normalizado para visualizacion en cuadricula."""
+    try:
+        df = pd.read_excel(filepath, sheet_name=sheet_name)
+        df = df.dropna(how='all', axis=0).dropna(how='all', axis=1)
+        for col in df.columns:
+            if pd.api.types.is_datetime64_any_dtype(df[col]):
+                df[col] = df[col].dt.strftime('%Y-%m-%d')
+        df = df.fillna('')
+        return df
+    except Exception as e:
+        return pd.DataFrame({"Mensaje": [f"No se pudo cargar la hoja: {e}"]})
+
+
+def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.DataFrame, autor: str, comentario: str) -> int:
+    """Guarda una nueva version de un libro Excel modificando la hoja seleccionada y preservando el historial inmutable."""
+    excel_path = os.path.join(DOCS_DIR, doc_name)
+    doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
+    os.makedirs(doc_hist_dir, exist_ok=True)
+    meta_path = os.path.join(doc_hist_dir, "metadata.json")
+
+    historial = obtener_historial_versiones(doc_name)
+    if not historial:
+        v1_filename = "v1.md"
+        contenido_previo = st.session_state.doc_store.get(doc_name, "")
+        with open(os.path.join(doc_hist_dir, v1_filename), "w", encoding="utf-8") as f:
+            f.write(contenido_previo)
+        historial = [
+            {
+                "version": 1,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "autor": "Sistema / Creador",
+                "comentario": "Version base inicial",
+                "archivo_snapshot": v1_filename,
+                "caracteres": len(contenido_previo)
+            }
+        ]
+
+    version_ant_num = len(historial)
+    nueva_v_num = version_ant_num + 1
+    snapshot_excel_fname = f"v{nueva_v_num}_{doc_name}"
+
+    # 1. Actualizar el archivo Excel en DOCS_DIR
+    try:
+        with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+            df_nuevo.to_excel(writer, sheet_name=sheet_name, index=False)
+    except Exception:
+        with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+            df_nuevo.to_excel(writer, sheet_name=sheet_name, index=False)
+
+    # Copiar snapshot del excel modificado
+    shutil.copy2(excel_path, os.path.join(doc_hist_dir, snapshot_excel_fname))
+
+    # 2. Re-procesar contenido estructurado para el Copilot
+    nuevo_markdown = procesar_excel_limpio(excel_path)
+    snapshot_md_fname = f"v{nueva_v_num}.md"
+    with open(os.path.join(doc_hist_dir, snapshot_md_fname), "w", encoding="utf-8") as f:
+        f.write(nuevo_markdown)
+
+    st.session_state.doc_store[doc_name] = nuevo_markdown
+
+    # 3. Registrar metadata
+    nueva_entry = {
+        "version": nueva_v_num,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "autor": autor.strip() if autor and autor.strip() else "Tecnico",
+        "comentario": f"[{sheet_name}] {comentario.strip()}" if comentario and comentario.strip() else f"Edicion de hoja {sheet_name}",
+        "archivo_snapshot": snapshot_md_fname,
+        "archivo_excel_snapshot": snapshot_excel_fname,
+        "caracteres": len(nuevo_markdown)
+    }
+    historial.append(nueva_entry)
+
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(historial, f, indent=2, ensure_ascii=False)
+
+    registrar_evento_auditoria(
+        doc_name=doc_name,
+        accion="EDICION_EXCEL",
+        version_ant=version_ant_num,
+        version_nueva=nueva_v_num,
+        autor=autor,
+        motivo=f"[{sheet_name}] {comentario}"
+    )
+
+    return nueva_v_num
 
 # Inicializacion de estado de chat
 if "messages" not in st.session_state:
@@ -124,11 +406,10 @@ if "messages" not in st.session_state:
         {
             "role": "assistant",
             "content": (
-                "**Sistema Bisqueda de documentacion por palabras clabes.**\n\n"
+                "**Sistema de Búsqueda de documentación por palabras clave.**\n\n"
                 "Capacidades activas:\n"
-                "- Consulta analitica de inventario y mantenimientos por numero de serie, servidor o tecnico .\n"
-                "- Recuperacion de procedimientos tecnicos, contingencias y despliegues (Usando MarkItDown).\n"
-                
+                "- Consulta analítica de inventario y mantenimientos por número de serie, servidor o técnico.\n"
+                "- Recuperación de procedimientos técnicos, contingencias y despliegues (MarkItDown).\n"
             )
         }
     ]
@@ -140,8 +421,10 @@ if "doc_store" not in st.session_state:
 # Carga de documentos locales
 
 
-def cargar_documentos_locales():
+def cargar_documentos_locales(force: bool = False):
     if os.path.exists(DOCS_DIR):
+        if force:
+            st.session_state.doc_store = {}
         for doc_file in glob.glob(os.path.join(DOCS_DIR, "*.*")):
             fname = os.path.basename(doc_file)
             ext = os.path.splitext(fname)[1].lower()
@@ -159,7 +442,11 @@ def cargar_documentos_locales():
                         res = md_engine.convert(doc_file)
                         st.session_state.doc_store[fname] = res.text_content
                 except Exception:
-                    pass
+                    try:
+                        with open(doc_file, "r", encoding="utf-8", errors="ignore") as f:
+                            st.session_state.doc_store[fname] = f.read()
+                    except Exception:
+                        pass
 
 
 cargar_documentos_locales()
@@ -280,42 +567,147 @@ def generar_respuesta_asistente(prompt_usuario: str):
         )
 
 
-# ================= SIDEBAR =================
+# ================= SIDEBAR (ACCESO RÁPIDO & CONTROL) =================
 with st.sidebar:
-    st.markdown("### Panel de Control")
-    st.caption("Documentacion de Infraestructura")
+    st.markdown("### Acceso Rápido")
+    st.caption("Panel de Control e Ingesta Directa")
 
-    st.divider()
-    st.markdown("#### Ingesta de Documentos")
-    uploaded_file = st.file_uploader(
-        "Cargar archivo tecnico",
-        type=["pdf", "docx", "xlsx", "csv", "txt", "md"],
-        help="Procesamiento e indexacion automatica en memoria."
+    st.markdown("---")
+
+    # 1. Ingesta Rápida de Archivos
+    st.markdown("#### Subir Archivo(s) Técnico(s)")
+    st.caption("Indexación automática en memoria y almacenamiento local.")
+
+    uploaded_files = st.file_uploader(
+        "Arrastra o selecciona tus archivos:",
+        type=["pdf", "docx", "xlsx", "xls", "csv", "txt", "md", "pptx"],
+        accept_multiple_files=True,
+        help="Formatos: PDF, Word (.docx), Excel (.xlsx/.xls), Markdown (.md), CSV, TXT, PPTX."
     )
 
-    if uploaded_file:
-        save_path = os.path.join(DOCS_DIR, uploaded_file.name)
-        with open(save_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+    if uploaded_files:
+        for uf in uploaded_files:
+            save_path = os.path.join(DOCS_DIR, uf.name)
+            os.makedirs(DOCS_DIR, exist_ok=True)
+            with open(save_path, "wb") as f:
+                f.write(uf.getbuffer())
 
-        ext = os.path.splitext(uploaded_file.name)[1].lower()
-        try:
-            if ext in (".xlsx", ".xls"):
-                st.session_state.doc_store[uploaded_file.name] = procesar_excel_limpio(
-                    save_path)
-                st.success(
-                    f"Hoja de cálculo procesada e indexada limpiamente: {uploaded_file.name}")
+            ext = os.path.splitext(uf.name)[1].lower()
+            try:
+                if ext in (".xlsx", ".xls"):
+                    st.session_state.doc_store[uf.name] = procesar_excel_limpio(save_path)
+                    st.success(f"[Excel] {uf.name} (Estructurado)")
+                elif ext in (".md", ".txt", ".csv"):
+                    with open(save_path, "r", encoding="utf-8", errors="ignore") as f:
+                        st.session_state.doc_store[uf.name] = f.read()
+                    st.success(f"[Texto] {uf.name}")
+                else:
+                    from markitdown import MarkItDown
+                    md_engine = MarkItDown()
+                    res = md_engine.convert(save_path)
+                    st.session_state.doc_store[uf.name] = res.text_content
+                    st.success(f"[Documento] {uf.name} (Indexado)")
+            except Exception as ex:
+                try:
+                    with open(save_path, "r", encoding="utf-8", errors="ignore") as f:
+                        st.session_state.doc_store[uf.name] = f.read()
+                    st.info(f"[Texto] {uf.name} (Modo texto fallback)")
+                except Exception:
+                    st.error(f"Error procesando {uf.name}: {ex}")
+
+    st.markdown("---")
+
+    # 2. Resumen de Documentos Indexados
+    cant_docs = len(st.session_state.doc_store)
+    st.markdown(f"#### Base Indexada ({cant_docs})")
+
+    if cant_docs > 0:
+        conteo_excel = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[1].lower() in ('.xlsx', '.xls'))
+        conteo_doc = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[1].lower() in ('.docx', '.pdf', '.pptx', '.doc'))
+        conteo_txt = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[1].lower() in ('.md', '.txt', '.csv'))
+
+        with st.expander("Ver documentos cargados", expanded=False):
+            tipo_filtro = st.selectbox(
+                "Filtrar por tipo:",
+                [
+                    f"Todos ({cant_docs})",
+                    f"Excel ({conteo_excel})",
+                    f"Documentos Word/PDF ({conteo_doc})",
+                    f"Markdown / Texto ({conteo_txt})"
+                ],
+                key="sb_type_filter"
+            )
+
+            doc_filter = st.text_input(
+                "Buscar por nombre...", key="sb_doc_filter", placeholder="Nombre de archivo...")
+
+            docs_filtrados = []
+            for d in sorted(st.session_state.doc_store.keys()):
+                ext = os.path.splitext(d)[1].lower()
+                if tipo_filtro.startswith("Excel") and ext not in ('.xlsx', '.xls'):
+                    continue
+                if tipo_filtro.startswith("Documentos") and ext not in ('.docx', '.pdf', '.pptx', '.doc'):
+                    continue
+                if tipo_filtro.startswith("Markdown") and ext not in ('.md', '.txt', '.csv'):
+                    continue
+                if doc_filter and doc_filter.lower() not in d.lower():
+                    continue
+                docs_filtrados.append(d)
+
+            if docs_filtrados:
+                for d in docs_filtrados:
+                    ext = os.path.splitext(d)[1].lower()
+                    tag = "[Excel]" if ext in ('.xlsx', '.xls') else "[Doc]" if ext in ('.pdf', '.docx', '.pptx', '.doc') else "[Txt]"
+                    size_kb = len(st.session_state.doc_store[d]) / 1024
+                    st.markdown(f"`{tag}` **{d}** *({size_kb:.1f} KB)*")
             else:
-                from markitdown import MarkItDown
-                md_engine = MarkItDown()
-                res = md_engine.convert(save_path)
-                st.session_state.doc_store[uploaded_file.name] = res.text_content
-                st.success(
-                    f"Archivo indexado correctamente: {uploaded_file.name}")
-        except Exception:
-            with open(save_path, "r", encoding="utf-8", errors="ignore") as f:
-                st.session_state.doc_store[uploaded_file.name] = f.read()
-            st.info(f"Archivo cargado en modo texto: {uploaded_file.name}")
+                st.caption("No hay documentos que coincidan con el filtro.")
+    else:
+        st.info("No hay documentos indexados aún.")
+
+    st.markdown("---")
+
+    # 3. Acciones Rápidas
+    st.markdown("#### Acciones Rápidas")
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("Reindexar", help="Recarga todos los documentos desde data/docs/", use_container_width=True):
+            cargar_documentos_locales(force=True)
+            st.toast("Base documental reindexada con éxito")
+            st.rerun()
+    with col_btn2:
+        if st.button("Limpiar Chat", help="Reinicia la conversación actual", use_container_width=True):
+            st.session_state.messages = [
+                {
+                    "role": "assistant",
+                    "content": (
+                        "**Sistema de Búsqueda de documentación por palabras clave.**\n\n"
+                        "Capacidades activas:\n"
+                        "- Consulta analítica de inventario y mantenimientos por número de serie, servidor o técnico.\n"
+                        "- Recuperación de procedimientos técnicos, contingencias y despliegues (MarkItDown).\n"
+                    )
+                }
+            ]
+            st.toast("Historial de chat reiniciado")
+            st.rerun()
+
+    st.markdown("---")
+
+    # 4. Estado del Sistema
+    st.markdown("#### Estado del Sistema")
+    st.markdown(f"""
+<div style="background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; font-size: 0.8rem;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+        <span><b>DuckDB SQL:</b></span> <span class="badge-ok">Conectado</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+        <span><b>MarkItDown Engine:</b></span> <span class="badge-ok">Activo</span>
+    </div>
+    <div style="display: flex; justify-content: space-between;">
+        <span><b>Docs Indexados:</b></span> <b>{cant_docs} archivos</b>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ================= ENCABEZADO =================
@@ -332,16 +724,16 @@ with col_stat:
             total_srvs = len(df_tot)
         except Exception:
             pass
-    st.metric("Documentos cargados",
+    st.metric("Documentación cargada",
               f"{total_srvs} Documentos")
 
 # ================= SECCIONES =================
 tab_chat, tab_analytics, tab_arch, tab_docs, tab_templates = st.tabs([
-    "Chat Copilot",
-    "Analitica DuckDB",
-    "Preview 4 Niveles",
+    "Consultar dudas (Buscar por palabras)",
+    "Historial de Mantenimientos",
+    "Preview de arquitecturas",
     "Documentacion Tecnica",
-    "Plantillas & Runbooks"
+    "Plantillas de documentación"
 ])
 
 # ----------------- TAB 1: CHAT -----------------
@@ -479,49 +871,385 @@ graph TD
 
 # ----------------- TAB 4: DOCUMENTOS -----------------
 with tab_docs:
-    st.subheader("Repositorio de Documentacion Tecnica Indexada")
+    st.subheader("Repositorio de Documentacion Tecnica Indexada y Versionada")
     st.caption(
-        "Manuales de contingencia, procedimientos de recuperacion, guias tecnicas y CMDBs.")
+        "Manuales de contingencia, procedimientos operativos, edición en vivo y control de cambios.")
 
     if st.session_state.doc_store:
-        col_doc_sel, col_info = st.columns([3, 1])
+        col_tipo_t4, col_doc_sel, col_info = st.columns([1.2, 2.5, 1.3])
+        with col_tipo_t4:
+            filtro_t4 = st.selectbox(
+                "Tipo de Documento",
+                ["Todos", "Excel (.xlsx, .xls)", "Documentos (.docx, .pdf, .pptx)", "Markdown / Texto (.md, .txt)"],
+                key="tab4_type_selector"
+            )
+
+        docs_disponibles_t4 = []
+        for d in sorted(st.session_state.doc_store.keys()):
+            ext = os.path.splitext(d)[1].lower()
+            if filtro_t4.startswith("Excel") and ext not in ('.xlsx', '.xls'):
+                continue
+            if filtro_t4.startswith("Documentos") and ext not in ('.docx', '.pdf', '.pptx', '.doc'):
+                continue
+            if filtro_t4.startswith("Markdown") and ext not in ('.md', '.txt', '.csv'):
+                continue
+            docs_disponibles_t4.append(d)
+
         with col_doc_sel:
-            doc_seleccionado = st.selectbox(
-                "Seleccionar Documento Activo", list(st.session_state.doc_store.keys()))
-        with col_info:
-            if doc_seleccionado:
-                doc_text = st.session_state.doc_store[doc_seleccionado]
-                st.caption(f"**Tamano:** {len(doc_text):,} caracteres")
+            if docs_disponibles_t4:
+                doc_seleccionado = st.selectbox(
+                    "Seleccionar Documento Activo", docs_disponibles_t4)
+            else:
+                doc_seleccionado = None
+                st.warning("No hay archivos para este tipo.")
 
         if doc_seleccionado:
             doc_content = st.session_state.doc_store[doc_seleccionado]
+            historial = inicializar_version_inicial_si_no_existe(doc_seleccionado, doc_content)
+            ultima_version = historial[-1]["version"] if historial else 1
+            ultima_fecha = historial[-1]["timestamp"] if historial else "N/A"
+            ultimo_autor = historial[-1]["autor"] if historial else "N/A"
 
-            # Detectar si el documento tiene multiples hojas (Excel / CMDB)
-            if "## Hoja:" in doc_content:
-                partes = doc_content.split("\n## Hoja:")
-                header_doc = partes[0].strip()
-                if header_doc:
-                    st.markdown(header_doc)
+            with col_info:
+                st.caption(f"**Versión:** `v{ultima_version}` | **Tamaño:** {len(doc_content):,} chars")
 
-                hojas_dict = {}
-                for p in partes[1:]:
-                    lineas = p.strip().split("\n", 1)
-                    s_name = lineas[0].strip()
-                    s_body = lineas[1].strip() if len(lineas) > 1 else ""
-                    hojas_dict[s_name] = s_body
+            st.markdown(f"""
+            <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 6px 12px; margin-bottom: 12px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                <span><b>Archivo:</b> <code>{doc_seleccionado}</code></span>
+                <span><b>Versión Actual:</b> <span class="badge-ok">v{ultima_version}</span></span>
+                <span><b>Autor:</b> <code>{ultimo_autor}</code></span>
+                <span><b>Última actualización:</b> {ultima_fecha}</span>
+            </div>
+            """, unsafe_allow_html=True)
 
-                if hojas_dict:
-                    hoja_activa = st.selectbox(
-                        "Seleccionar Hoja del Libro Excel:",
-                        list(hojas_dict.keys()),
-                        help="Navega entre las diferentes pestañas del archivo Excel de forma individual."
-                    )
+            subtab_view, subtab_edit, subtab_hist = st.tabs([
+                "Visualización",
+                "Editar Documento",
+                f"Historial de Versiones ({len(historial)})"
+            ])
+
+            with subtab_view:
+                excel_orig_path = os.path.join(DOCS_DIR, doc_seleccionado)
+                es_excel = doc_seleccionado.lower().endswith(('.xlsx', '.xls')) and os.path.exists(excel_orig_path)
+
+                if es_excel:
+                    try:
+                        xls = pd.ExcelFile(excel_orig_path)
+                        sheet_names = xls.sheet_names
+                    except Exception:
+                        sheet_names = []
+
+                    col_sheet, col_mode = st.columns([2, 1])
+                    with col_sheet:
+                        hoja_activa = st.selectbox(
+                            "Seleccionar Hoja del Libro Excel:",
+                            sheet_names if sheet_names else ["Hoja1"],
+                            help="Navega entre las pestañas del archivo Excel.",
+                            key=f"sb_sheet_sel_{doc_seleccionado}"
+                        )
+                    with col_mode:
+                        vista_modo = st.radio(
+                            "Modo de Visualización:",
+                            ["Cuadrícula Interactiva (Excel)", "Texto Estructurado"],
+                            horizontal=True,
+                            key=f"mode_view_{doc_seleccionado}"
+                        )
+
                     st.divider()
-                    st.markdown(f"### Hoja: {hoja_activa}")
-                    st.markdown(hojas_dict[hoja_activa])
-            else:
-                st.divider()
-                st.markdown(doc_content)
+                    if vista_modo == "Cuadrícula Interactiva (Excel)":
+                        df_sheet = cargar_hoja_excel_dataframe(excel_orig_path, hoja_activa)
+                        st.markdown(f"**Hoja:** `{hoja_activa}` | **Registros:** {len(df_sheet)} filas | **Columnas:** {len(df_sheet.columns)}")
+                        st.dataframe(df_sheet, use_container_width=True, hide_index=True, height=520)
+                    else:
+                        if "## Hoja:" in doc_content:
+                            partes = doc_content.split("\n## Hoja:")
+                            header_doc = partes[0].strip()
+                            if header_doc:
+                                st.markdown(header_doc)
+                            hojas_dict = {}
+                            for p in partes[1:]:
+                                lineas = p.strip().split("\n", 1)
+                                s_name = lineas[0].strip()
+                                s_body = lineas[1].strip() if len(lineas) > 1 else ""
+                                hojas_dict[s_name] = s_body
+                            st.markdown(f"### Hoja: {hoja_activa}")
+                            st.markdown(hojas_dict.get(hoja_activa, "Contenido no disponible para esta hoja en formato texto."))
+                        else:
+                            st.markdown(doc_content)
+
+                elif "## Hoja:" in doc_content:
+                    partes = doc_content.split("\n## Hoja:")
+                    header_doc = partes[0].strip()
+                    if header_doc:
+                        st.markdown(header_doc)
+
+                    hojas_dict = {}
+                    for p in partes[1:]:
+                        lineas = p.strip().split("\n", 1)
+                        s_name = lineas[0].strip()
+                        s_body = lineas[1].strip() if len(lineas) > 1 else ""
+                        hojas_dict[s_name] = s_body
+
+                    if hojas_dict:
+                        hoja_activa = st.selectbox(
+                            "Seleccionar Hoja del Libro Excel:",
+                            list(hojas_dict.keys()),
+                            help="Navega entre las diferentes pestañas del archivo Excel de forma individual."
+                        )
+                        st.divider()
+                        st.markdown(f"### Hoja: {hoja_activa}")
+                        st.markdown(hojas_dict[hoja_activa])
+                else:
+                    st.markdown(doc_content)
+
+            with subtab_edit:
+                excel_orig_path = os.path.join(DOCS_DIR, doc_seleccionado)
+                es_excel = doc_seleccionado.lower().endswith(('.xlsx', '.xls')) and os.path.exists(excel_orig_path)
+
+                if es_excel:
+                    try:
+                        xls = pd.ExcelFile(excel_orig_path)
+                        sheet_names_edit = xls.sheet_names
+                    except Exception:
+                        sheet_names_edit = []
+
+                    st.markdown("#### Edición en Vivo de Libro Excel")
+                    st.caption("Modifique los valores de las celdas directamente en la cuadrícula o inserte nuevas filas. Al guardar se creará una versión incremental.")
+
+                    col_es1, col_es2 = st.columns([1.5, 2.5])
+                    with col_es1:
+                        hoja_editar = st.selectbox(
+                            "Seleccionar Hoja a Modificar:",
+                            sheet_names_edit if sheet_names_edit else ["Hoja1"],
+                            key=f"edit_sheet_sel_{doc_seleccionado}"
+                        )
+                    with col_es2:
+                        col_ae1, col_ae2 = st.columns(2)
+                        with col_ae1:
+                            autor_edit = st.text_input(
+                                "Editor / Técnico Responsable (*)",
+                                value="",
+                                placeholder="Ej: Juan Pérez / DevOps",
+                                key=f"author_input_grid_{doc_seleccionado}"
+                            )
+                        with col_ae2:
+                            motivo_edit = st.text_input(
+                                "Motivo del Cambio (*)",
+                                placeholder="Ej: Actualización de IP de nodo",
+                                key=f"motive_input_grid_{doc_seleccionado}"
+                            )
+
+                    df_to_edit = cargar_hoja_excel_dataframe(excel_orig_path, hoja_editar)
+
+                    st.markdown(f"**Cuadrícula de la Hoja:** `{hoja_editar}` *(Doble clic en una celda para editar, use el botón final para agregar filas)*")
+                    df_modificado = st.data_editor(
+                        df_to_edit,
+                        use_container_width=True,
+                        num_rows="dynamic",
+                        height=480,
+                        key=f"grid_editor_{doc_seleccionado}_{hoja_editar}"
+                    )
+
+                    col_btn_save, col_btn_info = st.columns([2, 3])
+                    with col_btn_save:
+                        if st.button(
+                            f"Guardar y Publicar Versión v{ultima_version + 1}",
+                            type="primary",
+                            use_container_width=True,
+                            key=f"btn_save_grid_{doc_seleccionado}"
+                        ):
+                            if not autor_edit or not autor_edit.strip():
+                                st.error("Error de Auditoría: Debe ingresar el Editor / Técnico Responsable para guardar la nueva versión.")
+                            elif not motivo_edit or not motivo_edit.strip():
+                                st.error("Error de Auditoría: Debe ingresar el Motivo del Cambio para mantener la trazabilidad.")
+                            else:
+                                nueva_v = guardar_nueva_version_excel(
+                                    doc_name=doc_seleccionado,
+                                    sheet_name=hoja_editar,
+                                    df_nuevo=df_modificado,
+                                    autor=autor_edit.strip(),
+                                    comentario=motivo_edit.strip()
+                                )
+                                st.toast(f"Versión v{nueva_v} guardada y reindexada exitosamente")
+                                st.success(f"¡Versión [Version v{nueva_v}] creada con éxito! Responsable: {autor_edit.strip()}. La hoja '{hoja_editar}' y el Copilot han sido actualizados.")
+                                st.rerun()
+                    with col_btn_info:
+                        st.caption("*Al guardar, se preservará un snapshot del libro Excel y la base documental se reindexará automáticamente con registro de auditoría.*")
+
+                else:
+                    st.markdown("#### Edición en Vivo y Generación de Nueva Versión")
+                    st.caption("Modifique los procedimientos, IPs o parámetros. Al guardar, se preservará una copia histórica inmutable de la versión previa.")
+
+                    col_e1, col_e2 = st.columns([1, 2])
+                    with col_e1:
+                        autor_edit = st.text_input(
+                            "Editor / Técnico Responsable (*)",
+                            value="",
+                            placeholder="Ej: Juan Pérez / DevOps",
+                            key=f"author_input_{doc_seleccionado}"
+                        )
+                    with col_e2:
+                        motivo_edit = st.text_input(
+                            "Motivo o Resumen del Cambio (*)",
+                            placeholder="Ej: Actualización de IP de nodo primario a 10.24.0.126",
+                            key=f"motive_input_{doc_seleccionado}"
+                        )
+
+                    texto_editado = st.text_area(
+                        "Contenido del Documento (Markdown)",
+                        value=doc_content,
+                        height=450,
+                        key=f"textarea_edit_{doc_seleccionado}"
+                    )
+
+                    col_btn_save, col_btn_info = st.columns([2, 3])
+                    with col_btn_save:
+                        if st.button(
+                            f"Guardar y Publicar Versión v{ultima_version + 1}",
+                            type="primary",
+                            use_container_width=True,
+                            key=f"btn_save_{doc_seleccionado}"
+                        ):
+                            if not autor_edit or not autor_edit.strip():
+                                st.error("Error de Auditoría: Debe ingresar el Editor / Técnico Responsable para guardar la nueva versión.")
+                            elif not motivo_edit or not motivo_edit.strip():
+                                st.error("Error de Auditoría: Debe ingresar el Motivo del Cambio para mantener la trazabilidad.")
+                            else:
+                                nueva_v = guardar_nueva_version(
+                                    doc_name=doc_seleccionado,
+                                    nuevo_contenido=texto_editado,
+                                    autor=autor_edit.strip(),
+                                    comentario=motivo_edit.strip()
+                                )
+                                st.toast(f"Versión v{nueva_v} guardada y reindexada exitosamente")
+                                st.success(f"¡Versión [Version v{nueva_v}] creada con éxito! Responsable: {autor_edit.strip()}. El Copilot y el RAG han sido actualizados en memoria.")
+                                st.rerun()
+                    with col_btn_info:
+                        st.caption("*Al guardar, la versión actual pasará al historial y el asistente Copilot responderá con la información actualizada inmediatamente.*")
+
+            with subtab_hist:
+                st.markdown("#### Registro Histórico y Trazabilidad")
+                st.caption("Historial inmutable de todas las revisiones aplicadas sobre este documento.")
+
+                df_hist = pd.DataFrame(historial)[["version", "timestamp", "autor", "comentario", "caracteres"]]
+                df_hist.columns = ["Versión", "Fecha y Hora", "Editor / Responsable", "Motivo del Cambio", "Tamaño (caracteres)"]
+                st.dataframe(df_hist, use_container_width=True, hide_index=True)
+
+                st.markdown("---")
+                st.markdown("##### Comparador Visual de Cambios (Diff)")
+                st.caption("Compare las diferencias exactas de contenido entre dos versiones de este documento.")
+
+                if len(historial) >= 2:
+                    col_cmp1, col_cmp2 = st.columns(2)
+                    nombres_versiones = [f"v{item['version']} - {item['timestamp']} ({item['autor']})" for item in historial]
+                    mapa_versiones = {f"v{item['version']} - {item['timestamp']} ({item['autor']})": item for item in historial}
+
+                    with col_cmp1:
+                        ver_base_sel = st.selectbox(
+                            "Versión Base (Anterior):",
+                            nombres_versiones,
+                            index=0,
+                            key=f"diff_base_{doc_seleccionado}"
+                        )
+                    with col_cmp2:
+                        ver_comp_sel = st.selectbox(
+                            "Versión a Comparar (Nueva):",
+                            nombres_versiones,
+                            index=len(nombres_versiones) - 1,
+                            key=f"diff_comp_{doc_seleccionado}"
+                        )
+
+                    item_base = mapa_versiones[ver_base_sel]
+                    item_comp = mapa_versiones[ver_comp_sel]
+
+                    texto_base = obtener_contenido_version(doc_seleccionado, item_base["archivo_snapshot"])
+                    texto_comp = obtener_contenido_version(doc_seleccionado, item_comp["archivo_snapshot"])
+
+                    diff_resultado = generar_diff_texto(
+                        texto_ant=texto_base,
+                        texto_nuevo=texto_comp,
+                        label_ant=f"v{item_base['version']} ({item_base['autor']})",
+                        label_nuevo=f"v{item_comp['version']} ({item_comp['autor']})"
+                    )
+
+                    with st.expander(f"Ver Diferencias (Diff): v{item_base['version']} vs v{item_comp['version']}", expanded=True):
+                        st.code(diff_resultado, language="diff")
+                else:
+                    st.caption("Se requieren al menos 2 versiones para comparar diferencias.")
+
+                st.markdown("---")
+                st.markdown("##### Inspeccionar Versión Histórica")
+
+                opciones_versiones = {
+                    f"v{item['version']} - {item['timestamp']} ({item['autor']}): {item['comentario']}": item
+                    for item in reversed(historial)
+                }
+
+                v_sel_label = st.selectbox(
+                    "Seleccione una versión para previsualizar:",
+                    list(opciones_versiones.keys()),
+                    key=f"select_hist_ver_{doc_seleccionado}"
+                )
+
+                item_seleccionado = opciones_versiones[v_sel_label]
+                contenido_snapshot = obtener_contenido_version(doc_seleccionado, item_seleccionado["archivo_snapshot"])
+
+                with st.expander(f"Previsualizar contenido de la Versión v{item_seleccionado['version']}", expanded=False):
+                    st.markdown(contenido_snapshot)
+
+                if item_seleccionado["version"] != ultima_version:
+                    st.markdown(f"##### Revertir Documento a la Versión v{item_seleccionado['version']} (Rollback)")
+                    st.caption("Para garantizar la trazabilidad corporativa, debe especificar el Editor y la justificación técnica del Rollback.")
+
+                    col_rb_a, col_rb_m = st.columns([1, 2])
+                    with col_rb_a:
+                        autor_rb = st.text_input(
+                            "Editor / Técnico que ejecuta el Rollback (*)",
+                            value="",
+                            placeholder="Ej: Juan Pérez / SysAdmin",
+                            key=f"author_rb_{doc_seleccionado}_{item_seleccionado['version']}"
+                        )
+                    with col_rb_m:
+                        motivo_rb = st.text_input(
+                            "Motivo o Justificación del Rollback (*)",
+                            value="",
+                            placeholder=f"Ej: Reversión por inconsistencia en v{ultima_version}",
+                            key=f"motive_rb_{doc_seleccionado}_{item_seleccionado['version']}"
+                        )
+
+                    if st.button(
+                        f"Confirmar y Ejecutar Rollback a la Versión v{item_seleccionado['version']}",
+                        type="primary",
+                        key=f"btn_confirm_rollback_{doc_seleccionado}_{item_seleccionado['version']}"
+                    ):
+                        if not autor_rb or not autor_rb.strip():
+                            st.error("Error de Auditoría: Debe ingresar el Editor / Técnico responsable de ejecutar el Rollback.")
+                        elif not motivo_rb or not motivo_rb.strip():
+                            st.error("Error de Auditoría: Debe ingresar la justificación técnica del Rollback.")
+                        else:
+                            excel_snap = item_seleccionado.get("archivo_excel_snapshot")
+                            snap_full_path = os.path.join(HISTORY_DIR, doc_seleccionado, excel_snap) if excel_snap else ""
+                            if excel_snap and os.path.exists(snap_full_path):
+                                shutil.copy2(snap_full_path, os.path.join(DOCS_DIR, doc_seleccionado))
+                                nuevo_md = procesar_excel_limpio(os.path.join(DOCS_DIR, doc_seleccionado))
+                                nueva_v = guardar_nueva_version(
+                                    doc_name=doc_seleccionado,
+                                    nuevo_contenido=nuevo_md,
+                                    autor=autor_rb.strip(),
+                                    comentario=f"[Rollback a v{item_seleccionado['version']}] {motivo_rb.strip()}"
+                                )
+                            else:
+                                nueva_v = guardar_nueva_version(
+                                    doc_name=doc_seleccionado,
+                                    nuevo_contenido=contenido_snapshot,
+                                    autor=autor_rb.strip(),
+                                    comentario=f"[Rollback a v{item_seleccionado['version']}] {motivo_rb.strip()}"
+                                )
+                            st.toast(f"Documento restaurado a v{item_seleccionado['version']} (Registrado como v{nueva_v})")
+                            st.success(f"Rollback completado con éxito. Se generó la versión [Version v{nueva_v}] restaurando la versión [Version v{item_seleccionado['version']}]. Responsable: {autor_rb.strip()}")
+                            st.rerun()
+                else:
+                    st.info(f"La versión v{item_seleccionado['version']} es la versión activa actual. Para ejecutar un Rollback, elija una versión previa (como v1) en el selector superior.")
     else:
         st.warning(
             "No hay documentos indexados. Cargue un archivo en el panel lateral.")
@@ -701,6 +1429,12 @@ with tab_templates:
                 f.write(doc_generado_md)
 
             st.session_state.doc_store[nombre_final] = doc_generado_md
-            st.success(f"Documento guardado e indexado exitosamente como **{nombre_final}**.")
+            inicializar_version_inicial_si_no_existe(
+                doc_name=nombre_final,
+                contenido_actual=doc_generado_md,
+                autor=autor,
+                comentario=f"Creación inicial mediante plantilla: {tipo_plantilla}"
+            )
+            st.success(f"Documento guardado e indexado exitosamente como **{nombre_final}** (Versión v1).")
             st.info("El Chat Copilot y la búsqueda analítica ya pueden responder preguntas sobre este nuevo procedimiento.")
 
