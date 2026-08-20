@@ -49,7 +49,7 @@ from excel_cleaner import procesar_excel_limpio
 
 # 1. Configuracion de Streamlit
 st.set_page_config(
-    page_title="Copilot de Infraestructura y AIOps",
+    page_title="Consultadora de documentos IG",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -78,11 +78,11 @@ cargar_documentos_locales(st.session_state.doc_store)
 # 3. Sidebar (Panel de Control e Ingesta)
 with st.sidebar:
     st.markdown("### Acceso Rápido")
-    st.caption("Panel de Control e Ingesta Directa")
+    st.caption("Sidebar ")
     st.markdown("---")
 
     # Ingesta de Archivos
-    st.markdown("#### Subir Archivo(s) Técnico(s)")
+    st.markdown("#### Subir Archivo/s")
     uploaded_files = st.file_uploader(
         "Arrastra o selecciona tus archivos:",
         type=["pdf", "docx", "xlsx", "xls", "csv", "txt", "md", "pptx"],
@@ -142,7 +142,7 @@ with st.sidebar:
 
     # Resumen y Filtro de Base Documental
     cant_docs = len(st.session_state.doc_store)
-    st.markdown(f"#### Base Indexada ({cant_docs})")
+    st.markdown(f"#### Documentos cargados -> ({cant_docs})")
 
     if cant_docs > 0:
         conteo_excel = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[1].lower() in ('.xlsx', '.xls'))
@@ -253,10 +253,10 @@ with col_stat_csv:
 
 
 # 5. Pestañas Principales
-tab_chat, tab_analytics, tab_arch, tab_docs, tab_templates = st.tabs([
+tab_chat, tab_analytics, tab_docs, tab_templates = st.tabs([
     "Consultar dudas (Buscar por palabras)",
     "Historial de Mantenimientos",
-    "Preview de arquitecturas",
+    # "Preview de arquitecturas",  # Oculto temporalmente
     "Documentacion Tecnica",
     "Plantillas de documentación"
 ])
@@ -312,122 +312,122 @@ with tab_analytics:
             df_custom = ejecutar_consulta_sql(custom_sql)
             st.dataframe(df_custom, use_container_width=True)
 
-# ----------------- TAB 3: PREVIEW TOPOLOGICO (MERMAID) -----------------
-with tab_arch:
-    st.subheader("Preview Topológico y Arquitectura en 4 Niveles")
-    st.caption("Mapeo visual jerárquico de la infraestructura, edición interactiva de diagramas y dependencias entre capas.")
-
-    if "mermaid_code" not in st.session_state:
-        st.session_state.mermaid_code = TOPOLOGY_MERMAID.strip()
-
-    subtab_diag_view, subtab_diag_edit = st.tabs([
-        "Diagrama Topológico",
-        "Mini Editor de Diagrama (Live)"
-    ])
-
-    with subtab_diag_view:
-        st.markdown("#### 1. Diagrama Topológico de Dependencias")
-        st.markdown(f"```mermaid\n{st.session_state.mermaid_code.strip()}\n```")
-
-        st.divider()
-        st.markdown("#### 2. Especificación por Capa de Infraestructura")
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.info(f"**{INFRA_SPECS['L1'][0]}**\n\n{INFRA_SPECS['L1'][1]}")
-        with c2:
-            st.info(f"**{INFRA_SPECS['L2'][0]}**\n\n{INFRA_SPECS['L2'][1]}")
-        with c3:
-            st.info(f"**{INFRA_SPECS['L3'][0]}**\n\n{INFRA_SPECS['L3'][1]}")
-        with c4:
-            st.info(f"**{INFRA_SPECS['L4'][0]}**\n\n{INFRA_SPECS['L4'][1]}")
-
-    with subtab_diag_edit:
-        st.markdown("#### Mini Editor de Diagramas Mermaid en Vivo")
-        st.caption("Edite el código de la topología en tiempo real, cargue plantillas prediseñadas o guarde el diagrama en la base de conocimiento.")
-
-        col_preset, col_load_btn = st.columns([3, 1])
-        with col_preset:
-            plantilla_elegida = st.selectbox(
-                "Cargar Plantilla Prediseñada:",
-                list(PLANTILLAS_DIAGRAMAS.keys()),
-                key="sb_mermaid_template"
-            )
-        with col_load_btn:
-            st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-            if st.button("Cargar en Editor", use_container_width=True, key="btn_load_mermaid_template"):
-                st.session_state.mermaid_code = PLANTILLAS_DIAGRAMAS[plantilla_elegida].strip()
-                st.toast(f"Plantilla cargada en el editor")
-                st.rerun()
-
-        col_ed_code, col_ed_preview = st.columns([1, 1], gap="medium")
-
-        with col_ed_code:
-            st.markdown("##### Código de Diagrama (Sintaxis Mermaid)")
-            codigo_editado = st.text_area(
-                "Código Mermaid",
-                value=st.session_state.mermaid_code,
-                height=420,
-                key="mermaid_textarea_input",
-                help="Modifique nodos, etiquetas y relaciones en formato Mermaid."
-            )
-
-            col_act1, col_act2 = st.columns(2)
-            with col_act1:
-                if st.button("Aplicar Cambios al Diagrama", type="primary", use_container_width=True, key="btn_apply_mermaid"):
-                    st.session_state.mermaid_code = codigo_editado.strip()
-                    st.toast("Diagrama actualizado exitosamente")
-                    st.rerun()
-            with col_act2:
-                if st.button("Restablecer al Original", use_container_width=True, key="btn_reset_mermaid"):
-                    st.session_state.mermaid_code = TOPOLOGY_MERMAID.strip()
-                    st.toast("Diagrama restablecido a la versión original")
-                    st.rerun()
-
-            with st.expander("Guardar Diagrama como Documento Técnico (.md)", expanded=False):
-                st.caption("Al guardarlo, el diagrama se indexará en la base documental y el Copilot podrá consultarlo.")
-                nom_diag = st.text_input("Nombre de Archivo (.md)", value="diagrama_topologia_actualizada.md", key="diag_file_name")
-                autor_diag = st.text_input("Autor / Responsable", value="DevOps / SysAdmin", key="diag_author")
-
-                if st.button("Guardar e Indexar Documento", type="secondary", use_container_width=True, key="btn_save_diag_doc"):
-                    if not nom_diag.endswith(".md"):
-                        nom_diag += ".md"
-
-                    doc_md_diag = f"# Diagrama de Arquitectura: {nom_diag.replace('.md', '').replace('_', ' ').title()}\n\n"
-                    doc_md_diag += f"* **Autor:** `{autor_diag}`\n"
-                    doc_md_diag += f"* **Tipo:** `Topología y Arquitectura`\n\n---\n\n"
-                    doc_md_diag += f"```mermaid\n{codigo_editado.strip()}\n```\n"
-
-                    ruta_diag = os.path.join(DOCS_DIR, nom_diag)
-                    os.makedirs(DOCS_DIR, exist_ok=True)
-                    with open(ruta_diag, "w", encoding="utf-8") as f:
-                        f.write(doc_md_diag)
-
-                    st.session_state.doc_store[nom_diag] = doc_md_diag
-                    inicializar_version_inicial_si_no_existe(
-                        doc_name=nom_diag,
-                        contenido_actual=doc_md_diag,
-                        autor=autor_diag,
-                        comentario="Generación de diagrama desde el Mini Editor de Topología"
-                    )
-                    st.toast(f"Diagrama guardado como {nom_diag}")
-                    st.success(f"Documento guardado e indexado exitosamente como **{nom_diag}** (Versión [Version v1]).")
-
-        with col_ed_preview:
-            st.markdown("##### Previsualización en Tiempo Real")
-            with st.container(border=True):
-                if codigo_editado.strip():
-                    st.markdown(f"```mermaid\n{codigo_editado.strip()}\n```")
-                else:
-                    st.info("Ingrese código Mermaid en el editor para previsualizar.")
-
-            with st.expander("Referencia Rápida de Sintaxis Mermaid", expanded=False):
-                st.markdown("""
-- **Dirección de Grafo:** `graph TD` (arriba-abajo) o `graph LR` (izquierda-derecha).
-- **Subgrafos (Capas):** `subgraph Capa ["Título"] ... end`
-- **Conexiones:** `A --> B` (sólida con flecha), `A -.-> B` (punteada), `A --- B` (sin flecha).
-- **Etiquetas en Línea:** `A -->|Texto| B`
-- **Diagramas de Secuencia:** `sequenceDiagram`, `Cliente->>Servidor: Petición`
-                """)
+# ----------------- TAB: PREVIEW TOPOLOGICO (MERMAID) [OCULTO TEMPORALMENTE] -----------------
+# with tab_arch:
+#     st.subheader("Preview Topológico y Arquitectura en 4 Niveles")
+#     st.caption("Mapeo visual jerárquico de la infraestructura, edición interactiva de diagramas y dependencias entre capas.")
+#
+#     if "mermaid_code" not in st.session_state:
+#         st.session_state.mermaid_code = TOPOLOGY_MERMAID.strip()
+#
+#     subtab_diag_view, subtab_diag_edit = st.tabs([
+#         "Diagrama Topológico",
+#         "Mini Editor de Diagrama (Live)"
+#     ])
+#
+#     with subtab_diag_view:
+#         st.markdown("#### 1. Diagrama Topológico de Dependencias")
+#         st.markdown(f"```mermaid\n{st.session_state.mermaid_code.strip()}\n```")
+#
+#         st.divider()
+#         st.markdown("#### 2. Especificación por Capa de Infraestructura")
+#         c1, c2, c3, c4 = st.columns(4)
+#         with c1:
+#             st.info(f"**{INFRA_SPECS['L1'][0]}**\n\n{INFRA_SPECS['L1'][1]}")
+#         with c2:
+#             st.info(f"**{INFRA_SPECS['L2'][0]}**\n\n{INFRA_SPECS['L2'][1]}")
+#         with c3:
+#             st.info(f"**{INFRA_SPECS['L3'][0]}**\n\n{INFRA_SPECS['L3'][1]}")
+#         with c4:
+#             st.info(f"**{INFRA_SPECS['L4'][0]}**\n\n{INFRA_SPECS['L4'][1]}")
+#
+#     with subtab_diag_edit:
+#         st.markdown("#### Mini Editor de Diagramas Mermaid en Vivo")
+#         st.caption("Edite el código de la topología en tiempo real, cargue plantillas prediseñadas o guarde el diagrama en la base de conocimiento.")
+#
+#         col_preset, col_load_btn = st.columns([3, 1])
+#         with col_preset:
+#             plantilla_elegida = st.selectbox(
+#                 "Cargar Plantilla Prediseñada:",
+#                 list(PLANTILLAS_DIAGRAMAS.keys()),
+#                 key="sb_mermaid_template"
+#             )
+#         with col_load_btn:
+#             st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+#             if st.button("Cargar en Editor", use_container_width=True, key="btn_load_mermaid_template"):
+#                 st.session_state.mermaid_code = PLANTILLAS_DIAGRAMAS[plantilla_elegida].strip()
+#                 st.toast(f"Plantilla cargada en el editor")
+#                 st.rerun()
+#
+#         col_ed_code, col_ed_preview = st.columns([1, 1], gap="medium")
+#
+#         with col_ed_code:
+#             st.markdown("##### Código de Diagrama (Sintaxis Mermaid)")
+#             codigo_editado = st.text_area(
+#                 "Código Mermaid",
+#                 value=st.session_state.mermaid_code,
+#                 height=420,
+#                 key="mermaid_textarea_input",
+#                 help="Modifique nodos, etiquetas y relaciones en formato Mermaid."
+#             )
+#
+#             col_act1, col_act2 = st.columns(2)
+#             with col_act1:
+#                 if st.button("Aplicar Cambios al Diagrama", type="primary", use_container_width=True, key="btn_apply_mermaid"):
+#                     st.session_state.mermaid_code = codigo_editado.strip()
+#                     st.toast("Diagrama actualizado exitosamente")
+#                     st.rerun()
+#             with col_act2:
+#                 if st.button("Restablecer al Original", use_container_width=True, key="btn_reset_mermaid"):
+#                     st.session_state.mermaid_code = TOPOLOGY_MERMAID.strip()
+#                     st.toast("Diagrama restablecido a la versión original")
+#                     st.rerun()
+#
+#             with st.expander("Guardar Diagrama como Documento Técnico (.md)", expanded=False):
+#                 st.caption("Al guardarlo, el diagrama se indexará en la base documental y el Copilot podrá consultarlo.")
+#                 nom_diag = st.text_input("Nombre de Archivo (.md)", value="diagrama_topologia_actualizada.md", key="diag_file_name")
+#                 autor_diag = st.text_input("Autor / Responsable", value="DevOps / SysAdmin", key="diag_author")
+#
+#                 if st.button("Guardar e Indexar Documento", type="secondary", use_container_width=True, key="btn_save_diag_doc"):
+#                     if not nom_diag.endswith(".md"):
+#                         nom_diag += ".md"
+#
+#                     doc_md_diag = f"# Diagrama de Arquitectura: {nom_diag.replace('.md', '').replace('_', ' ').title()}\n\n"
+#                     doc_md_diag += f"* **Autor:** `{autor_diag}`\n"
+#                     doc_md_diag += f"* **Tipo:** `Topología y Arquitectura`\n\n---\n\n"
+#                     doc_md_diag += f"```mermaid\n{codigo_editado.strip()}\n```\n"
+#
+#                     ruta_diag = os.path.join(DOCS_DIR, nom_diag)
+#                     os.makedirs(DOCS_DIR, exist_ok=True)
+#                     with open(ruta_diag, "w", encoding="utf-8") as f:
+#                         f.write(doc_md_diag)
+#
+#                     st.session_state.doc_store[nom_diag] = doc_md_diag
+#                     inicializar_version_inicial_si_no_existe(
+#                         doc_name=nom_diag,
+#                         contenido_actual=doc_md_diag,
+#                         autor=autor_diag,
+#                         comentario="Generación de diagrama desde el Mini Editor de Topología"
+#                     )
+#                     st.toast(f"Diagrama guardado como {nom_diag}")
+#                     st.success(f"Documento guardado e indexado exitosamente como **{nom_diag}** (Versión [Version v1]).")
+#
+#         with col_ed_preview:
+#             st.markdown("##### Previsualización en Tiempo Real")
+#             with st.container(border=True):
+#                 if codigo_editado.strip():
+#                     st.markdown(f"```mermaid\n{codigo_editado.strip()}\n```")
+#                 else:
+#                     st.info("Ingrese código Mermaid en el editor para previsualizar.")
+#
+#             with st.expander("Referencia Rápida de Sintaxis Mermaid", expanded=False):
+#                 st.markdown(\"\"\"
+# - **Dirección de Grafo:** `graph TD` (arriba-abajo) o `graph LR` (izquierda-derecha).
+# - **Subgrafos (Capas):** `subgraph Capa ["Título"] ... end`
+# - **Conexiones:** `A --> B` (sólida con flecha), `A -.-> B` (punteada), `A --- B` (sin flecha).
+# - **Etiquetas en Línea:** `A -->|Texto| B`
+# - **Diagramas de Secuencia:** `sequenceDiagram`, `Cliente->>Servidor: Petición`
+#                 \"\"\")
 
 # ----------------- TAB 4: DOCUMENTACION TECNICA Y VERSIONADO -----------------
 with tab_docs:
@@ -785,7 +785,7 @@ with tab_templates:
             "Tipo de Procedimiento",
             [
                 "Procedimiento de Rollback de Emergencia",
-                "Paso a Producción / Despliegue CI/CD",
+                    "Paso a Producción / Despliegue CI/CD",
                 "Reporte Postmortem / Incidente P1 (RCA)",
                 "Ficha Técnica de Microservicio / API WSO2",
                 "Guía de Contingencia y Failover Operativo"

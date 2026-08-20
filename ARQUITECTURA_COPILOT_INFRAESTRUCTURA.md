@@ -188,3 +188,45 @@ Para convertir volumenes grandes de documentos en la carpeta `data/inbox/`:
 4. **Compatibilidad Visual Total:** Diseno libre de dependencias de tema rigidas, adaptandose dinamicamente a la configuracion del usuario (Light/Dark).
 5. **Politica Estricta Sin Emojis:** Prohibicion total del uso de emojis en interfaces, botones, mensajes del sistema, codigo y respuestas del asistente, priorizando un estilo sobrio, formal y corporativo con etiquetas textuales estructuradas (`[OK]`, `[WARN]`, `[CRIT]`, etc.).
 6. **Auditoria Obligatoria de Cambios y Reversiones:** Exigencia estricta de registro del Editor Responsable y la Justificacion Tecnica en cualquier modificacion o Rollback, consolidando la trazabilidad en `data/audit_log.json`.
+
+---
+
+## 9. Plan de Integración con Google Gemini (SDK google-genai)
+
+### 9.1 Objetivo y Arquitectura de Doble Motor
+Implementar un modo híbrido de inteligencia artificial que permita alternar de forma transparente entre el **Modo Local Autónomo (DuckDB + MarkItDown)** y el **Modo Gemini AIOps (Google GenAI SDK)** para análisis profundo de causas raíz (RCA), correlación de incidentes y síntesis técnica avanzada en lenguaje natural.
+
+```text
+[Consulta del Usuario]
+          │
+          ▼
+[Recuperación de Contexto RAG Híbrido]
+  ├── DuckDB SQL  ──► Registros de servidores, IPs, componentes y mantenimientos
+  └── MarkItDown  ──► Fragmentos de manuales técnicos, runbooks y CMDBs en data/docs/
+          │
+          ▼
+[Ensamblador de Contexto Corporativo]
+          │
+          ├── [Sin API Key]  ──► Fallback automático a Modo Local Autónomo
+          │
+          └── [Con API Key]  ──► Google Gemini API (gemini-2.5-flash / gemini-2.0-flash)
+                                    - Temperature: 0.2 (Determinista)
+                                    - System Instruction: Senior AIOps Engineer
+                                    - Grounding estricto contra alucinaciones
+```
+
+### 9.2 Componentes Técnicos del Plan
+
+1. **SDK Oficial de Google (`google-genai`):**
+   * Migración completa hacia `from google import genai` y `from google.genai import types`, eliminando dependencias de librerías anteriores.
+2. **Jerarquía Segura de API Keys:**
+   * Nivel 1: Variable de entorno del sistema `GEMINI_API_KEY`.
+   * Nivel 2: Archivo de configuración local `.streamlit/secrets.toml`.
+   * Nivel 3: Input seguro (`type="password"`) en el panel lateral de la aplicación.
+3. **Directriz de Sistema Estricta (*System Instruction*):**
+   * Rol formal de Ingeniero Principal de AIOps de Unicard.
+   * Obligación de basar las respuestas 100% en los datos recuperados de DuckDB y `data/docs/` sin inventar información (*Zero Hallucinations*).
+4. **Fallback y Resiliencia (*Air-Gapped Ready*):**
+   * Si la API Key no está configurada o se pierde la conectividad externa, el sistema responde inmediatamente mediante el motor local offline sin interrumpir la operación.
+5. **Trazabilidad de Motor en Chat:**
+   * Inclusión de un badge al pie de cada mensaje: `[Motor: Google Gemini 2.5 Flash | RAG Contextual]` o `[Motor: Local Autónomo | DuckDB + MarkItDown]`.

@@ -10,6 +10,7 @@
     color: inherit;
     margin-bottom: 2px;
     line-height: 1.2;
+    letter-spacing: -0.02em;
 }
 
 .sub-title {
@@ -19,7 +20,29 @@
     line-height: 1.4;
 }
 
-/* 2. Badges de Estado Corporativos */
+/* 2. Pestañas de Navegación Estilizadas (Streamlit Tabs) */
+button[data-baseweb="tab"] {
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    padding: 8px 16px !important;
+    border-radius: 6px 6px 0 0 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-bottom: 2px solid transparent !important;
+}
+
+button[data-baseweb="tab"]:hover {
+    background-color: rgba(59, 130, 246, 0.08) !important;
+    color: #3B82F6 !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #3B82F6 !important;
+    font-weight: 600 !important;
+    border-bottom: 2.5px solid #3B82F6 !important;
+    background-color: rgba(59, 130, 246, 0.06) !important;
+}
+
+/* 3. Badges de Estado Corporativos */
 .badge-ok {
     background-color: rgba(16, 185, 129, 0.15);
     color: #10B981;
@@ -28,6 +51,7 @@
     border-radius: 4px;
     font-size: 0.8rem;
     font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .badge-warn {
@@ -38,6 +62,7 @@
     border-radius: 4px;
     font-size: 0.8rem;
     font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .badge-crit {
@@ -48,9 +73,36 @@
     border-radius: 4px;
     font-size: 0.8rem;
     font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
-/* 3. Panel Lateral (Sidebar) Adaptable */
+/* 4. Tarjetas de Métricas (KPI Cards) */
+div[data-testid="stMetric"] {
+    background-color: rgba(128, 128, 128, 0.05);
+    border: 1px solid rgba(128, 128, 128, 0.18);
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+
+div[data-testid="stMetric"]:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+}
+
+div[data-testid="stMetricLabel"] {
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    opacity: 0.85;
+}
+
+div[data-testid="stMetricValue"] {
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+}
+
+/* 5. Panel Lateral (Sidebar) Adaptable */
 [data-testid="stSidebar"] div[data-testid="stFileUploader"] {
     border: 1.5px dashed rgba(128, 128, 128, 0.3);
     border-radius: 8px;
@@ -60,9 +112,49 @@
 
 [data-testid="stSidebar"] div[data-testid="stFileUploader"]:hover {
     border-color: #3B82F6;
+    background-color: rgba(59, 130, 246, 0.04);
 }
 
-/* 4. Tablas Responsivas y Adaptables */
+/* 6. Botones y Microinteracciones */
+.stButton button {
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    border: 1px solid rgba(128, 128, 128, 0.25) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.stButton button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    border-color: rgba(59, 130, 246, 0.5) !important;
+}
+
+/* Botones de Descarga */
+div[data-testid="stDownloadButton"] button {
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-testid="stDownloadButton"] button:hover {
+    border-color: #10B981 !important;
+    background-color: rgba(16, 185, 129, 0.08) !important;
+    transform: translateY(-1px);
+}
+
+/* 7. Desplegables y Expansores */
+div[data-testid="stExpander"] {
+    border: 1px solid rgba(128, 128, 128, 0.2) !important;
+    border-radius: 8px !important;
+    transition: border-color 0.2s ease;
+}
+
+div[data-testid="stExpander"]:hover {
+    border-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+/* 8. Tablas Responsivas y Adaptables */
 .stMarkdown table {
     display: block !important;
     width: 100% !important;
@@ -98,7 +190,13 @@
     transition: background-color 0.15s ease;
 }
 
-/* 5. Scrollbars Discretas */
+/* 9. Tipografía Monoespaciada Técnica */
+code, pre {
+    font-family: "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace !important;
+    font-size: 0.86rem !important;
+}
+
+/* 10. Scrollbars Discretas */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -117,14 +215,7 @@
     background: rgba(128, 128, 128, 0.5);
 }
 
-/* 6. Botones y Contenedores */
-.stButton button {
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-/* 7. Reglas Responsivas para Pantallas Medianas y Pequeñas */
+/* 11. Reglas Responsivas para Pantallas Medianas y Pequeñas */
 @media (max-width: 992px) {
     .main-title {
         font-size: 1.5rem !important;
