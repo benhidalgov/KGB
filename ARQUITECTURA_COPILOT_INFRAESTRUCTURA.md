@@ -114,6 +114,15 @@ Prototipo/
 ├── ARQUITECTURA_COPILOT_INFRAESTRUCTURA.md # Especificacion tecnica y documentacion de arquitectura
 ├── HOJA_DE_RUTA_DIAGRAMAS_E_INGESTA.md     # Planificacion de diagramas, OCR y sincronizacion de red
 ├── GEMINI.md                          # Reglas y directrices de desarrollo para el asistente
+├── core/                              # Modulos centrales en espanol
+│   ├── auditoria.py                   # Versionado, snapshots inmutables, Diff y auditoria
+│   ├── configuracion.py               # Rutas globales de datos y archivos del sistema
+│   ├── estilos.py                     # Cargador dinamico de reglas visuales CSS
+│   ├── estilos.css                    # Hoja de estilos CSS pura desacoplada (Theme-Safe)
+│   ├── motor.py                       # Motor analitico DuckDB, busqueda y Copilot
+│   ├── procesador.py                  # Ingesta y lectura multiformato (MarkItDown, Excel)
+│   ├── plantillas.py                  # Generador oficial de plantillas y Runbooks
+│   └── topologia.py                   # Diagrama Mermaid y especificacion de capas
 └── data/
     ├── mantenimientos.csv             # Base estructurada de inventario y mantenimientos
     ├── ingestion_manifest.json        # Manifiesto de firmas SHA-256 de archivos procesados

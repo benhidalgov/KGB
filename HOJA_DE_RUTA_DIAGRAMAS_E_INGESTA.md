@@ -1,10 +1,10 @@
-﻿# Hoja de Ruta: Procesamiento de Diagramas, Imágenes y Unidades de Red
+# Hoja de Ruta: Procesamiento de Diagramas, Imágenes y Unidades de Red
 
 Este documento contiene la planificación detallada y paso a paso para la integración de diagramas de procesos, imágenes de arquitectura y unidades de red compartidas (`Z:\`) en el **Copilot de Infraestructura y AIOps**.
 
 ---
 
-## 📌 Estado de Avance
+## 1. Estado de Avance
 
 - [x] **Paso 1: Ingesta Recursiva y Rutas de Red** *(COMPLETADO)*
   - Soporte de subcarpetas y árboles de directorios profundos sin colisiones (`Carpeta__Subcarpeta__archivo.md`).
@@ -13,9 +13,9 @@ Este documento contiene la planificación detallada y paso a paso para la integr
 
 ---
 
-## 🚀 Pasos Restantes
+## 2. Pasos Restantes
 
-### 🖼️ Paso 2: Registro e Ingesta de Imágenes y Diagramas
+### Paso 2: Registro e Ingesta de Imágenes y Diagramas
 **Objetivo:** Permitir que `batch_ingest.py` reconozca archivos gráficos, los almacene de forma organizada y cree fichas Markdown vinculadas.
 
 1. **Soporte de Extensiones:**
@@ -30,7 +30,7 @@ Este documento contiene la planificación detallada y paso a paso para la integr
 
 ---
 
-### 🔍 Paso 3: Extracción de Contenido (OCR y Descripción con Visión IA)
+### Paso 3: Extracción de Contenido (OCR y Descripción con Visión IA)
 **Objetivo:** Hacer que los diagramas sean buscables por el Copilot mediante su contenido interno (IPs, nombres de servidores, flujos).
 
 1. **Estrategia A — OCR Local (Sin costo / Offline):**
@@ -46,7 +46,7 @@ Este documento contiene la planificación detallada y paso a paso para la integr
 
 ---
 
-### 🖥️ Paso 4: Visualización Multimedia en la Interfaz Web (`app.py`)
+### Paso 4: Visualización Multimedia en la Interfaz Web (`app.py`)
 **Objetivo:** Permitir al usuario ver y explorar los diagramas directamente en la aplicación.
 
 1. **Renderizado en el Chat Copilot:**
@@ -58,17 +58,17 @@ Este documento contiene la planificación detallada y paso a paso para la integr
 
 ---
 
-### ⚡ Paso 5: Sincronización Interactiva desde la UI
-**Objetivo:** Permitir sincronizar carpetas de red sin usar la consola.
+### Paso 5: Sincronización Automática con Unidades de Red (Servicio Programado)
+**Objetivo:** Mantener el repositorio siempre actualizado sin intervención manual cada vez que un ingeniero guarde un nuevo archivo en el servidor de archivos.
 
-1. **Panel de Sincronización en la Barra Lateral:**
-   * Campo de texto para ingresar la ruta de la carpeta (ej. `Z:\Infraestructura\Diagramas`).
-   * Botón `[ Sincronizar Carpeta ]`.
-   * Barra de progreso en vivo mostrando los archivos nuevos, imágenes procesadas y tiempo transcurrido.
+1. **Script de Tarea Programada (Windows Task Scheduler / Cron):**
+   * Ejecución cada 30 o 60 minutos: `python batch_ingest.py --origen Z:\Infraestructura\Docs`.
+2. **Alertamiento de Ingesta:**
+   * Resumen automático en el log y notificación de nuevos documentos agregados al Copilot.mágenes procesadas y tiempo transcurrido.
 
 ---
 
-## 🛠️ Tecnologías y Dependencias Necesarias para los Siguientes Pasos
+## [TECNOLOGÍAS Y DEPENDENCIAS] Tecnologías y Dependencias Necesarias para los Siguientes Pasos
 
 | Componente | Librería / Herramienta | Propósito |
 | :--- | :--- | :--- |

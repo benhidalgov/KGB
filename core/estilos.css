@@ -1,0 +1,149 @@
+/* ==========================================================================
+   Estilos Visuales Corporativos - Copilot de Infraestructura y AIOps
+   Compatibilidad: Tema Claro (Light) y Tema Oscuro (Dark) - Theme-Safe
+   ========================================================================== */
+
+/* 1. Tipografía y Títulos Adaptables */
+.main-title {
+    font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+    font-weight: 700;
+    color: inherit;
+    margin-bottom: 2px;
+    line-height: 1.2;
+}
+
+.sub-title {
+    font-size: clamp(0.85rem, 1.2vw, 1rem);
+    opacity: 0.8;
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+/* 2. Badges de Estado Corporativos */
+.badge-ok {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-warn {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #F59E0B;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-crit {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* 3. Panel Lateral (Sidebar) Adaptable */
+[data-testid="stSidebar"] div[data-testid="stFileUploader"] {
+    border: 1.5px dashed rgba(128, 128, 128, 0.3);
+    border-radius: 8px;
+    padding: 8px;
+    transition: all 0.2s ease;
+}
+
+[data-testid="stSidebar"] div[data-testid="stFileUploader"]:hover {
+    border-color: #3B82F6;
+}
+
+/* 4. Tablas Responsivas y Adaptables */
+.stMarkdown table {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    border-collapse: collapse !important;
+    margin: 12px 0 !important;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 6px;
+}
+
+.stMarkdown th,
+.stMarkdown td {
+    padding: 7px 12px !important;
+    border: 1px solid rgba(128, 128, 128, 0.2) !important;
+    font-size: 0.85rem !important;
+}
+
+.stMarkdown th {
+    background-color: rgba(128, 128, 128, 0.1) !important;
+    font-weight: 600 !important;
+    position: sticky;
+    top: 0;
+}
+
+.stMarkdown tr:nth-child(even) {
+    background-color: rgba(128, 128, 128, 0.04) !important;
+}
+
+.stMarkdown tr:hover {
+    background-color: rgba(128, 128, 128, 0.08) !important;
+    transition: background-color 0.15s ease;
+}
+
+/* 5. Scrollbars Discretas */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(128, 128, 128, 0.5);
+}
+
+/* 6. Botones y Contenedores */
+.stButton button {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+/* 7. Reglas Responsivas para Pantallas Medianas y Pequeñas */
+@media (max-width: 992px) {
+    .main-title {
+        font-size: 1.5rem !important;
+    }
+    .sub-title {
+        font-size: 0.85rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-title {
+        font-size: 1.3rem !important;
+    }
+    .sub-title {
+        font-size: 0.8rem !important;
+    }
+    div[data-testid="column"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        margin-bottom: 8px;
+    }
+}

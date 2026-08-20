@@ -1,0 +1,32 @@
+"""Modulo core del Copilot de Infraestructura y AIOps."""
+
+from core.topologia import TOPOLOGY_MERMAID, PLANTILLAS_DIAGRAMAS, INFRA_SPECS
+from core.configuracion import CSV_PATH, DOCS_DIR, HISTORY_DIR, AUDIT_LOG_PATH, ESTILOS_CSS_PATH
+from core.estilos import cargar_estilos_css
+from core.auditoria import (
+    obtener_historial_versiones,
+    inicializar_version_inicial_si_no_existe,
+    guardar_nueva_version,
+    guardar_nueva_version_excel,
+    obtener_contenido_version,
+    obtener_bytes_snapshot,
+    cargar_hoja_excel_dataframe,
+    generar_diff_texto,
+    registrar_evento_auditoria,
+)
+from core.motor import (
+    ejecutar_consulta_sql,
+    buscar_servidores_duckdb,
+    buscar_en_documentos,
+    generar_respuesta_asistente,
+)
+from core.procesador import (
+    cargar_documento_individual,
+    cargar_documentos_locales,
+    calcular_sha256,
+    sanitizar_nombre_descarga,
+)
+from core.plantillas import (
+    generar_doc_plantilla,
+)
+

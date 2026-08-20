@@ -17,14 +17,15 @@ Asistente inteligente corporativo y motor de búsqueda dual diseñado para la ge
   * **Edición Celda a Celda en Vivo (`st.data_editor`):** Modificación directa de valores, agregado e inserción dinámica de filas directamente en el libro `.xlsx`.
 * **Control de Versiones y Auditoría Estricta:**
   * **Snapshots Inmutables (`data/history/`):** Respaldo automático de copias históricas de cada versión (`v1`, `v2`, etc.) tanto para documentos Markdown como para libros Excel.
+  * **Descarga Directa por Versión:** Capacidad de re-descargar cualquier versión histórica (`v1`, `v2`, etc.) en su formato nativo (`.xlsx`, `.md`) con un solo clic.
   * **Validación Obligatoria de Editor y Motivo:** Exigencia estricta de identificación del técnico y justificación técnica para cualquier guardado o reversión.
   * **Comparador Visual de Cambios (Diff Viewer):** Comparación línea a línea entre dos versiones históricas con sintaxis unificada `diff`.
   * **Rollback Seguro:** Restauración con un clic a cualquier punto histórico con registro de auditoría.
   * **Registro Central de Auditoría (`data/audit_log.json`):** Trazabilidad global de todas las operaciones realizadas en la plataforma.
 * **Pipeline de Ingesta Masiva Multihilo (`batch_ingest.py`):**
   * Conversión automática por lotes con control de inmutabilidad y firmas criptográficas **SHA-256** en `data/ingestion_manifest.json`.
-* **Mapeo Topológico y Arquitectura en 4 Niveles:**
-  * Visualización jerárquica (L1: Hardware, L2: Virtualización, L3: Middleware, L4: Aplicaciones) y correlación con la capa de Observabilidad (*Nagios, New Relic, VZOR, PRTG*) y CI/CD (*GitLab, Jenkins*).
+* **Mapeo Topológico y Mini Editor de Diagramas:**
+  * Visualización jerárquica (L1 a L4) y **Mini Editor en Vivo (Mermaid)** con selector de plantillas prediseñadas (CI/CD, API Gateway, Failover), previsualización en tiempo real y exportación como documento técnico indexado.
 * **Generador Integrado de Plantillas y Runbooks:**
   * Creación y publicación rápida de procedimientos técnicos estandarizados (Rollbacks, Despliegues, Postmortems P1, Fichas de Microservicios y Failover) con inicialización automática de versión `v1`.
 
@@ -45,6 +46,16 @@ C:\Prototipo\
 ├── ARQUITECTURA_COPILOT_INFRAESTRUCTURA.md # Especificación técnica y arquitectura detallada
 ├── HOJA_DE_RUTA_DIAGRAMAS_E_INGESTA.md     # Roadmap de diagramas, OCR y sincronización de red
 ├── GEMINI.md                          # Reglas y directrices de desarrollo para el asistente
+│
+├── core/                              # Módulos centrales de lógica de negocio
+│   ├── auditoria.py                   # Versionado, snapshots inmutables, Diff y auditoría
+│   ├── configuracion.py               # Rutas globales de datos y archivos del sistema
+│   ├── estilos.py                     # Cargador dinámico de reglas visuales CSS
+│   ├── estilos.css                    # Hoja de estilos CSS pura desacoplada (Theme-Safe)
+│   ├── motor.py                       # Motor analítico DuckDB, búsqueda y Copilot
+│   ├── procesador.py                  # Ingesta y lectura multiformato (MarkItDown, Excel)
+│   ├── plantillas.py                  # Generador oficial de plantillas y Runbooks
+│   └── topologia.py                   # Diagrama Mermaid y especificación de capas
 │
 └── data/
     ├── inbox/                         # Carpeta para colocar archivos a procesar en lote
@@ -118,6 +129,7 @@ La interfaz web se abrirá automáticamente en `http://localhost:8501`.
 
 #### Pestaña 3: Preview de arquitecturas
 * Diagrama topológico interactivo en **Mermaid.js** con dependencias entre Hardware (L1), Virtualización (L2), Middleware (L3), Aplicaciones (L4), Observabilidad y CI/CD.
+* **Mini Editor de Diagramas en Vivo:** Editor interactivo con split de código y previsualización en tiempo real, selector de plantillas prediseñadas (CI/CD, API Gateway, Failover) y botón de exportación para guardar y publicar diagramas como documentos técnicos indexados en `data/docs/`.
 
 #### Pestaña 4: Documentación Técnica y Versionado
 * **Subpestaña 1 (Visualización):** Visor con soporte de cuadrícula interactiva para Excel y visor formateado para Markdown.
