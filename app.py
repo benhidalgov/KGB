@@ -15,6 +15,7 @@ import core.procesador
 import core.topologia
 import core.plantillas
 import core.visor
+import core.manual
 
 importlib.reload(core.configuracion)
 importlib.reload(core.estilos)
@@ -24,8 +25,10 @@ importlib.reload(core.procesador)
 importlib.reload(core.topologia)
 importlib.reload(core.plantillas)
 importlib.reload(core.visor)
+importlib.reload(core.manual)
 
 from excel_cleaner import procesar_excel_limpio
+from core.manual import renderizar_manual_usuario
 from core.configuracion import (
     CSV_PATH,
     DOCS_DIR,
@@ -82,19 +85,11 @@ st.set_page_config(
 st.markdown(cargar_estilos_css(), unsafe_allow_html=True)
 
 # 2. Inicializacion de Estado y Documentos
+if "historial_busquedas" not in st.session_state:
+    st.session_state.historial_busquedas = []
+
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": (
-                "**Sistema de Búsqueda de documentación por palabras clave y activos de arquitectura.**\n\n"
-                "Capacidades activas:\n"
-                "- Consulta analítica de inventario y mantenimientos por número de serie, IP, servidor o técnico.\n"
-                "- Recuperación de procedimientos técnicos, manuales y contingencias (MarkItDown Engine).\n"
-                "- Búsqueda e inspección de topologías, diagramas visuales y comparación Lado a Lado (Side-by-Side).\n"
-            )
-        }
-    ]
+    st.session_state.messages = []
 
 if "doc_store" not in st.session_state:
     st.session_state.doc_store = {}
@@ -104,8 +99,19 @@ cargar_documentos_locales(st.session_state.doc_store)
 
 # 3. Sidebar (Panel de Control e Ingesta)
 with st.sidebar:
-    st.markdown("### Acceso Rápido")
-    st.caption("Panel de Ingesta y Control Documental")
+    st.markdown("### Navegación Principal")
+    vista_seleccionada = sac.segmented(
+        items=[
+            sac.SegmentedItem(label="[Panel principal]"),
+            sac.SegmentedItem(label="[Manual de uso]"),
+        ],
+        size="sm",
+        align="start",
+        key="sb_nav_view_selector"
+    )
+    if not vista_seleccionada:
+        vista_seleccionada = "[Consola AIOps]"
+
     st.markdown("---")
 
     # Ingesta de Archivos
@@ -305,20 +311,10 @@ with st.sidebar:
             st.toast("Base documental y assets reindexados con éxito")
             st.rerun()
     with col_btn2:
-        if st.button("Limpiar Chat", help="Reinicia la conversación actual", use_container_width=True):
-            st.session_state.messages = [
-                {
-                    "role": "assistant",
-                    "content": (
-                        "**Sistema de Búsqueda de documentación por palabras clave y activos de arquitectura.**\n\n"
-                        "Capacidades activas:\n"
-                        "- Consulta analítica de inventario y mantenimientos por número de serie, IP, servidor o técnico.\n"
-                        "- Recuperación de procedimientos técnicos, manuales y contingencias (MarkItDown Engine).\n"
-                        "- Búsqueda e inspección de topologías, diagramas visuales y comparación Lado a Lado (Side-by-Side).\n"
-                    )
-                }
-            ]
-            st.toast("Historial de chat reiniciado")
+        if st.button("Limpiar Chat", help="Reinicia el historial de búsquedas y chat", use_container_width=True):
+            st.session_state.historial_busquedas = []
+            st.session_state.messages = []
+            st.toast("Historial de búsquedas reiniciado")
             st.rerun()
 
     st.markdown("---")
@@ -341,6 +337,12 @@ with st.sidebar:
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+
+# Verificación de Vista Seleccionada en Barra Lateral
+if vista_seleccionada == "[Manual de Operaciones]":
+    renderizar_manual_usuario()
+    st.stop()
 
 
 # 4. Encabezado Principal
@@ -372,24 +374,92 @@ tab_chat, tab_analytics, tab_docs, tab_templates = st.tabs([
     "Plantillas de documentación"
 ])
 
-# ----------------- TAB 1: CHAT -----------------
+# ----------------- TAB 1: BUSCADOR Y ASISTENTE AIOPS -----------------
 with tab_chat:
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # 1. Barra de Búsqueda Superior (Always on Top)
+    with st.form(key="top_search_form", clear_on_submit=True):
+        col_inp, col_btn = st.columns([5, 1])
+        with col_inp:
+            query_input = st.text_input(
+                "Buscar en infraestructura y documentación:",
+                placeholder="Ingrese su consulta técnica (ej: BALANCER001, JWT, 10.24.0.125, Failover Redis, SN-8842-A)...",
+                label_visibility="collapsed"
+            )
+        with col_btn:
+            submitted = st.form_submit_button("Buscar", type="primary", use_container_width=True)
 
-    if prompt := st.chat_input("Ingrese su consulta tecnica..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+    # 2. Chips de consultas rápidas
+    st.markdown("<div style='margin-top: -6px; margin-bottom: 8px; font-size: 0.8rem; font-weight: 600; opacity: 0.85;'>Consultas Rápidas Sugeridas:</div>", unsafe_allow_html=True)
+    col_q1, col_q2, col_q3, col_q4, col_q5 = st.columns(5)
+    prompt_rapido = None
 
-        with st.chat_message("assistant"):
-            with st.spinner("Procesando consulta..."):
-                respuesta = generar_respuesta_asistente(
-                    prompt, st.session_state.doc_store)
-                st.markdown(respuesta)
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": respuesta})
+    with col_q1:
+        if st.button("BALANCER001", use_container_width=True, key="btn_quick_b1"):
+            prompt_rapido = "BALANCER001"
+    with col_q2:
+        if st.button("Autenticación JWT", use_container_width=True, key="btn_quick_jwt"):
+            prompt_rapido = "Autenticación JWT"
+    with col_q3:
+        if st.button("10.24.0.125", use_container_width=True, key="btn_quick_ip"):
+            prompt_rapido = "10.24.0.125"
+    with col_q4:
+        if st.button("Failover Redis", use_container_width=True, key="btn_quick_redis"):
+            prompt_rapido = "Failover Redis"
+    with col_q5:
+        if st.button("SN-8842-A", use_container_width=True, key="btn_quick_sn"):
+            prompt_rapido = "SN-8842-A"
+
+    query_a_ejecutar = prompt_rapido if prompt_rapido else (query_input.strip() if submitted and query_input.strip() else None)
+
+    if query_a_ejecutar:
+        with st.spinner("Procesando consulta..."):
+            respuesta = generar_respuesta_asistente(query_a_ejecutar, st.session_state.doc_store)
+            # Guardar al inicio (índice 0) para que aparezca primero arriba
+            st.session_state.historial_busquedas.insert(0, {
+                "query": query_a_ejecutar,
+                "response": respuesta,
+                "timestamp": pd.Timestamp.now().strftime("%H:%M:%S")
+            })
+        st.rerun()
+
+    st.markdown("---")
+
+    # 3. Resultados: Los más nuevos se muestran ARRIBA
+    if not st.session_state.historial_busquedas:
+        st.markdown(
+            '<div class="search-result-card">'
+            '<div class="search-header-row">'
+            '<div><span class="badge-info">[Consola de Búsqueda AIOps]</span> <span class="search-doc-title" style="margin-left: 8px;">Búsqueda Unificada de Infraestructura y Procedimientos</span></div>'
+            '<div><span class="badge-ok">[Motor Activo]</span></div>'
+            '</div>'
+            '<div style="font-size: 0.88rem; line-height: 1.6;">'
+            '<b>Capacidades operativas disponibles:</b><br/>'
+            '• <b>Consulta analítica de inventario y mantenimientos:</b> por número de serie, IP, servidor o técnico.<br/>'
+            '• <b>Recuperación de procedimientos técnicos:</b> manuales, rollbacks y contingencias con coincidencia semántica.<br/>'
+            '• <b>Inspección de diagramas y topologías:</b> acceso directo y comparador visual Lado a Lado (Side-by-Side).'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    else:
+        col_res_t, col_res_btn = st.columns([4, 1])
+        with col_res_t:
+            st.markdown(f"<div style='font-size: 0.95rem; font-weight: 600;'>Historial de Resultados ({len(st.session_state.historial_busquedas)} consultas):</div>", unsafe_allow_html=True)
+        with col_res_btn:
+            if st.button("Limpiar Resultados", use_container_width=True, key="btn_clear_search_history_top"):
+                st.session_state.historial_busquedas = []
+                st.rerun()
+
+        for idx, item in enumerate(st.session_state.historial_busquedas):
+            es_ultimo = (idx == 0)
+            badge_orden = '<span class="badge-ok">[ÚLTIMA CONSULTA]</span>' if es_ultimo else f'<span class="badge-tag">[{item["timestamp"]}]</span>'
+
+            st.markdown(f"""
+            <div style="margin-top: 12px; margin-bottom: 4px; font-size: 0.9rem;">
+                {badge_orden} <span style="font-weight: 600; margin-left: 6px;">Consulta:</span> <code>{item['query']}</code>
+            </div>
+            """, unsafe_allow_html=True)
+            st.markdown(item["response"], unsafe_allow_html=True)
 
 # ----------------- TAB 2: ANALITICA DUCKDB -----------------
 with tab_analytics:

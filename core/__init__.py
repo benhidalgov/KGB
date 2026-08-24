@@ -53,3 +53,4 @@ from core.visor import (
     renderizar_lado_a_lado,
     renderizar_diagrama_limpio,
 )
+from core.manual import renderizar_manual_usuario

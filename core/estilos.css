@@ -76,6 +76,27 @@ button[data-baseweb="tab"][aria-selected="true"] {
     letter-spacing: 0.02em;
 }
 
+.badge-info {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #3B82F6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.badge-tag {
+    background-color: rgba(128, 128, 128, 0.12);
+    color: inherit;
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
 /* 4. Tarjetas de Métricas (KPI Cards) */
 div[data-testid="stMetric"] {
     background-color: rgba(128, 128, 128, 0.05);
@@ -102,7 +123,68 @@ div[data-testid="stMetricValue"] {
     font-weight: 700 !important;
 }
 
-/* 5. Panel Lateral (Sidebar) Adaptable */
+/* 5. Tarjetas de Resultado del Chat y Búsqueda */
+.search-result-card {
+    background-color: rgba(128, 128, 128, 0.04);
+    border: 1px solid rgba(128, 128, 128, 0.22);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px 0 14px 0;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-result-card:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.search-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.search-doc-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: inherit;
+}
+
+.search-snippet-content {
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+}
+
+.search-highlight {
+    background-color: rgba(234, 179, 8, 0.25);
+    color: inherit;
+    border: 1px solid rgba(234, 179, 8, 0.45);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.search-meta-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(128, 128, 128, 0.12);
+    padding-top: 8px;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    opacity: 0.8;
+}
+
+/* 6. Panel Lateral (Sidebar) Adaptable */
 [data-testid="stSidebar"] div[data-testid="stFileUploader"] {
     border: 1.5px dashed rgba(128, 128, 128, 0.3);
     border-radius: 8px;
@@ -115,7 +197,7 @@ div[data-testid="stMetricValue"] {
     background-color: rgba(59, 130, 246, 0.04);
 }
 
-/* 6. Botones y Microinteracciones */
+/* 7. Botones y Microinteracciones */
 .stButton button {
     border-radius: 6px !important;
     font-weight: 500 !important;
@@ -143,7 +225,7 @@ div[data-testid="stDownloadButton"] button:hover {
     transform: translateY(-1px);
 }
 
-/* 7. Desplegables y Expansores */
+/* 8. Desplegables y Expansores */
 div[data-testid="stExpander"] {
     border: 1px solid rgba(128, 128, 128, 0.2) !important;
     border-radius: 8px !important;
@@ -154,7 +236,7 @@ div[data-testid="stExpander"]:hover {
     border-color: rgba(59, 130, 246, 0.35) !important;
 }
 
-/* 8. Tablas Responsivas y Adaptables */
+/* 9. Tablas Responsivas y Adaptables */
 .stMarkdown table {
     display: block !important;
     width: 100% !important;
@@ -190,13 +272,13 @@ div[data-testid="stExpander"]:hover {
     transition: background-color 0.15s ease;
 }
 
-/* 9. Tipografía Monoespaciada Técnica */
+/* 10. Tipografía Monoespaciada Técnica */
 code, pre {
     font-family: "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace !important;
     font-size: 0.86rem !important;
 }
 
-/* 10. Scrollbars Discretas */
+/* 11. Scrollbars Discretas */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -215,7 +297,7 @@ code, pre {
     background: rgba(128, 128, 128, 0.5);
 }
 
-/* 11. Reglas Responsivas para Pantallas Medianas y Pequeñas */
+/* 12. Reglas Responsivas */
 @media (max-width: 992px) {
     .main-title {
         font-size: 1.5rem !important;
