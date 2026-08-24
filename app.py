@@ -1,56 +1,11 @@
-from excel_cleaner import procesar_excel_limpio
-from core.visor import (
-    renderizar_lado_a_lado,
-    renderizar_original_adaptativo,
-    mostrar_pdf_embebido,
-)
-from core.plantillas import (
-    generar_doc_plantilla,
-    obtener_todos_los_tipos_plantillas,
-    guardar_plantilla_personalizada,
-    cargar_plantillas_personalizadas,
-)
-from core.topologia import TOPOLOGY_MERMAID, PLANTILLAS_DIAGRAMAS, INFRA_SPECS
-from core.procesador import (
-    IMAGE_EXTENSIONS,
-    OFFICE_EXTENSIONS,
-    SUPPORTED_EXTENSIONS,
-    cargar_documentos_locales,
-    cargar_documento_individual,
-    calcular_sha256,
-    sanitizar_nombre_descarga,
-    generar_ficha_diagrama,
-    obtener_ruta_original,
-)
-from core.motor import (
-    ejecutar_consulta_sql,
-    generar_respuesta_asistente,
-)
-from core.auditoria import (
-    obtener_historial_versiones,
-    inicializar_version_inicial_si_no_existe,
-    guardar_nueva_version,
-    guardar_nueva_version_excel,
-    obtener_contenido_version,
-    obtener_bytes_snapshot,
-    cargar_hoja_excel_dataframe,
-    generar_diff_texto,
-)
-from core.estilos import cargar_estilos_css
-from core.configuracion import (
-    CSV_PATH,
-    DOCS_DIR,
-    ASSETS_DIR,
-    ORIGINALS_DIR,
-    HISTORY_DIR,
-)
-import importlib
 import os
 import re
 import shutil
+import importlib
 import duckdb
 import pandas as pd
 import streamlit as st
+import streamlit_antd_components as sac
 
 import core.configuracion
 import core.estilos
@@ -69,6 +24,53 @@ importlib.reload(core.procesador)
 importlib.reload(core.topologia)
 importlib.reload(core.plantillas)
 importlib.reload(core.visor)
+
+from excel_cleaner import procesar_excel_limpio
+from core.configuracion import (
+    CSV_PATH,
+    DOCS_DIR,
+    ASSETS_DIR,
+    ORIGINALS_DIR,
+    HISTORY_DIR,
+)
+from core.estilos import cargar_estilos_css
+from core.auditoria import (
+    obtener_historial_versiones,
+    inicializar_version_inicial_si_no_existe,
+    guardar_nueva_version,
+    guardar_nueva_version_excel,
+    obtener_contenido_version,
+    obtener_bytes_snapshot,
+    cargar_hoja_excel_dataframe,
+    generar_diff_texto,
+)
+from core.motor import (
+    ejecutar_consulta_sql,
+    generar_respuesta_asistente,
+)
+from core.procesador import (
+    IMAGE_EXTENSIONS,
+    OFFICE_EXTENSIONS,
+    SUPPORTED_EXTENSIONS,
+    cargar_documentos_locales,
+    cargar_documento_individual,
+    calcular_sha256,
+    sanitizar_nombre_descarga,
+    generar_ficha_diagrama,
+    obtener_ruta_original,
+)
+from core.topologia import TOPOLOGY_MERMAID, PLANTILLAS_DIAGRAMAS, INFRA_SPECS
+from core.plantillas import (
+    generar_doc_plantilla,
+    obtener_todos_los_tipos_plantillas,
+    guardar_plantilla_personalizada,
+    cargar_plantillas_personalizadas,
+)
+from core.visor import (
+    renderizar_lado_a_lado,
+    renderizar_original_adaptativo,
+    mostrar_pdf_embebido,
+)
 
 
 # 1. Configuracion de Streamlit
@@ -237,17 +239,22 @@ with st.sidebar:
             d)[1].lower() in ('.md', '.txt', '.csv') and not d.startswith("DIAGRAMA__"))
 
         with st.expander("Ver documentos cargados", expanded=False):
-            tipo_filtro = st.selectbox(
-                "Filtrar por tipo:",
-                [
-                    f"Todos ({cant_docs})",
-                    f"Diagramas / Imágenes ({conteo_img})",
-                    f"Excel ({conteo_excel})",
-                    f"Documentos Word/PDF ({conteo_doc})",
-                    f"Markdown / Texto ({conteo_txt})"
+            st.markdown("<div style='margin-bottom: 6px; font-size: 0.8rem; font-weight: 600;'>Filtrar por tipo:</div>", unsafe_allow_html=True)
+            tipo_filtro = sac.chip(
+                items=[
+                    sac.ChipItem(label=f"Todos ({cant_docs})"),
+                    sac.ChipItem(label=f"Diagramas ({conteo_img})"),
+                    sac.ChipItem(label=f"Excel ({conteo_excel})"),
+                    sac.ChipItem(label=f"Documentos ({conteo_doc})"),
+                    sac.ChipItem(label=f"Markdown ({conteo_txt})"),
                 ],
-                key="sb_type_filter"
+                size="xs",
+                radius="sm",
+                align="start",
+                key="sb_type_chip_filter"
             )
+            if not tipo_filtro:
+                tipo_filtro = f"Todos ({cant_docs})"
 
             doc_filter = st.text_input(
                 "Buscar por nombre...", key="sb_doc_filter", placeholder="Nombre de archivo...")
@@ -825,6 +832,17 @@ with tab_docs:
 with tab_templates:
     st.subheader("Generador Rápido de Documentación y Runbooks")
     st.caption("Crea y publica procedimientos técnicos estandarizados o define nuevos tipos personalizados en 2 minutos.")
+
+    sac.steps(
+        items=[
+            sac.StepsItem(title="Paso 1", subtitle="Selección y Metadatos"),
+            sac.StepsItem(title="Paso 2", subtitle="Parámetros Técnicos"),
+            sac.StepsItem(title="Paso 3", subtitle="Previsualización y Publicación"),
+        ],
+        size="sm",
+        return_index=False
+    )
+    st.markdown("---")
 
     col_t1, col_t2 = st.columns([1, 1], gap="large")
 

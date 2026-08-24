@@ -3,6 +3,7 @@ import os
 import re
 import streamlit as st
 import pandas as pd
+import streamlit_antd_components as sac
 from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version
 from core.procesador import IMAGE_EXTENSIONS, calcular_sha256, sanitizar_nombre_descarga
 from core.configuracion import DOCS_DIR
@@ -289,16 +290,23 @@ def renderizar_lado_a_lado(
     # Para documentos estándar (Word, PDF, Excel, Markdown)
     col_mode_sel, col_mode_help = st.columns([2.5, 1.5])
     with col_mode_sel:
-        modo_vista = st.radio(
-            "Modo de Visualización:",
-            ["[Lado a Lado]", "[Solo Markdown]", "[Solo Formato Original]"],
-            horizontal=True,
-            key=f"radio_modo_vista_{doc_name}_{key_suffix}"
+        st.markdown("<div style='margin-bottom: 4px; font-size: 0.85rem; font-weight: 600;'>Modo de Visualización:</div>", unsafe_allow_html=True)
+        modo_vista = sac.segmented(
+            items=[
+                sac.SegmentedItem(label="[Lado a Lado]"),
+                sac.SegmentedItem(label="[Solo Markdown]"),
+                sac.SegmentedItem(label="[Solo Formato Original]"),
+            ],
+            size="sm",
+            align="start",
+            key=f"sac_modo_vista_{doc_name}_{key_suffix}"
         )
+        if not modo_vista:
+            modo_vista = "[Lado a Lado]"
     with col_mode_help:
         tiene_orig = ruta_original is not None and os.path.exists(ruta_original)
         badge_orig = '<span class="badge-ok">Fuente Disponible</span>' if tiene_orig else '<span class="badge-warn">Nativo Markdown</span>'
-        st.markdown(f'<div style="text-align: right; padding-top: 10px;"><b>Estado Fuente:</b> {badge_orig}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: right; padding-top: 18px;"><b>Estado Fuente:</b> {badge_orig}</div>', unsafe_allow_html=True)
 
     st.markdown("---")
 
