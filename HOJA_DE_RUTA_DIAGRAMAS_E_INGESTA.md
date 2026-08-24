@@ -1,84 +1,84 @@
-# Hoja de Ruta: Procesamiento de Diagramas, Imágenes y Unidades de Red
+# Hoja de Ruta: Procesamiento de Diagramas, Ingesta y Evolución del Sistema
 
-Este documento contiene la planificación detallada y paso a paso para la integración de diagramas de procesos, imágenes de arquitectura y unidades de red compartidas (`Z:\`) en el **Copilot de Infraestructura y AIOps**.
+Este documento contiene el registro de avances completados y la planificación técnica para la evolución del **Copilot de Infraestructura y AIOps**.
 
 ---
 
-## 1. Estado de Avance
+## 1. Registro de Hitos y Funcionalidades Completadas
 
 - [x] **Paso 1: Ingesta Recursiva y Rutas de Red** *(COMPLETADO)*
-  - Soporte de subcarpetas y árboles de directorios profundos sin colisiones (`Carpeta__Subcarpeta__archivo.md`).
-  - Metadatos de origen integrados en el encabezado de cada documento.
-  - Parámetro CLI `--origen` para apuntar a carpetas locales o unidades de red (`Z:\` o `\\SMUCORPSP02\Infraestructura`).
+  - Soporte de subcarpetas y árboles de directorios profundos sin colisiones de nombres (`Carpeta__Subcarpeta__archivo.md`).
+  - Inyección de metadatos de origen en el encabezado de cada documento indexado.
+  - Parámetro CLI `--origen` para apuntar a carpetas locales o unidades de red compartidas (`Z:\` o rutas UNC).
 
-- [x] **Paso 2: Registro e Ingesta de Imágenes, Diagramas y Visor Lado a Lado** *(COMPLETADO)*
+- [x] **Paso 2: Ingesta de Diagramas, Assets y Visor Lado a Lado (*Side-by-Side*)** *(COMPLETADO)*
   - Soporte de extensiones `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg` en `batch_ingest.py` y subida web.
-  - Organización de activos en `data/docs/assets/` y preservación de binarios fuente en `data/originals/`.
-  - Generación de fichas técnicas Markdown (`DIAGRAMA__*.md`) con metadatos y visualización embebida.
-  - Visor Lado a Lado (*Side-by-Side*) en Streamlit con renderizado adaptativo (Imágenes, PDF embebido, Excel interactivo).
+  - Almacenamiento organizado de activos gráficos en `data/docs/assets/` y resguardo inmutable de archivos binarios originales en `data/originals/`.
+  - Generación de fichas técnicas Markdown asociadas con firmas criptográficas **SHA-256**.
+  - Visor Lado a Lado con renderizado adaptativo (Imágenes nativas en alta resolución, PDFs embebidos en iframe Base64, libros Excel interactivos con selector de hojas y documentos Word/PPTX).
+  - Gestión de **Pie de Imagen (*Caption*)** con trazabilidad obligatoria de Editor y Motivo del Cambio.
+
+- [x] **Paso 3: Consola de Búsqueda Superior (*Search On-Top*), Resaltado Visual y Algoritmo de Score** *(COMPLETADO)*
+  - Reubicación de la barra de búsqueda en la parte superior (*Always On-Top*) con orden cronológico descendente (los resultados más nuevos aparecen inmediatamente arriba).
+  - Algoritmo de puntuación de relevancia (**Score**): +30 pts por frase exacta, +20 pts por coincidencia en título, +2 pts por densidad de términos.
+  - Normalización de acentos/tildes y soporte para siglas técnicas cortas (>= 2 caracteres: `JWT`, `IP`, `SSL`, `TLS`, `DNS`, `VM`, `DB`, `L1`-`L4`).
+  - Resaltado visual automático de términos coincidentes (*Keyword Highlighting*) y tarjetas estructuradas (*Result Cards*).
+  - Chips de consultas rápidas en la cabecera (`[BALANCER001]`, `[Autenticación JWT]`, `[10.24.0.125]`, `[Failover Redis]`, `[SN-8842-A]`).
+
+- [x] **Paso 4: Generador de Procedimientos Ampliado y Plantillas Dinámicas** *(COMPLETADO)*
+  - Catálogo oficial ampliado: Rollback, Despliegue CI/CD, Postmortem P1, Microservicios, Contingencia/Failover, Parchado de SO, Renovación de Certificados SSL/TLS, Disaster Recovery (DRP) y Respaldo de BD.
+  - Capacidad de definir **Nuevos Tipos de Procedimientos Personalizados** con persistencia en `data/plantillas_custom.json`.
+  - Barra guiada de pasos **`sac.steps`** (Paso 1: Metadatos ──► Paso 2: Parámetros ──► Paso 3: Publicación).
+
+- [x] **Paso 5: Manual Interactivo de Operaciones y Navegación en Sidebar** *(COMPLETADO)*
+  - Módulo interactivo [`core/manual.py`](file:///C:/prototipo/core/manual.py) integrado en la barra lateral con selector `[Consola AIOps]` | `[Manual de Uso]`.
+  - Redacción práctica, directa y accesible sin perder el rigor técnico y respetando la regla de cero emojis.
 
 ---
 
-## 2. Pasos Restantes
+## 2. Próximos Pasos y Roadmap de Desarrollo
 
-### Paso 2: Registro e Ingesta de Imágenes y Diagramas
-**Objetivo:** Permitir que `batch_ingest.py` reconozca archivos gráficos, los almacene de forma organizada y cree fichas Markdown vinculadas.
+### Paso 6: Extracción de Contenido Gráfico (OCR y Visión Multimodal con IA)
+**Objetivo:** Hacer que los diagramas sean buscables por el Copilot mediante su contenido textual interno (nombres de servidores, puertos, flujos, direcciones IP dentro de la imagen).
 
-1. **Soporte de Extensiones:**
-   * Agregar `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg` a `SUPPORTED_EXTENSIONS`.
-2. **Organización de Assets:**
-   * Al procesar una imagen, copiarla a una subcarpeta dedicada: `data/docs/assets/`.
-3. **Generación de Ficha Markdown:**
-   * Crear un archivo `.md` homónimo que contenga:
-     * Metadatos (nombre, carpeta de origen, tamaño, fecha).
-     * Enlace de renderizado de imagen para Markdown: `![Diagrama](assets/nombre_imagen.png)`.
-     * Sección reservada para el texto extraído / descripción técnica.
-
----
-
-### Paso 3: Extracción de Contenido (OCR y Descripción con Visión IA)
-**Objetivo:** Hacer que los diagramas sean buscables por el Copilot mediante su contenido interno (IPs, nombres de servidores, flujos).
-
-1. **Estrategia A — OCR Local (Sin costo / Offline):**
-   * Usar librerías como `easyocr` o `pytesseract` para extraer texto de cuadros, etiquetas, puertos y servidores dentro de la imagen.
-2. **Estrategia B — Visión con IA (Multimodal):**
-   * Enviar la imagen a un modelo de visión (`gpt-4o-mini` o modelo local como `llava` / `qwen2-vl` vía Ollama).
-   * Generar una explicación técnica estructurada del flujo:
-     * *Propósito del proceso o topología.*
+1. **Estrategia A — OCR Local (Offline / Sin costo de API):**
+   * Integración de `easyocr` o `pytesseract` para extraer cajas de texto y etiquetas de topología.
+2. **Estrategia B — Visión Multimodal con Google GenAI SDK (`gemini-1.5-flash`):**
+   * Análisis automático de la arquitectura visual para generar un resumen técnico estructurado:
+     * *Propósito de la topología.*
      * *Componentes e interfaces involucradas.*
-     * *Puntos de decisión y contingencias.*
+     * *Puntos de contingencia y failover.*
 3. **Indexación:**
-   * Inyectar el texto extraído y la descripción directamente en la ficha `.md` del diagrama para que DuckDB y el motor documental puedan encontrarlo.
+   * Inyectar automáticamente el texto y resumen extraído dentro de la ficha Markdown del diagrama para su recuperación en búsquedas.
 
 ---
 
-### Paso 4: Visualización Multimedia en la Interfaz Web (`app.py`)
-**Objetivo:** Permitir al usuario ver y explorar los diagramas directamente en la aplicación.
+### Paso 7: Galería Multimedia y Visor de Topologías Interactivo
+**Objetivo:** Ofrecer una experiencia visual inmersiva para navegar mapas de infraestructura y diagramas de procesos.
 
-1. **Renderizado en el Chat Copilot:**
-   * Cuando el usuario consulte por un proceso o arquitectura (ej. *"Muéstrame el diagrama de contingencia de WSO2"*), el asistente responderá con la explicación técnica y **la imagen embebida en el mensaje**.
-2. **Pestaña Galería de Diagramas y Procesos:**
-   * Agregar una nueva pestaña en Streamlit para navegar visualmente por todos los diagramas indexados.
-   * Filtros por categoría/subcarpeta (ej. Redes, Servidores, Middleware).
-   * Vista previa ampliada y botón para abrir la imagen original en alta resolución.
+1. **Galería Visual de Diagramas:**
+   * Cuadrícula con miniaturas (*thumbnails*), zoom interactivo en modal y filtros por dominio (Redes, Middleware, Bases de Datos).
+2. **Editor Topológico Mermaid Avanzado:**
+   * Exportación de diagramas a formatos vectoriales `.svg` y sincronización bidireccional entre el código Mermaid y el inventario DuckDB.
 
 ---
 
-### Paso 5: Sincronización Automática con Unidades de Red (Servicio Programado)
-**Objetivo:** Mantener el repositorio siempre actualizado sin intervención manual cada vez que un ingeniero guarde un nuevo archivo en el servidor de archivos.
+### Paso 8: Demonio de Sincronización Automática con Carpetas de Red
+**Objetivo:** Mantener el Copilot sincronizado automáticamente con repositorios corporativos compartidos (`Z:\` o rutas UNC) en segundo plano.
 
-1. **Script de Tarea Programada (Windows Task Scheduler / Cron):**
-   * Ejecución cada 30 o 60 minutos: `python batch_ingest.py --origen Z:\Infraestructura\Docs`.
-2. **Alertamiento de Ingesta:**
-   * Resumen automático en el log y notificación de nuevos documentos agregados al Copilot.mágenes procesadas y tiempo transcurrido.
+1. **Tarea Programada / Background Watcher:**
+   * Script demonio que detecta nuevos archivos depositados en carpetas de red, ejecuta la ingesta incremental multihilo y notifica en el log de auditoría.
+2. **Reportes de Ingesta:**
+   * Resumen automático de archivos nuevos, modificados e ignorados con sus firmas SHA-256.
 
 ---
 
-## [TECNOLOGÍAS Y DEPENDENCIAS] Tecnologías y Dependencias Necesarias para los Siguientes Pasos
+## 3. Matriz de Tecnologías Planificadas
 
 | Componente | Librería / Herramienta | Propósito |
 | :--- | :--- | :--- |
-| **Copia y Manejo de Assets** | `shutil` (Nativo de Python) | Mover y versionar imágenes en `data/docs/assets/` |
-| **OCR Local** | `easyocr` o `pytesseract` | Extraer texto de imágenes sin conexión |
-| **Visión IA (Opcional)** | `openai` (Vision API) o `ollama` | Describir flujos y diagramas complejos con IA |
-| **Visualización Web** | `streamlit` (`st.image`) | Renderizar diagramas en chat y galería |
+| **Componentes de UI** | `streamlit-antd-components` | Segmented controls, chips de categorías y barras de progreso por pasos |
+| **OCR Local** | `easyocr` / `pytesseract` | Extracción de texto en diagramas de red sin conexión |
+| **Visión Multimodal** | `google-genai` (Gemini Vision) | Interpretación semántica de diagramas de arquitectura |
+| **Topologías** | `Mermaid.js` | Diagramas interactivos y mapas jerárquicos L1-L4 |
+| **Automatización** | Windows Task Scheduler / Python `watchdog` | Sincronización desasistida en segundo plano |
