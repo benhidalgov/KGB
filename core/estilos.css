@@ -429,10 +429,61 @@ code, pre {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* 14. Reglas Responsivas */
+/* 14. Navbar Corporativa y Stat Chips */
+.navbar-stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(128, 128, 128, 0.07);
+    border: 1px solid rgba(128, 128, 128, 0.22);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.navbar-stat-chip:hover {
+    border-color: rgba(59, 130, 246, 0.45);
+    background-color: rgba(59, 130, 246, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-stat-label {
+    opacity: 0.85;
+    font-size: 0.86rem;
+    font-weight: 500;
+}
+
+.navbar-stat-value-ok {
+    background-color: rgba(16, 185, 129, 0.18);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.navbar-stat-value-info {
+    background-color: rgba(59, 130, 246, 0.18);
+    color: #3B82F6;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.navbar-divider {
+    border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+    margin: 8px 0 16px 0;
+}
+
+/* 15. Reglas Responsivas */
 @media (max-width: 992px) {
     .main-title {
-        font-size: 1.5rem !important;
+        font-size: 1.3rem !important;
     }
     .sub-title {
         font-size: 0.85rem !important;
@@ -441,7 +492,7 @@ code, pre {
 
 @media (max-width: 768px) {
     .main-title {
-        font-size: 1.3rem !important;
+        font-size: 1.15rem !important;
     }
     .sub-title {
         font-size: 0.8rem !important;

@@ -101,20 +101,7 @@ cargar_documentos_locales(st.session_state.doc_store)
 
 # 3. Sidebar (Panel de Control e Ingesta)
 with st.sidebar:
-    st.markdown("### Navegación Principal")
-    vista_seleccionada = sac.segmented(
-        items=[
-            sac.SegmentedItem(label="Consola"),
-            sac.SegmentedItem(label="Manual de Uso"),
-        ],
-        size="sm",
-        align="start",
-        key="sb_nav_view_selector"
-    )
-    if not vista_seleccionada:
-        vista_seleccionada = "Consola"
-
-    st.markdown("---")
+    st.markdown("### Panel de Ingesta y Operaciones")
 
     # Ingesta de Archivos
     st.markdown("#### Subir Archivo/s")
@@ -342,23 +329,33 @@ with st.sidebar:
 """, unsafe_allow_html=True)
 
 
-# Verificación de Vista Seleccionada en Barra Lateral
-if "Manual" in str(vista_seleccionada):
-    renderizar_manual_usuario()
-    st.stop()
+# 4. Navbar Corporativa Superior
+col_brand, col_nav_mode, col_stats = st.columns([2.4, 1.8, 2.8], gap="medium")
 
+with col_brand:
+    st.markdown("""
+    <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
+        <span class="main-title" style="margin: 0; font-size: 1.3rem;">Documentador</span>
+        <span class="badge-info" style="font-size: 0.75rem; padding: 2px 7px;">[DOCS]</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-# 4. Encabezado Principal
-col_title, col_stat_docs, col_stat_csv = st.columns([2.6, 1.2, 1.2])
-with col_title:
-    st.markdown('<p class="main-title">Copilot de Infraestructura y Operaciones</p>',
-                unsafe_allow_html=True)
+with col_nav_mode:
+    vista_seleccionada = sac.segmented(
+        items=[
+            sac.SegmentedItem(label="Consola"),
+            sac.SegmentedItem(label="Manual"),
+        ],
+        size="sm",
+        align="center",
+        use_container_width=True,
+        key="top_navbar_view_selector"
+    )
+    if not vista_seleccionada:
+        vista_seleccionada = "Consola"
 
-with col_stat_docs:
+with col_stats:
     cant_docs = len(st.session_state.doc_store)
-    st.metric("Documentos Indexados", f"{cant_docs} Archivos")
-
-with col_stat_csv:
     total_srvs = 0
     if os.path.exists(CSV_PATH):
         try:
@@ -366,18 +363,37 @@ with col_stat_csv:
             total_srvs = len(df_tot)
         except Exception:
             pass
-    st.metric("Inventario / CMDB", f"{total_srvs} Registros")
+
+    st.markdown(f"""
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; height: 100%;">
+        <div class="navbar-stat-chip">
+            <span class="navbar-stat-label">Documentos:</span>
+            <span class="navbar-stat-value-ok">{cant_docs}</span>
+        </div>
+        <div class="navbar-stat-chip">
+            <span class="navbar-stat-label">Inventario CMDB:</span>
+            <span class="navbar-stat-value-info">{total_srvs}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown('<div class="navbar-divider"></div>', unsafe_allow_html=True)
+
+# Verificación de Vista Seleccionada en Navbar
+if "Manual" in str(vista_seleccionada):
+    renderizar_manual_usuario()
+    st.stop()
 
 
 # 5. Pestañas Principales
 tab_chat, tab_analytics, tab_docs, tab_templates = st.tabs([
-    "Consultar dudas (Buscar por palabras)",
-    "Historial de Mantenimientos",
-    "Documentacion Tecnica",
-    "Plantillas de documentación"
+    "Consultas y Búsqueda",
+    f"Historial de Mantenimientos ({total_srvs})",
+    f"Documentación Técnica ({cant_docs})",
+    "Plantillas y Runbooks"
 ])
 
-# ----------------- TAB 1: BUSCADOR Y ASISTENTE AIOPS -----------------
+# ----------------- TAB 1: BUSCADOR Y ASISTENTE  -----------------
 with tab_chat:
     # 1. Barra de Búsqueda Superior (Always on Top)
     with st.form(key="top_search_form", clear_on_submit=True):
@@ -435,7 +451,7 @@ with tab_chat:
         st.markdown(
             '<div class="search-result-card">'
             '<div class="search-header-row">'
-            '<div><span class="badge-info">[Consola de Búsqueda AIOps]</span> <span class="search-doc-title" style="margin-left: 8px;">Búsqueda Unificada de Infraestructura y Procedimientos</span></div>'
+            '<div><span class="badge-info">Consola de Búsqueda</span> <span class="search-doc-title" style="margin-left: 8px;">Búsqueda Unificada de Infraestructura y Procedimientos</span></div>'
             '<div><span class="badge-ok">[Motor Activo]</span></div>'
             '</div>'
             '<div style="font-size: 0.88rem; line-height: 1.6;">'
