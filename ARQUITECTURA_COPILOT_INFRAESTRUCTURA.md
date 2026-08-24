@@ -104,7 +104,7 @@ Para resolver el punto ciego de los RAGs vectoriales tradicionales al procesar i
 
 ```text
 Prototipo/
-├── app.py                             # Aplicacion interactiva Streamlit (Pestanas de Chat, Analitica, Docs, Plantillas)
+├── app.py                             # Aplicacion interactiva Streamlit (Navbar flotante y 4 Pestanas)
 ├── batch_ingest.py                    # Worker de conversion masiva multihilo con cache SHA-256
 ├── excel_cleaner.py                   # Motor de extraccion y limpieza de CMDBs y libros Excel
 ├── requirements.txt                   # Dependencias del entorno virtual (DuckDB, Pandas, MarkItDown, Google-GenAI)
@@ -119,30 +119,22 @@ Prototipo/
 │   ├── configuracion.py               # Rutas globales de datos y archivos del sistema
 │   ├── estilos.py                     # Cargador dinamico de reglas visuales CSS
 │   ├── estilos.css                    # Hoja de estilos CSS pura desacoplada (Theme-Safe)
+│   ├── manual.py                      # Guia interactiva y manual rapido del usuario
 │   ├── motor.py                       # Motor analitico DuckDB, busqueda y Copilot
-│   ├── procesador.py                  # Ingesta y lectura multiformato (MarkItDown, Excel)
 │   ├── plantillas.py                  # Generador oficial de plantillas y Runbooks
-│   └── topologia.py                   # Diagrama Mermaid y especificacion de capas
+│   ├── procesador.py                  # Ingesta y lectura multiformato (MarkItDown, Excel)
+│   ├── topologia.py                   # Diagrama Mermaid y especificacion de capas
+│   └── visor.py                       # Visor Lado a Lado (Side-by-Side) y renderizado adaptativo
 └── data/
     ├── mantenimientos.csv             # Base estructurada de inventario y mantenimientos
     ├── ingestion_manifest.json        # Manifiesto de firmas SHA-256 de archivos procesados
     ├── audit_log.json                 # Registro centralizado de auditoria y trazabilidad global
+    ├── plantillas_custom.json         # Catalogo persistente de tipos de procedimientos creados
     ├── inbox/                         # Carpeta de entrada para ingesta masiva desatendida
+    ├── originals/                     # Copias binarias inmutables de archivos originales
     ├── history/                       # Repositorio inmutable de snapshots versionados (v1, v2...)
     └── docs/                          # Repositorio de documentacion tecnica indexada
-        ├── ficha_tecnica_BALANCER001.md
-        ├── datacenter_chasis_blade_hpe.md
-        ├── almacenamiento_san_purestorage.md
-        ├── vmware_vcloud_redes_nsx.md
-        ├── politicas_backup_veeam.md
-        ├── wso2_tuning_optimizacion_threads.md
-        ├── redis_cluster_cache_failover.md
-        ├── booking_engine_arquitectura_servicios.md
-        ├── incident_management_postmortem_p1.md
-        ├── matriz_alertamiento_nagios_newrelic.md
-        ├── politicas_seguridad_auditoria_devops.md
-        ├── manual_contingencia_wso2.md
-        └── procedimiento_rollback_booking.md
+        └── assets/                    # Repositorio de imagenes y diagramas graficos
 ```
 
 ---

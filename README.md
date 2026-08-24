@@ -119,7 +119,16 @@ El dashboard se abrirá automáticamente en el navegador en `http://localhost:85
 
 ## 4. Manual de Uso por Módulo
 
-### 4.1 Panel Lateral (Sidebar)
+### 4.1 Navbar Superior Flotante y Modos de Vista
+* **Brand e Indicador ONLINE:** Muestra el título corporativo `Copilot de Infraestructura [Consola]` y el indicador de servicio activo `● ONLINE`.
+* **Selector de Modo de Vista:** Permite alternar con un clic entre:
+  * **[Consola]:** Vista operativa con las 4 pestañas de búsqueda, analítica, documentación y runbooks.
+  * **[Manual de Uso]:** Guía interactiva paso a paso basada en el módulo [`core/manual.py`](file:///C:/Prototipo/core/manual.py).
+* **KPI Stat Chips:** Micro-tarjetas ampliadas que reportan en vivo la cantidad de documentos indexados (`[23]`) y registros CMDB (`[10]`).
+
+---
+
+### 4.2 Panel Lateral (Sidebar de Ingesta y Operaciones)
 1. **Subida de Archivos:**
    * Arrastre uno o varios archivos (`.pdf`, `.docx`, `.xlsx`, `.xls`, `.csv`, `.txt`, `.md`, `.pptx`, `.png`, `.jpg`, `.svg`).
    * El sistema detecta el tipo de archivo, guarda una copia binaria en `data/originals/`, almacena las imágenes en `data/docs/assets/`, genera la ficha Markdown normalizada en `data/docs/` y registra la versión inicial `v1`.
@@ -131,15 +140,15 @@ El dashboard se abrirá automáticamente en el navegador en `http://localhost:85
 
 ---
 
-### 4.2 Pestaña 1: Consultar dudas (Buscar por palabras)
-* **Función:** Asistente conversacional de operaciones con búsqueda híbrida.
+### 4.3 Pestaña 1: Consultas y Búsqueda
+* **Función:** Asistente conversacional de operaciones con búsqueda híbrida y barra *Always On-Top*.
 * **Modo de Uso:**
-  1. Ingrese una consulta técnica en el campo de texto inferior (ej. *"¿Cuál es la IP y estado de BALANCER001?"*, *"Procedimiento de contingencia WSO2"* o *"SN-8842-A"*).
-  2. El asistente correlaciona DuckDB y los documentos indexados, respondiendo con tablas de atributos, fragmentos de procedimientos y enlaces a diagramas.
+  1. Ingrese una consulta técnica en el campo de texto superior (ej. *"¿Cuál es la IP y estado de BALANCER001?"*, *"Procedimiento de contingencia WSO2"* o *"SN-8842-A"*), o seleccione un chip de consulta rápida (`BALANCER001`, `Autenticación JWT`, `10.24.0.125`, `Failover Redis`, `SN-8842-A`).
+  2. El asistente correlaciona DuckDB y los documentos indexados, respondiendo con tarjetas estructuradas, bordes laterales de color temático (*Verde para CMDB, Índigo para Documentos*), tablas de atributos y fragmentos con resaltado automático de términos.
 
 ---
 
-### 4.3 Pestaña 2: Historial de Mantenimientos
+### 4.4 Pestaña 2: Historial de Mantenimientos
 * **Función:** Motor analítico SQL sobre el inventario y mantenimientos de servidores.
 * **Modo de Uso:**
   1. Utilice los filtros superiores para acotar por **Nivel de Arquitectura** (L1 a L4), **Estado Operativo** (Operativo, En Revisión, Crítico) o **Técnico**.
@@ -147,7 +156,7 @@ El dashboard se abrirá automáticamente en el navegador en `http://localhost:85
 
 ---
 
-### 4.4 Pestaña 3: Documentación Técnica y Versionado
+### 4.5 Pestaña 3: Documentación Técnica y Versionado
 * **Función:** Repositorio central de manuales, diagramas de topología, CMDBs, edición en vivo y auditoría.
 * **Modo de Uso:**
 
@@ -171,7 +180,7 @@ El dashboard se abrirá automáticamente en el navegador en `http://localhost:85
 
 ---
 
-### 4.5 Pestaña 4: Plantillas de Documentación y Runbooks
+### 4.6 Pestaña 4: Plantillas y Runbooks
 * **Función:** Generador de procedimientos técnicos estandarizados y creador de nuevos tipos de plantillas.
 * **Modo de Uso:**
   1. En **Tipo de Procedimiento**, seleccione una plantilla oficial (Rollback, Despliegue, Postmortem P1, Microservicio, Contingencia, Parchado, Certificados SSL, DRP, Backup BD) o elija `[+ Crear Nuevo Tipo de Procedimiento...]`.
@@ -182,7 +191,7 @@ El dashboard se abrirá automáticamente en el navegador en `http://localhost:85
 
 ---
 
-### 4.6 Ingesta Masiva por Lote (`batch_ingest.py`)
+### 4.7 Ingesta Masiva por Lote (`batch_ingest.py`)
 Para procesar cientos de documentos o sincronizar con una carpeta de red compartida (`Z:\`):
 
 ```cmd
