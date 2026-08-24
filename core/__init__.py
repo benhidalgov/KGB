@@ -26,6 +26,7 @@ from core.auditoria import (
     obtener_todos_los_eventos_auditoria,
     generar_timeline_versiones_html,
     registrar_evento_auditoria,
+    obtener_fecha_carga_documento,
 )
 from core.motor import (
     ejecutar_consulta_sql,

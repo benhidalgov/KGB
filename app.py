@@ -37,6 +37,7 @@ from core.auditoria import (
     generar_diff_lado_a_lado_html,
     obtener_todos_los_eventos_auditoria,
     generar_timeline_versiones_html,
+    obtener_fecha_carga_documento,
 )
 from core.estilos import cargar_estilos_css
 from core.configuracion import (
@@ -52,6 +53,7 @@ import os
 import re
 import shutil
 import importlib
+import datetime
 import duckdb
 import pandas as pd
 import streamlit as st
@@ -284,7 +286,8 @@ with st.sidebar:
                     else:
                         tag = "[Txt]"
                     size_kb = len(st.session_state.doc_store[d]) / 1024
-                    st.markdown(f"`{tag}` **{d}** *({size_kb:.1f} KB)*")
+                    f_d = obtener_fecha_carga_documento(d)
+                    st.markdown(f"`{tag}` **{d}** <span style='font-size: 0.75rem; opacity: 0.7;'>({f_d.strftime('%Y-%m-%d')} · {size_kb:.1f} KB)</span>", unsafe_allow_html=True)
             else:
                 st.caption("No hay documentos que coincidan con el filtro.")
     else:
@@ -489,9 +492,25 @@ with tab_chat:
 with tab_analytics:
     st.subheader("Motor SQL DuckDB - Historial de Mantenimientos e Inventario")
     st.caption(
-        "Consultas analíticas estructuradas con filtrado de alto rendimiento.")
+        "Consultas analíticas estructuradas con filtrado multidimensional por fecha, nivel, estado y técnico.")
 
-    col_f1, col_f2, col_f3 = st.columns(3)
+    # Límites temporales desde el dataset
+    min_date = datetime.date(2026, 1, 1)
+    max_date = datetime.date(2026, 12, 31)
+    if os.path.exists(CSV_PATH):
+        try:
+            df_fechas = pd.read_csv(CSV_PATH)
+            df_fechas['fecha_dt'] = pd.to_datetime(df_fechas['fecha'], errors='coerce')
+            val_min = df_fechas['fecha_dt'].min()
+            val_max = df_fechas['fecha_dt'].max()
+            if pd.notnull(val_min):
+                min_date = val_min.date()
+            if pd.notnull(val_max):
+                max_date = val_max.date()
+        except Exception:
+            pass
+
+    col_f1, col_f2, col_f3, col_f4 = st.columns([1.2, 1.1, 1.2, 1.5], gap="small")
     with col_f1:
         filtro_nivel = st.selectbox("Nivel de Arquitectura", [
                                     "Todos", "L1 - Hardware", "L2 - Virtualización", "L3 - Middleware", "L4 - Aplicación"])
@@ -499,7 +518,15 @@ with tab_analytics:
         filtro_estado = st.selectbox(
             "Estado Operativo", ["Todos", "Operativo", "En Revision", "Critico"])
     with col_f3:
-        filtro_tec = st.text_input("Filtrar por Tecnico")
+        filtro_tec = st.text_input("Filtrar por Técnico", placeholder="Nombre del técnico...")
+    with col_f4:
+        rango_fechas = st.date_input(
+            "Rango de Fechas:",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date,
+            key="filtro_rango_fechas_mantenimientos"
+        )
 
     condiciones = ["1=1"]
     if filtro_nivel != "Todos":
@@ -510,8 +537,20 @@ with tab_analytics:
         condiciones.append(
             f"LOWER(tecnico) LIKE LOWER('%{filtro_tec.strip()}%')")
 
+    if isinstance(rango_fechas, (tuple, list)):
+        if len(rango_fechas) == 2:
+            f_ini, f_fin = rango_fechas
+            condiciones.append(f"fecha >= '{f_ini.strftime('%Y-%m-%d')}' AND fecha <= '{f_fin.strftime('%Y-%m-%d')}'")
+        elif len(rango_fechas) == 1:
+            f_ini = rango_fechas[0]
+            condiciones.append(f"fecha >= '{f_ini.strftime('%Y-%m-%d')}'")
+    elif isinstance(rango_fechas, datetime.date):
+        condiciones.append(f"fecha = '{rango_fechas.strftime('%Y-%m-%d')}'")
+
     sql_query = f"SELECT * FROM read_csv_auto('{CSV_PATH}') WHERE {' AND '.join(condiciones)} ORDER BY fecha DESC"
     df_filtrado = duckdb.sql(sql_query).df()
+
+    st.markdown(f"<div style='font-size: 0.85rem; margin-bottom: 6px; font-weight: 500;'><span class='badge-info'>{len(df_filtrado)} registros coincidentes</span></div>", unsafe_allow_html=True)
     st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
 
     with st.expander("Ejecutar Consulta SQL Personalizada"):
@@ -531,7 +570,13 @@ with tab_docs:
         "Manuales de contingencia, procedimientos operativos, visor Lado a Lado (Side-by-Side) y control de cambios.")
 
     if st.session_state.doc_store:
-        col_tipo_t4, col_doc_sel, col_info = st.columns([1.3, 2.4, 1.3])
+        # Mapa de fechas de carga / indexación
+        mapa_fechas_docs = {d: obtener_fecha_carga_documento(d) for d in st.session_state.doc_store.keys()}
+        fechas_validas = [f for f in mapa_fechas_docs.values() if f]
+        min_doc_date = min(fechas_validas) if fechas_validas else datetime.date.today()
+        max_doc_date = max(fechas_validas) if fechas_validas else datetime.date.today()
+
+        col_tipo_t4, col_fecha_t4, col_doc_sel = st.columns([1.1, 1.3, 2.2], gap="small")
         with col_tipo_t4:
             filtro_t4 = st.selectbox(
                 "Tipo de Documento",
@@ -543,6 +588,15 @@ with tab_docs:
                     "Markdown / Texto (.md, .txt)"
                 ],
                 key="tab4_type_selector"
+            )
+
+        with col_fecha_t4:
+            rango_fecha_doc = st.date_input(
+                "Fecha de Carga / Modificación:",
+                value=(min_doc_date, max_doc_date),
+                min_value=min_doc_date,
+                max_value=max_doc_date,
+                key="tab4_date_range_selector"
             )
 
         docs_disponibles_t4 = []
@@ -558,15 +612,29 @@ with tab_docs:
                 continue
             if filtro_t4.startswith("Markdown") and (es_diag or ext not in ('.md', '.txt', '.csv')):
                 continue
+
+            # Filtrar por fecha de carga / modificacion
+            f_doc = mapa_fechas_docs.get(d)
+            if f_doc:
+                if isinstance(rango_fecha_doc, (tuple, list)) and len(rango_fecha_doc) == 2:
+                    if not (rango_fecha_doc[0] <= f_doc <= rango_fecha_doc[1]):
+                        continue
+                elif isinstance(rango_fecha_doc, datetime.date):
+                    if f_doc != rango_fecha_doc:
+                        continue
+
             docs_disponibles_t4.append(d)
 
         with col_doc_sel:
             if docs_disponibles_t4:
                 doc_seleccionado = st.selectbox(
-                    "Seleccione Documento", docs_disponibles_t4, key="tab4_doc_selector")
+                    f"Seleccione Documento ({len(docs_disponibles_t4)} disponibles)",
+                    docs_disponibles_t4,
+                    key="tab4_doc_selector"
+                )
             else:
                 doc_seleccionado = None
-                st.warning("No hay documentos para el filtro seleccionado.")
+                st.warning("No hay documentos que coincidan con el tipo y rango de fechas seleccionados.")
 
         if doc_seleccionado:
             doc_content = st.session_state.doc_store.get(doc_seleccionado, "")
@@ -575,15 +643,18 @@ with tab_docs:
             ultima_version = len(historial)
             ultimo_editor = historial[-1]["autor"] if historial else "Desconocido"
             ultimo_timestamp = historial[-1]["timestamp"] if historial else "N/A"
+            fecha_carga_inicial = historial[0]["timestamp"] if historial else "N/A"
+            fecha_carga_corta = fecha_carga_inicial.split()[0] if " " in fecha_carga_inicial else fecha_carga_inicial
             ruta_original = obtener_ruta_original(
                 doc_seleccionado, doc_content)
 
             st.markdown(f"""
-<div style="background-color: rgba(128, 128, 128, 0.08); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 6px; padding: 6px 12px; margin-bottom: 10px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
-    <div><b>Documento:</b> <span style="color:#38BDF8; font-family: monospace;">{doc_seleccionado}</span></div>
+<div style="background-color: rgba(128, 128, 128, 0.08); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 6px; padding: 8px 14px; margin-bottom: 12px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div><b>Documento:</b> <span style="color:#6366F1; font-weight: 600; font-family: monospace;">{doc_seleccionado}</span></div>
     <div><b>Versión Activa:</b> <span class="badge-ok">v{ultima_version}</span></div>
-    <div><b>Autor:</b> <span style="color:#34D399;">{ultimo_editor}</span></div>
-    <div><b>Última actualización:</b> <span style="opacity: 0.7;">{ultimo_timestamp}</span></div>
+    <div><b>Fecha de Carga:</b> <span class="badge-tag">[{fecha_carga_corta}]</span></div>
+    <div><b>Último Editor:</b> <span style="color:#10B981; font-weight: 500;">{ultimo_editor}</span></div>
+    <div><b>Actualizado:</b> <span style="opacity: 0.75;">{ultimo_timestamp}</span></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -934,20 +1005,38 @@ with tab_docs:
                     eventos_globales = obtener_todos_los_eventos_auditoria()
                     if eventos_globales:
                         df_aud = pd.DataFrame(eventos_globales)
-                        col_fa, col_fd = st.columns([1, 2])
+                        df_aud["fecha_dt"] = pd.to_datetime(df_aud["timestamp"], errors="coerce")
+                        min_d_aud = df_aud["fecha_dt"].min().date() if not df_aud["fecha_dt"].dropna().empty else datetime.date.today()
+                        max_d_aud = df_aud["fecha_dt"].max().date() if not df_aud["fecha_dt"].dropna().empty else datetime.date.today()
+
+                        col_fa, col_fd, col_fdate = st.columns([1.1, 1.4, 1.5])
                         with col_fa:
                             acciones_disp = ["Todas"] + sorted(list(set(df_aud["accion"].dropna().unique())))
                             filtro_acc = st.selectbox("Filtrar por Acción:", acciones_disp, key=f"filter_aud_acc_s_{doc_seleccionado}")
                         with col_fd:
                             docs_disp = ["Todos los Documentos", f"Solo este documento ({doc_seleccionado})"]
                             filtro_doc_aud = st.selectbox("Filtrar por Documento:", docs_disp, key=f"filter_aud_doc_s_{doc_seleccionado}")
+                        with col_fdate:
+                            rango_aud_fecha = st.date_input(
+                                "Rango de Fechas:",
+                                value=(min_d_aud, max_d_aud),
+                                min_value=min_d_aud,
+                                max_value=max_d_aud,
+                                key=f"filter_aud_date_s_{doc_seleccionado}"
+                            )
 
                         df_aud_filtrado = df_aud.copy()
                         if filtro_acc != "Todas":
                             df_aud_filtrado = df_aud_filtrado[df_aud_filtrado["accion"] == filtro_acc]
                         if filtro_doc_aud.startswith("Solo este"):
                             df_aud_filtrado = df_aud_filtrado[df_aud_filtrado["documento"] == doc_seleccionado]
+                        if isinstance(rango_aud_fecha, (tuple, list)) and len(rango_aud_fecha) == 2:
+                            fa_ini, fa_fin = rango_aud_fecha
+                            df_aud_filtrado = df_aud_filtrado[(df_aud_filtrado["fecha_dt"].dt.date >= fa_ini) & (df_aud_filtrado["fecha_dt"].dt.date <= fa_fin)]
+                        elif isinstance(rango_aud_fecha, datetime.date):
+                            df_aud_filtrado = df_aud_filtrado[df_aud_filtrado["fecha_dt"].dt.date == rango_aud_fecha]
 
+                        st.markdown(f"<div style='font-size: 0.82rem; margin-bottom: 6px; font-weight: 500;'><span class='badge-info'>{len(df_aud_filtrado)} eventos de auditoría</span></div>", unsafe_allow_html=True)
                         df_aud_display = df_aud_filtrado[["timestamp", "documento", "accion", "version_anterior", "version_nueva", "editor_responsable", "motivo_justificacion"]]
                         df_aud_display.columns = ["Timestamp", "Documento", "Acción", "Versión Ant.", "Versión Nueva", "Editor Responsable", "Motivo / Justificación"]
                         st.dataframe(df_aud_display, use_container_width=True, hide_index=True)

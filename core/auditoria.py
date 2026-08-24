@@ -6,7 +6,30 @@ import difflib
 from datetime import datetime
 import pandas as pd
 from excel_cleaner import procesar_excel_limpio
-from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR
+from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR
+
+
+def obtener_fecha_carga_documento(doc_name: str):
+    """Obtiene la fecha (date) de carga o creacion inicial de un documento."""
+    hist = obtener_historial_versiones(doc_name)
+    if hist and len(hist) > 0 and "timestamp" in hist[0]:
+        try:
+            ts_str = str(hist[0]["timestamp"]).strip()
+            fecha_str = ts_str.split()[0]
+            return datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        except Exception:
+            pass
+
+    for ruta_base in [DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR]:
+        p = os.path.join(ruta_base, doc_name)
+        if os.path.exists(p):
+            try:
+                mtime = os.path.getmtime(p)
+                return datetime.fromtimestamp(mtime).date()
+            except Exception:
+                pass
+
+    return datetime.now().date()
 
 
 def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, version_nueva: int, autor: str, motivo: str):
