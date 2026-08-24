@@ -198,7 +198,7 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
 
         desc_resaltada = resaltar_terminos_en_html(row['descripcion'], prompt_usuario)
 
-        tabla_html = f"""<div class="search-result-card">
+        tabla_html = f"""<div class="search-result-card" style="border-left: 3.5px solid #10B981;">
     <div class="search-header-row">
         <div>
             <span class="badge-info">[Inventario CMDB]</span>
@@ -247,7 +247,7 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
         tipo_badge = "[Diagrama]" if doc_name.startswith("DIAGRAMA__") else "[Documento]"
         score_label = "Alta" if score >= 20 else "Media"
 
-        resultado_html = f"""<div class="search-result-card">
+        resultado_html = f"""<div class="search-result-card" style="border-left: 3.5px solid #6366F1;">
     <div class="search-header-row">
         <div>
             <span class="badge-info">{tipo_badge}</span>
@@ -288,7 +288,7 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
 
     # Caso 3: Sin coincidencias
     else:
-        return f"""<div class="search-result-card" style="border-left: 3px solid #F59E0B;">
+        return f"""<div class="search-result-card" style="border-left: 3.5px solid #D97706;">
     <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">
         <span class="badge-warn">[SIN COINCIDENCIAS]</span> No se encontraron registros para: <code>{prompt_usuario}</code>
     </div>

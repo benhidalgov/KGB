@@ -329,55 +329,56 @@ with st.sidebar:
 """, unsafe_allow_html=True)
 
 
-# 4. Navbar Corporativa Superior
-col_brand, col_nav_mode, col_stats = st.columns([2.4, 1.8, 2.8], gap="medium")
+# 4. Navbar Hero Card (Barra Flotante con Relieve)
+with st.container(border=True):
+    st.markdown('<div class="navbar-anchor" style="display:none;"></div>', unsafe_allow_html=True)
+    col_brand, col_nav_mode, col_stats = st.columns([2.5, 1.8, 2.7], gap="medium")
 
-with col_brand:
-    st.markdown("""
-    <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
-        <span class="main-title" style="margin: 0; font-size: 1.3rem;">Documentador</span>
-        <span class="badge-info" style="font-size: 0.75rem; padding: 2px 7px;">[DOCS]</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_nav_mode:
-    vista_seleccionada = sac.segmented(
-        items=[
-            sac.SegmentedItem(label="Consola"),
-            sac.SegmentedItem(label="Manual"),
-        ],
-        size="sm",
-        align="center",
-        use_container_width=True,
-        key="top_navbar_view_selector"
-    )
-    if not vista_seleccionada:
-        vista_seleccionada = "Consola"
-
-with col_stats:
-    cant_docs = len(st.session_state.doc_store)
-    total_srvs = 0
-    if os.path.exists(CSV_PATH):
-        try:
-            df_tot = pd.read_csv(CSV_PATH)
-            total_srvs = len(df_tot)
-        except Exception:
-            pass
-
-    st.markdown(f"""
-    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; height: 100%;">
-        <div class="navbar-stat-chip">
-            <span class="navbar-stat-label">Documentos:</span>
-            <span class="navbar-stat-value-ok">{cant_docs}</span>
+    with col_brand:
+        st.markdown("""
+        <div class="navbar-brand-container">
+            <span class="navbar-brand-title" style="font-size: 1.25rem; font-weight: 700;">Copilot de Infraestructura</span>
+            <span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span>
+            <span class="badge-info" style="font-size: 0.72rem; padding: 2px 6px;">[Docs]</span>
         </div>
-        <div class="navbar-stat-chip">
-            <span class="navbar-stat-label">Inventario CMDB:</span>
-            <span class="navbar-stat-value-info">{total_srvs}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-st.markdown('<div class="navbar-divider"></div>', unsafe_allow_html=True)
+    with col_nav_mode:
+        vista_seleccionada = sac.segmented(
+            items=[
+                sac.SegmentedItem(label="Consola"),
+                sac.SegmentedItem(label="Manual de Uso"),
+            ],
+            size="sm",
+            align="center",
+            use_container_width=True,
+            key="top_navbar_view_selector"
+        )
+        if not vista_seleccionada:
+            vista_seleccionada = "Consola "
+
+    with col_stats:
+        cant_docs = len(st.session_state.doc_store)
+        total_srvs = 0
+        if os.path.exists(CSV_PATH):
+            try:
+                df_tot = pd.read_csv(CSV_PATH)
+                total_srvs = len(df_tot)
+            except Exception:
+                pass
+
+        st.markdown(f"""
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; height: 100%;">
+            <div class="navbar-stat-chip">
+                <span class="navbar-stat-label">Documentos:</span>
+                <span class="navbar-stat-value-ok">{cant_docs}</span>
+            </div>
+            <div class="navbar-stat-chip">
+                <span class="navbar-stat-label">Inventario CMDB:</span>
+                <span class="navbar-stat-value-info">{total_srvs}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Verificación de Vista Seleccionada en Navbar
 if "Manual" in str(vista_seleccionada):

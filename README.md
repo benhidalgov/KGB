@@ -1,4 +1,4 @@
-# Copilot de Infraestructura y Operaciones (AIOps)
+# Copilot de Infraestructura y Operaciones
 
 Asistente inteligente corporativo y motor de búsqueda dual diseñado para la gestión de infraestructura, análisis de mantenimientos en tiempo real, consulta de CMDBs, inspección visual de diagramas y topologías, edición versionada y recuperación de procedimientos técnicos operativos.
 

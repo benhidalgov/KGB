@@ -1,5 +1,5 @@
 """
-Módulo de documentación interactiva y Guía Práctica del Copilot de Infraestructura y AIOps.
+Módulo de documentación interactiva y Guía Práctica del Copilot de Infraestructura y Operaciones.
 """
 import streamlit as st
 import streamlit_antd_components as sac

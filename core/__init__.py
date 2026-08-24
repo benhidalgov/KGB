@@ -1,4 +1,4 @@
-"""Modulo core del Copilot de Infraestructura y AIOps."""
+"""Modulo core del Copilot de Infraestructura y Operaciones."""
 
 from core.topologia import TOPOLOGY_MERMAID, PLANTILLAS_DIAGRAMAS, INFRA_SPECS
 from core.configuracion import (

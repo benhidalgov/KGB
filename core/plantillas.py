@@ -94,7 +94,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 ```
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"procedimiento_rollback_{srv_clean}.md"
         return doc_md, fname
@@ -127,7 +127,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 {smoke}
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"despliegue_{srv_clean}_{version.replace('.', '_')}.md"
         return doc_md, fname
@@ -168,7 +168,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 {preventiva}
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"postmortem_{incidente_id.lower()}_{srv_clean}.md"
         return doc_md, fname
@@ -199,7 +199,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 * **Nagios / PRTG Check:** Chequeo periódico de endpoint `/health`.
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"ficha_servicio_{srv_clean}.md"
         return doc_md, fname
@@ -228,7 +228,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 ```
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"contingencia_failover_{srv_clean}.md"
         return doc_md, fname
@@ -264,7 +264,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 {rollback_parchado}
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"parchado_so_{srv_clean}.md"
         return doc_md, fname
@@ -298,7 +298,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 ```
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"renovacion_cert_{srv_clean}.md"
         return doc_md, fname
@@ -329,7 +329,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 ```
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"drp_{srv_clean}.md"
         return doc_md, fname
@@ -362,7 +362,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 ```
 
 ---
-*Documento generado mediante Plantilla Oficial de Operaciones AIOps.*
+*Documento generado mediante Plantilla Oficial de Operaciones e Infraestructura.*
 """
         fname = f"backup_restore_db_{srv_clean}.md"
         return doc_md, fname
@@ -413,7 +413,7 @@ def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, para
 {rollback_custom}
 
 ---
-*Documento generado mediante Generador de Procedimientos AIOps.*
+*Documento generado mediante Generador de Procedimientos de Infraestructura.*
 """
         tipo_slug = tipo_limpio.lower().replace(" ", "_")
         fname = f"proc_{tipo_slug}_{srv_clean}.md"

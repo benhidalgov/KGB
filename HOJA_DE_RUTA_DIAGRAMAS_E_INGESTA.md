@@ -1,6 +1,6 @@
 # Hoja de Ruta: Procesamiento de Diagramas, Ingesta y Evolución del Sistema
 
-Este documento contiene el registro de avances completados y la planificación técnica para la evolución del **Copilot de Infraestructura y AIOps**.
+Este documento contiene el registro de avances completados y la planificación técnica para la evolución del **Copilot de Infraestructura y Operaciones**.
 
 ---
 
@@ -30,20 +30,35 @@ Este documento contiene el registro de avances completados y la planificación t
   - Capacidad de definir **Nuevos Tipos de Procedimientos Personalizados** con persistencia en `data/plantillas_custom.json`.
   - Barra guiada de pasos **`sac.steps`** (Paso 1: Metadatos ──► Paso 2: Parámetros ──► Paso 3: Publicación).
 
-- [x] **Paso 5: Manual Interactivo de Operaciones y Navegación en Sidebar** *(COMPLETADO)*
-  - Módulo interactivo [`core/manual.py`](file:///C:/prototipo/core/manual.py) integrado en la barra lateral con selector `[Consola AIOps]` | `[Manual de Uso]`.
+- [x] **Paso 5: Manual Interactivo de Operaciones y Navegación Centralizada** *(COMPLETADO)*
+  - Módulo interactivo [`core/manual.py`](file:///C:/prototipo/core/manual.py) integrado con selector `[Consola]` | `[Manual de Uso]`.
   - Redacción práctica, directa y accesible sin perder el rigor técnico y respetando la regla de cero emojis.
+
+- [x] **Paso 6: Control de Versiones Incremental, Rollback y Registro de Auditoría Global** *(COMPLETADO)*
+  - Sistema de snapshots inmutables en `data/history/<doc_name>/` (`v1.md`, `v2.md`, metadata JSON y copias originales de Excel).
+  - Tabla de historial de revisiones con timestamp, editor responsable y motivo del cambio.
+  - Descarga en un clic de versiones previas tanto en formato Markdown como en libros Excel originales `.xlsx`.
+  - Mecanismo de **Rollback seguro** con validación obligatoria de editor y justificación técnica registrada en `data/audit_log.json`.
+  - Comparador Diff lado a lado y visor de auditoría global integrados en expanders limpios.
+
+- [x] **Paso 7: Navbar Superior Flotante con Relieve, Paleta Obsidian & Indigo y Estandarización Visual** *(COMPLETADO)*
+  - **Navbar Hero Card:** Contenedor superior flotante con gradiente Índigo translúcido, borde brillante y sombra de elevación moderna.
+  - Indicador de estado en tiempo real `● ONLINE` en Verde Menta Nórdico junto al Brand corporativo.
+  - **KPI Stat Chips:** Micro-tarjetas ampliadas de alta legibilidad para conteo en vivo de `Documentos` e `Inventario CMDB`.
+  - **Pestañas Dinámicas:** Estandarización de títulos con contadores automáticos (`Consultas y Búsqueda`, `Historial de Mantenimientos (10)`, `Documentación Técnica (23)`, `Plantillas y Runbooks`).
+  - **Paleta Obsidian & Indigo (Theme-Safe):** Acentos en Índigo (`#6366F1`), estados operativos `[OK]` (`#10B981`), `[WARN]` (`#D97706`), `[CRIT]` (`#E11D48`) y bordes laterales de 3.5px en tarjetas de búsqueda.
+  - **Gobernanza:** Prohibición estricta de la palabra "AIOps" y política de cero emojis en todo el proyecto.
 
 ---
 
 ## 2. Próximos Pasos y Roadmap de Desarrollo
 
-### Paso 6: Extracción de Contenido Gráfico (OCR y Visión Multimodal con IA)
+### Paso 8: Extracción de Contenido Gráfico (OCR y Visión Multimodal con IA)
 **Objetivo:** Hacer que los diagramas sean buscables por el Copilot mediante su contenido textual interno (nombres de servidores, puertos, flujos, direcciones IP dentro de la imagen).
 
 1. **Estrategia A — OCR Local (Offline / Sin costo de API):**
    * Integración de `easyocr` o `pytesseract` para extraer cajas de texto y etiquetas de topología.
-2. **Estrategia B — Visión Multimodal con Google GenAI SDK (`gemini-1.5-flash`):**
+2. **Estrategia B — Visión Multimodal con Google GenAI SDK (`gemini-2.5-flash`):**
    * Análisis automático de la arquitectura visual para generar un resumen técnico estructurado:
      * *Propósito de la topología.*
      * *Componentes e interfaces involucradas.*
@@ -53,7 +68,7 @@ Este documento contiene el registro de avances completados y la planificación t
 
 ---
 
-### Paso 7: Galería Multimedia y Visor de Topologías Interactivo
+### Paso 9: Galería Multimedia y Visor de Topologías Interactivo
 **Objetivo:** Ofrecer una experiencia visual inmersiva para navegar mapas de infraestructura y diagramas de procesos.
 
 1. **Galería Visual de Diagramas:**
@@ -63,7 +78,7 @@ Este documento contiene el registro de avances completados y la planificación t
 
 ---
 
-### Paso 8: Demonio de Sincronización Automática con Carpetas de Red
+### Paso 10: Demonio de Sincronización Automática con Carpetas de Red
 **Objetivo:** Mantener el Copilot sincronizado automáticamente con repositorios corporativos compartidos (`Z:\` o rutas UNC) en segundo plano.
 
 1. **Tarea Programada / Background Watcher:**

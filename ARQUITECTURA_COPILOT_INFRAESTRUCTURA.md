@@ -1,13 +1,13 @@
 # Arquitectura y Especificacion Tecnica: Copilot de Infraestructura y RAG Documental
 
 ## 1. Vision General del Proyecto
-Desarrollo de un asistente inteligente corporativo (**Copilot de Operaciones / AIOps**) disenado para:
+Desarrollo de un asistente inteligente corporativo (**Copilot de Infraestructura y Operaciones**) disenado para:
 1. **Unificar la documentacion tecnica:** Ingesta, indexacion y busqueda full-text en manuales, procedimientos operativos, PDFs complejos y documentos ofimaticos (Word, Excel, PowerPoint, Markdown).
 2. **Consultas analiticas de inventario y mantenimientos:** Busqueda exacta y en tiempo real de historiales de servidores por fecha, numero de serie, tecnico, direccion IP, criticidad y componentes mediante DuckDB y datos tabulares normalizados.
 3. **Mapeo de arquitectura en 4 niveles:** Comprension jerarquica y causal de dependencias entre hardware fisico, virtualizacion, middleware y aplicaciones de negocio.
 4. **Integracion con observabilidad y SLAs:** Evaluacion y correlacion de metricas de monitoreo (*Nagios, PRTG, VZOR, New Relic, vCloud Director, Azure DevOps*), tiempos de respuesta y matrices de escalamiento 7x24.
 5. **Ingesta y conversion masiva por lotes:** Procesamiento paralelo multihilo con control de inmutabilidad y firmas criptograficas SHA-256.
-6. **Interfaz corporativa Theme-Safe:** Diseno visual nativo adaptativo 100% compatible con Tema Claro (*Light*) y Tema Oscuro (*Dark*).
+6. **Interfaz corporativa Theme-Safe:** Diseno visual nativo adaptativo 100% compatible con Tema Claro (*Light*) como con Tema Oscuro (*Dark*).
 
 ---
 
@@ -104,7 +104,7 @@ Para resolver el punto ciego de los RAGs vectoriales tradicionales al procesar i
 
 ```text
 Prototipo/
-├── app.py                             # Aplicacion interactiva Streamlit (5 Tabs: Chat, Analitica, Topologia, Docs, Plantillas)
+├── app.py                             # Aplicacion interactiva Streamlit (Pestanas de Chat, Analitica, Docs, Plantillas)
 ├── batch_ingest.py                    # Worker de conversion masiva multihilo con cache SHA-256
 ├── excel_cleaner.py                   # Motor de extraccion y limpieza de CMDBs y libros Excel
 ├── requirements.txt                   # Dependencias del entorno virtual (DuckDB, Pandas, MarkItDown, Google-GenAI)
@@ -169,7 +169,7 @@ Para convertir volumenes grandes de documentos en la carpeta `data/inbox/`:
 
 | Proyecto / Framework | Organizacion | Relevancia y Comparacion |
 | :--- | :--- | :--- |
-| **HolmesGPT** | [`robusta-dev/holmesgpt`](https://github.com/robusta-dev/holmesgpt) | Asistente de investigacion de incidentes y observabilidad AIOps con LLMs. |
+| **HolmesGPT** | [`robusta-dev/holmesgpt`](https://github.com/robusta-dev/holmesgpt) | Asistente de investigacion de incidentes y observabilidad con LLMs. |
 | **Keep** | [`keephq/keep`](https://github.com/keephq/keep) | Plataforma de correlacion y gestion de alertas multimonitor (Nagios, New Relic, Datadog). |
 | **K8sGPT** | [`k8sgpt-ai/k8sgpt`](https://github.com/k8sgpt-ai/k8sgpt) | Diagnostico automatizado de infraestructura y analisis de causa raiz. |
 | **MarkItDown** | [`microsoft/markitdown`](https://github.com/microsoft/markitdown) | Motor de conversion de formatos ofimaticos a Markdown para LLMs. |
@@ -194,7 +194,7 @@ Para convertir volumenes grandes de documentos en la carpeta `data/inbox/`:
 ## 9. Plan de Integración con Google Gemini (SDK google-genai)
 
 ### 9.1 Objetivo y Arquitectura de Doble Motor
-Implementar un modo híbrido de inteligencia artificial que permita alternar de forma transparente entre el **Modo Local Autónomo (DuckDB + MarkItDown)** y el **Modo Gemini AIOps (Google GenAI SDK)** para análisis profundo de causas raíz (RCA), correlación de incidentes y síntesis técnica avanzada en lenguaje natural.
+Implementar un modo híbrido de inteligencia artificial que permita alternar de forma transparente entre el **Modo Local Autónomo (DuckDB + MarkItDown)** y el **Modo Gemini (Google GenAI SDK)** para análisis profundo de causas raíz (RCA), correlación de incidentes y síntesis técnica avanzada en lenguaje natural.
 
 ```text
 [Consulta del Usuario]
@@ -211,7 +211,7 @@ Implementar un modo híbrido de inteligencia artificial que permita alternar de 
           │
           └── [Con API Key]  ──► Google Gemini API (gemini-2.5-flash / gemini-2.0-flash)
                                     - Temperature: 0.2 (Determinista)
-                                    - System Instruction: Senior AIOps Engineer
+                                    - System Instruction: Senior Infrastructure Engineer
                                     - Grounding estricto contra alucinaciones
 ```
 
@@ -224,7 +224,7 @@ Implementar un modo híbrido de inteligencia artificial que permita alternar de 
    * Nivel 2: Archivo de configuración local `.streamlit/secrets.toml`.
    * Nivel 3: Input seguro (`type="password"`) en el panel lateral de la aplicación.
 3. **Directriz de Sistema Estricta (*System Instruction*):**
-   * Rol formal de Ingeniero Principal de AIOps de Unicard.
+   * Rol formal de Ingeniero Principal de Infraestructura y Operaciones.
    * Obligación de basar las respuestas 100% en los datos recuperados de DuckDB y `data/docs/` sin inventar información (*Zero Hallucinations*).
 4. **Fallback y Resiliencia (*Air-Gapped Ready*):**
    * Si la API Key no está configurada o se pierde la conectividad externa, el sistema responde inmediatamente mediante el motor local offline sin interrumpir la operación.
