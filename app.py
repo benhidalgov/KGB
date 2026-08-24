@@ -102,8 +102,8 @@ with st.sidebar:
     st.markdown("### Navegación Principal")
     vista_seleccionada = sac.segmented(
         items=[
-            sac.SegmentedItem(label="[Panel principal]"),
-            sac.SegmentedItem(label="[Manual de uso]"),
+            sac.SegmentedItem(label="[Consola AIOps]"),
+            sac.SegmentedItem(label="[Manual de Uso]"),
         ],
         size="sm",
         align="start",
@@ -340,7 +340,7 @@ with st.sidebar:
 
 
 # Verificación de Vista Seleccionada en Barra Lateral
-if vista_seleccionada == "[Manual de Operaciones]":
+if "Manual" in str(vista_seleccionada):
     renderizar_manual_usuario()
     st.stop()
 

@@ -1,182 +1,158 @@
 """
-Módulo de documentación interactiva y Manual de Usuario del Copilot de Infraestructura y AIOps.
+Módulo de documentación interactiva y Guía Práctica del Copilot de Infraestructura y AIOps.
 """
 import streamlit as st
 import streamlit_antd_components as sac
 
 
 def renderizar_manual_usuario():
-    """Renderiza el manual interactivo de operaciones y guía de arquitectura del sistema."""
-    st.markdown('<p class="main-title">Manual de Operaciones y Guía del Sistema</p>', unsafe_allow_html=True)
-    st.caption("Guía técnica detallada sobre las capacidades, módulos, motores de búsqueda y directrices operativas de la plataforma.")
+    """Renderiza una guía práctica, directa y sin rodeos sobre el funcionamiento del sistema."""
+    st.markdown('<p class="main-title">Guía Rápida: Cómo funciona esto y qué hace</p>', unsafe_allow_html=True)
+    st.caption("Un resumen práctico y al grano para entender cómo sacarle provecho a la plataforma sin enredarse.")
 
     tab_m1, tab_m2, tab_m3, tab_m4, tab_m5, tab_m6 = st.tabs([
-        "1. Visión General",
-        "2. Motor de Búsqueda y Score",
+        "1. ¿De qué va esto?",
+        "2. Cómo buscar y el Score",
         "3. Visor Lado a Lado",
-        "4. Versionado y Rollback",
-        "5. Plantillas y Runbooks",
-        "6. Ingesta Masiva (CLI)"
+        "4. Guardar cambios y Rollback",
+        "5. Plantillas de Runbooks",
+        "6. Carga masiva (Script)"
     ])
 
-    # ----------------- SECCIÓN 1: VISIÓN GENERAL -----------------
+    # ----------------- SECCIÓN 1: ¿DE QUÉ VA ESTO? -----------------
     with tab_m1:
-        st.subheader("1. Arquitectura y Capacidades de la Plataforma")
+        st.subheader("1. ¿Qué es esta herramienta y para qué sirve?")
 
         st.markdown("""
-El **Copilot de Infraestructura y Operaciones (AIOps)** es un sistema unificado para la gestión de activos técnicos, diagnóstico de incidentes, consulta analítica de inventarios y mantenimiento de documentación operativa.
+En corto: es un asistente para no tener que abrir 50 carpetas compartidas ni volverse loco buscando servidores en Excels viejos.
 
 ---
 
-### Módulos Principales del Sistema:
-1. **Motor de Búsqueda Dual:**
-   * **Motor Analítico DuckDB:** Consultas SQL ultrarrápidas en memoria sobre el inventario (`data/mantenimientos.csv`).
-   * **Motor Documental Full-Text:** Búsqueda normalizada por palabras clave, siglas y frases sobre manuales y procedimientos (`data/docs/`).
-2. **Visor Comparativo Lado a Lado (Side-by-Side):**
-   * Visualización simultánea de la representación Markdown indexable frente al archivo fuente original (PDF embebido, Excel interactivo, diagramas e imágenes en alta resolución).
-3. **Auditoría e Inmutabilidad:**
-   * Control estricto de versiones con snapshots inmutables (`data/history/`), registro cronológico de autor y justificación técnica en `data/audit_log.json`.
-4. **Generador de Procedimientos y Runbooks:**
-   * Asistente estructurado para crear procedimientos técnicos estandarizados y definir nuevos tipos personalizados con almacenamiento persistente.
-5. **Worker de Ingesta Masiva (`batch_ingest.py`):**
-   * Procesamiento multihilo por lotes con cálculo de firmas criptográficas **SHA-256**.
+### Lo que hace la herramienta por detrás:
+
+* **Te encuentra servidores rapido:** Busca por IP (`10.24.0.125`), hostname (`BALANCER001`), número de serie (`SN-8842-A`) o técnico en la base de datos de inventario usando **DuckDB** en memoria.
+* **Lee documentos por ti:** Extrae el texto de archivos PDF, Word, Excel, presentaciones y diagramas para que puedas buscar cosas como *"contingencia WSO2"* o *"autenticación JWT"* y te dé el párrafo exacto.
+* **Te muestra el original y la versión limpia:** Tiene un visor de dos columnas para ver el texto indexado a la izquierda y el archivo real (el PDF embebido, el Excel en cuadrícula o la imagen) a la derecha.
+* **No pierde nada (Historial y Rollback):** Cada vez que alguien edita un archivo, se guarda una versión nueva (`v1`, `v2`, `v3`). Si alguien comete un error, se vuelve a la versión anterior con un clic.
+* **Genera procedimientos en 2 minutos:** Viene con formularios para redactar rollbacks, despliegues o postmortems con formato estándar.
         """)
 
-    # ----------------- SECCIÓN 2: MOTOR DE BÚSQUEDA Y SCORE -----------------
+    # ----------------- SECCIÓN 2: CÓMO BUSCAR Y EL SCORE -----------------
     with tab_m2:
-        st.subheader("2. Motor de Búsqueda y Algoritmo de Relevancia (Score)")
+        st.subheader("2. Cómo buscar cosas y qué significa el 'Score'")
 
         st.markdown("""
-El motor de búsqueda correlaciona la base de datos estructurada con el repositorio documental técnico.
+El buscador de la primera pestaña está arriba del todo y funciona tanto con términos exactos como con búsquedas generales.
 
 ---
 
-### ¿Cómo buscar información?
-* **Por Servidor o Identificador:** Ingrese `BALANCER001`, `DB-POSTGRES-01`, `VM-BOOKING-01`.
-* **Por Número de Serie:** Ingrese `SN-8842-A`, `SN-9912-B`.
-* **Por Dirección IP:** Ingrese `10.24.0.125`, `10.24.0.126`, `10.24.0.130`.
-* **Por Tecnologías o Conceptos:** Ingrese `JWT`, `WSO2`, `Redis`, `Rollback`, `Failover`, `SSL`.
+### ¿Qué puedes escribir en la barra?
+* **Datos duros de servidores:** `10.24.0.125`, `BALANCER001`, `SN-8842-A`, `VM-BOOKING-01`.
+* **Conceptos técnicos y siglas:** `JWT`, `SSL`, `Redis`, `Rollback`, `Failover`, `PostgreSQL`, `Nagios`.
+* **Nombres de técnicos:** `Juan Pérez`, `Carlos DevOps`.
 
 ---
 
-### Algoritmo de Cálculo del Score (Puntuación de Relevancia):
-El sistema asigna una puntuación numérica a cada documento para clasificar los resultados de mayor a menor relevancia:
+### ¿Qué es el Score (puntos de coincidencia)?
+El **Score** es simplemente una nota que el motor le pone a cada documento para decidir cuál mostrarte primero:
 
-| Criterio Evaluado | Puntos Asignados | Explicación |
-| :--- | :--- | :--- |
-| **Frase Exacta en Contenido** | **+30 pts** | La consulta aparece textual y completa dentro del documento. |
-| **Coincidencia en Nombre de Archivo** | **+20 pts** | Algún término de la consulta coincide con el nombre del documento. |
-| **Frecuencia de Términos (Densidad)** | **+2 pts por aparición** | Mayor repetición de las palabras clave dentro del cuerpo del texto. |
+1. **Si coincide la frase exacta que escribiste:** Le suma **+30 puntos** (es casi seguro lo que buscas).
+2. **Si la palabra está en el nombre del archivo:** Le suma **+20 puntos**.
+3. **Por cada vez que se repite la palabra en el texto:** Suma **+2 puntos**.
 
-* **Alta Relevancia (`>= 20 pts`):** Coincidencia directa en títulos o párrafos clave.
-* **Media Relevancia (`< 20 pts`):** Coincidencia contextual o mención secundaria.
+* **Score alto (20 pts o más):** El documento habla directo de lo que preguntaste.
+* **Score medio (menos de 20 pts):** El documento lo menciona de pasada o en un párrafo secundario.
         """)
 
     # ----------------- SECCIÓN 3: VISOR LADO A LADO -----------------
     with tab_m3:
-        st.subheader("3. Visor Lado a Lado (Side-by-Side) y Renderizado Adaptativo")
+        st.subheader("3. El Visor Lado a Lado: ¿Por qué dos columnas?")
 
         st.markdown("""
-El **Visor Lado a Lado** permite verificar y comparar la versión procesada que utiliza el motor de búsqueda frente al documento binario original cargado por el equipo.
+Cuando vas a la pestaña **Documentación Técnica**, puedes comparar el archivo en dos paneles paralelos:
 
 ---
 
-### Comportamiento según el Formato del Archivo:
+### ¿Qué hay en cada columna?
+* **Columna Izquierda (Versión Markdown):** Es el texto limpio y estructurado que lee el motor de búsqueda.
+* **Columna Derecha (Archivo Original):** Es el documento real tal como fue subido:
+  * **Si es PDF:** Te abre un lector embebido para leer, hacer zoom o imprimir.
+  * **Si es Excel:** Te muestra una cuadrícula interactiva donde puedes cambiar de hoja de cálculo con un desplegable.
+  * **Si es un Diagrama o Imagen (.png, .jpg, .svg):** Te muestra la imagen en grande y te deja editar el pie de imagen (*Caption*).
+  * **Si es Word o PPTX:** Te da una ficha técnica con el botón para descargar el binario original.
 
-1. **Diagramas e Imágenes (`.png`, `.jpg`, `.svg`, `.webp`):**
-   * Se muestra la imagen en resolución completa.
-   * Cuenta con un apartado de **Pie de Imagen (*Caption*)** editable, donde se requiere obligatoriamente registrar el Editor Responsable y el Motivo del Cambio antes de guardar una nueva versión.
-   * Incluye botón para descargar la imagen original.
-
-2. **Libros de Cálculo Excel (`.xlsx`, `.xls`):**
-   * La columna derecha despliega una **cuadrícula interactiva** (`st.dataframe`) con selector de hojas de trabajo (*Sheet Selector*).
-   * La columna izquierda muestra la normalización en tablas Markdown.
-
-3. **Documentos PDF (`.pdf`):**
-   * Renderizado nativo embebido en la página mediante un `iframe` seguro en Base64.
-   * Permite lectura, zoom, impresión y búsqueda nativa dentro del PDF.
-
-4. **Documentos Ofimáticos Word / PowerPoint (`.docx`, `.pptx`):**
-   * Despliega una tarjeta de especificación técnica y botón de descarga directa del binario original resguardado en `data/originals/`.
+*Tip:* Con los botones de arriba `[Lado a Lado] | [Solo Markdown] | [Solo Formato Original]` puedes ocultar una de las columnas si quieres más espacio.
         """)
 
-    # ----------------- SECCIÓN 4: VERSIONADO Y AUDITORÍA -----------------
+    # ----------------- SECCIÓN 4: GUARDAR CAMBIOS Y ROLLBACK -----------------
     with tab_m4:
-        st.subheader("4. Control de Versiones, Diff y Rollback con Auditoría")
+        st.subheader("4. Editar, Versionar y hacer Rollback sin miedo a romper nada")
 
         st.markdown("""
-Toda modificación realizada sobre un documento técnico, libro Excel o diagrama genera una nueva versión inmutable con trazabilidad total.
+Aquí nada se sobreescribe a ciegas. Cualquier cambio que hagas genera una versión nueva con copia inmutable de respaldo.
 
 ---
 
-### Reglas de Auditoría Obligatoria:
-1. **Identificación Obligatoria:** Todo guardado o reversión exige ingresar el **Editor / Técnico Responsable (*)** y el **Motivo del Cambio (*)**.
-2. **Inmutabilidad (`data/history/`):** El estado anterior se almacena en una copia histórica inalterable (`v1`, `v2`, etc.).
-3. **Registro Central (`data/audit_log.json`):** Cada evento registra marca temporal ISO, autor, motivo, diferencias y versión resultante.
+### Reglas básicas al editar:
+* **Pon quién eres y por qué cambiaste el archivo:** Para guardar cualquier cambio (en Excel, Markdown o en el pie de un diagrama), el sistema te pide obligatoriamente el **Editor / Técnico** y el **Motivo del Cambio**.
+* **El sistema guarda snapshots:** En `data/history/` queda guardada la copia exacta de cómo estaba antes.
 
 ---
 
-### Comparador de Versiones (Diff Viewer):
-* En la subpestaña **Historial de Versiones**, seleccione dos versiones cualesquiera para inspeccionar la comparación línea por línea con sintaxis unificada `diff`.
-
----
-
-### Procedimiento de Rollback Seguro:
-1. En la subpestaña **Historial de Versiones**, seleccione la versión previa a la que desea retornar.
-2. Ingrese su nombre/rol en *Editor que ejecuta el Rollback* y la justificación técnica.
-3. Haga clic en **Confirmar y Ejecutar Rollback**. El sistema restaurará el archivo y generará una nueva versión incremental registrando el evento de restauración.
+### ¿Cómo volver atrás si un cambio falló (Rollback)?
+1. Entra al documento en **Documentación Técnica** y ve a la subpestaña **Historial de Versiones**.
+2. En el desplegable, selecciona la versión vieja que quieres restaurar (ej: `v1` o `v2`).
+3. Puedes usar el comparador de cambios (*Diff*) para ver exactamente qué líneas cambiaron.
+4. Escribe tu nombre, la justificación del rollback y dale al botón de **Confirmar y Ejecutar Rollback**.
+5. Listo: el sistema restaura el documento y crea una versión nueva registrando la reversión en el log de auditoría.
         """)
 
     # ----------------- SECCIÓN 5: PLANTILLAS Y RUNBOOKS -----------------
     with tab_m5:
-        st.subheader("5. Generador de Plantillas y Runbooks Estandarizados")
+        st.subheader("5. Plantillas: Crear procedimientos en 2 minutos")
 
         st.markdown("""
-El generador permite publicar procedimientos técnicos homologados con gobernanza operativa en menos de 2 minutos.
+En la pestaña **Plantillas de documentación**, puedes redactar manuales y runbooks sin tener que preocuparte por el formato.
 
 ---
 
-### Catálogo de Plantillas Oficiales:
-* **Procedimiento de Rollback de Emergencia:** Criterios de activación, comandos de reversión y verificación post-rollback.
-* **Paso a Producción / Despliegue CI/CD:** Variables de entorno, secrets en KeyVault y smoke tests.
-* **Reporte Postmortem / Incidente P1 (RCA):** Resumen de impacto, diagnóstico de causa raíz y medidas preventivas.
-* **Ficha Técnica de Microservicio / API:** Endpoints base, autenticación, dependencias y telemetría APM/Nagios.
-* **Guía de Contingencia y Failover Operativo:** Síntomas de falla, conmutación HAProxy y validación DNS.
-* **Procedimiento de Parchado y Mantenimiento de SO:** Alcance de parches, pasos de aplicación y plan de reversión.
-* **Renovación de Certificados SSL/TLS:** Comandos OpenSSL, instalación y validación de vigencia.
-* **Plan de Recuperación ante Desastres (DRP):** Objetivos RPO/RTO y conmutación a Datacenter DR.
-* **Plan de Respaldo y Restauración de Base de Datos:** Scripts de backup y restore.
+### ¿Cómo funciona?
+1. **Eliges el Tipo de Procedimiento:** Ya vienen listas plantillas para Rollback de emergencia, Paso a Producción, Postmortems de incidentes P1, Fichas de APIs, Contingencias, Parchado de SO, Certificados SSL, Disaster Recovery (DRP) y Backups de BD.
+2. **Llenas los campos:** Nombre del servicio, criticidad, ambiente (Producción/QA), ventana de horario y comandos.
+3. **Revisas a la derecha:** Se genera la vista previa en tiempo real.
+4. **Le das a Guardar:** El documento se guarda automáticamente en `data/docs/`, queda indexado como `v1` y el buscador ya puede responder sobre él.
 
 ---
 
-### Definición de Tipos Personalizados:
-* Al seleccionar `[+ Crear Nuevo Tipo de Procedimiento...]`, puede definir un nuevo tipo operativo y marcar la opción para guardarlo permanentemente en el catálogo (`data/plantillas_custom.json`).
+### ¿Qué pasa si necesitas un tipo de documento que no existe?
+* En el selector de tipo, eliges `[+ Crear Nuevo Tipo de Procedimiento...]`.
+* Le pones nombre (ej: *"Procedimiento de Auditoría de Accesos"*), marcas la casilla de guardar en catálogo y listo: queda guardado en `data/plantillas_custom.json` para que tú y tu equipo lo usen cuando quieran.
         """)
 
-    # ----------------- SECCIÓN 6: INGESTA MASIVA CLI -----------------
+    # ----------------- SECCIÓN 6: CARGA MASIVA CLI -----------------
     with tab_m6:
-        st.subheader("6. Worker de Ingesta Masiva Multihilo (`batch_ingest.py`)")
+        st.subheader("6. Script de carga masiva (`batch_ingest.py`)")
 
         st.markdown(r"""
-Para procesar volúmenes masivos de documentos o sincronizar periódicamente con repositorios compartidos de red:
+Si te pasaron una carpeta con 200 archivos o quieres sincronizar una unidad compartida de red (`Z:\`), no los subas uno a uno por la web. Usa el script de terminal:
 
 ---
 
-### Ejecución por Línea de Comandos:
+### Comandos directos:
 
 ```cmd
-# 1. Ingesta estándar desde la carpeta data/inbox/
+# Opción 1: Procesa todo lo que dejes dentro de la carpeta data/inbox/
 python batch_ingest.py
 
-# 2. Ingesta desde una unidad de red compartida (Z:\) o carpeta externa con 8 hilos
+# Opción 2: Procesa una carpeta de red compartida (Z:\) usando 8 hilos en paralelo
 python batch_ingest.py --origen Z:\Infraestructura\Manuales --workers 8
 ```
 
 ---
 
-### Proceso Interno de Ingesta:
-1. **Detección Recursiva:** Escanea subcarpetas buscando archivos `.pdf`, `.docx`, `.xlsx`, `.png`, `.jpg`, etc.
-2. **Firma Criptográfica SHA-256:** Compara el hash contra `data/ingestion_manifest.json` para omitir archivos sin cambios.
-3. **Resguardo de Binarios:** Copia los archivos originales a `data/originals/` y las imágenes a `data/docs/assets/`.
-4. **Normalización:** Genera las fichas Markdown en `data/docs/` listas para indexación inmediata.
+### ¿Qué hace el script?
+* Revisa todas las subcarpetas.
+* Calcula el hash criptográfico **SHA-256** de cada archivo: si el archivo no ha cambiado, se lo salta para no perder tiempo.
+* Si es una imagen, la guarda en `data/docs/assets/` y le crea su ficha `.md`.
+* Si es PDF, Word o Excel, guarda el original en `data/originals/` y genera su versión Markdown indexable en `data/docs/`.
         """)
