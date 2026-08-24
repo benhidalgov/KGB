@@ -3,18 +3,30 @@ import glob
 import time
 import hashlib
 import json
+import shutil
+import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from markitdown import MarkItDown
+from excel_cleaner import procesar_excel_limpio
+from core.configuracion import (
+    DOCS_DIR,
+    ASSETS_DIR,
+    ORIGINALS_DIR,
+    INBOX_DIR,
+    MANIFEST_PATH,
+)
+from core.procesador import (
+    IMAGE_EXTENSIONS,
+    SUPPORTED_EXTENSIONS,
+    generar_ficha_diagrama,
+)
 
-INPUT_DIR = os.path.join('data', 'inbox')
-OUTPUT_DIR = os.path.join('data', 'docs')
-MANIFEST_PATH = os.path.join('data', 'ingestion_manifest.json')
-
-SUPPORTED_EXTENSIONS = {'.pdf', '.docx', '.xlsx',
-                        '.xls', '.pptx', '.txt', '.csv', '.md'}
+INPUT_DIR = INBOX_DIR
+OUTPUT_DIR = DOCS_DIR
 
 
 def calcular_hash_archivo(filepath: str) -> str:
+    """Calcula el hash SHA-256 de un archivo en disco."""
     hasher = hashlib.sha256()
     with open(filepath, 'rb') as f:
         while chunk := f.read(65536):
@@ -23,6 +35,7 @@ def calcular_hash_archivo(filepath: str) -> str:
 
 
 def cargar_manifiesto() -> dict:
+    """Carga el manifiesto de ingesta inmutable."""
     if os.path.exists(MANIFEST_PATH):
         try:
             with open(MANIFEST_PATH, 'r', encoding='utf-8') as f:
@@ -33,14 +46,13 @@ def cargar_manifiesto() -> dict:
 
 
 def guardar_manifiesto(manifest: dict):
+    """Guarda el estado del manifiesto de ingesta."""
     with open(MANIFEST_PATH, 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
 
 
-import argparse
-from excel_cleaner import procesar_excel_limpio
-
 def procesar_un_archivo(fpath: str, rel_path: str, md_engine: MarkItDown) -> tuple[str, bool, str]:
+    """Procesa un archivo individual (documento u activo gráfico) y genera su versión Markdown."""
     fname = os.path.basename(fpath)
     ext = os.path.splitext(fname)[1].lower()
 
@@ -48,24 +60,55 @@ def procesar_un_archivo(fpath: str, rel_path: str, md_engine: MarkItDown) -> tup
         return rel_path, False, f'Extension {ext} no soportada.'
 
     try:
-        if ext in ('.xlsx', '.xls'):
+        # Asegurar copia en data/originals/
+        clean_rel = rel_path.replace(os.sep, "__").replace("/", "__")
+        orig_target_name = clean_rel
+        orig_target_path = os.path.join(ORIGINALS_DIR, orig_target_name)
+        if not os.path.exists(orig_target_path) or fpath != orig_target_path:
+            shutil.copy2(fpath, orig_target_path)
+
+        # 1. Caso de Activos Gráficos / Diagramas
+        if ext in IMAGE_EXTENSIONS:
+            asset_target = os.path.join(ASSETS_DIR, fname)
+            if not os.path.exists(asset_target) or fpath != asset_target:
+                shutil.copy2(fpath, asset_target)
+
+            fhash = calcular_hash_archivo(fpath)
+            out_name = os.path.splitext(clean_rel)[0] + '.md'
+            out_path = os.path.join(OUTPUT_DIR, out_name)
+
+            md_content = generar_ficha_diagrama(
+                image_filename=fname,
+                orig_rel_path=rel_path,
+                sha256_hash=fhash,
+                categoria=os.path.dirname(rel_path) or "General / Raiz"
+            )
+
+            with open(out_path, 'w', encoding='utf-8') as out_f:
+                out_f.write(md_content)
+
+            return rel_path, True, f'Diagrama ingestado y ficha generada en {out_name}'
+
+        # 2. Caso de Libros Excel
+        elif ext in ('.xlsx', '.xls'):
             md_content = procesar_excel_limpio(fpath)
+
+        # 3. Caso de Documentos Ofimáticos / PDFs / Markdown
+        elif ext in ('.md', '.txt', '.csv'):
+            with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
+                md_content = f.read()
         else:
             resultado = md_engine.convert(fpath)
             md_content = resultado.text_content
 
-
-        # Normalizar nombre de salida usando la ruta relativa para evitar colisiones
-        # Ej: "Redes/Cisco/manual.docx" -> "Redes__Cisco__manual.md"
-        clean_rel = rel_path.replace(os.sep, "__").replace("/", "__")
         out_name = os.path.splitext(clean_rel)[0] + '.md'
         out_path = os.path.join(OUTPUT_DIR, out_name)
 
-        # Agregar encabezado con metadatos del origen
         carpeta_origen = os.path.dirname(rel_path) or "Raiz"
         encabezado = f"""# Documento Técnico: {fname}
 * **Ubicación Origen:** `{rel_path}`
 * **Categoría / Carpeta:** `{carpeta_origen}`
+* **Archivo Original:** `data/originals/{orig_target_name}`
 
 ---
 
@@ -79,9 +122,9 @@ def procesar_un_archivo(fpath: str, rel_path: str, md_engine: MarkItDown) -> tup
 
 
 def ejecutar_conversion_masiva(directorio_origen: str = INPUT_DIR, max_workers: int = 4):
-    if not os.path.exists(directorio_origen):
-        os.makedirs(directorio_origen, exist_ok=True)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    """Ejecuta la ingesta y conversión masiva en paralelo."""
+    for d in [directorio_origen, OUTPUT_DIR, ASSETS_DIR, ORIGINALS_DIR]:
+        os.makedirs(d, exist_ok=True)
 
     manifiesto = cargar_manifiesto()
     md_engine = MarkItDown()
@@ -141,4 +184,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     ejecutar_conversion_masiva(directorio_origen=args.origen, max_workers=args.workers)
-

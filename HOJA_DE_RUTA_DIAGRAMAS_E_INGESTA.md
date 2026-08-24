@@ -11,6 +11,12 @@ Este documento contiene la planificación detallada y paso a paso para la integr
   - Metadatos de origen integrados en el encabezado de cada documento.
   - Parámetro CLI `--origen` para apuntar a carpetas locales o unidades de red (`Z:\` o `\\SMUCORPSP02\Infraestructura`).
 
+- [x] **Paso 2: Registro e Ingesta de Imágenes, Diagramas y Visor Lado a Lado** *(COMPLETADO)*
+  - Soporte de extensiones `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg` en `batch_ingest.py` y subida web.
+  - Organización de activos en `data/docs/assets/` y preservación de binarios fuente en `data/originals/`.
+  - Generación de fichas técnicas Markdown (`DIAGRAMA__*.md`) con metadatos y visualización embebida.
+  - Visor Lado a Lado (*Side-by-Side*) en Streamlit con renderizado adaptativo (Imágenes, PDF embebido, Excel interactivo).
+
 ---
 
 ## 2. Pasos Restantes
