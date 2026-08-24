@@ -22,6 +22,9 @@ from core.auditoria import (
     obtener_bytes_snapshot,
     cargar_hoja_excel_dataframe,
     generar_diff_texto,
+    generar_diff_lado_a_lado_html,
+    obtener_todos_los_eventos_auditoria,
+    generar_timeline_versiones_html,
     registrar_evento_auditoria,
 )
 from core.motor import (

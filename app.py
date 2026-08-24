@@ -1,3 +1,53 @@
+from core.visor import (
+    renderizar_lado_a_lado,
+    renderizar_original_adaptativo,
+    mostrar_pdf_embebido,
+)
+from core.plantillas import (
+    generar_doc_plantilla,
+    obtener_todos_los_tipos_plantillas,
+    guardar_plantilla_personalizada,
+    cargar_plantillas_personalizadas,
+)
+from core.topologia import TOPOLOGY_MERMAID, PLANTILLAS_DIAGRAMAS, INFRA_SPECS
+from core.procesador import (
+    IMAGE_EXTENSIONS,
+    OFFICE_EXTENSIONS,
+    SUPPORTED_EXTENSIONS,
+    cargar_documentos_locales,
+    cargar_documento_individual,
+    calcular_sha256,
+    sanitizar_nombre_descarga,
+    generar_ficha_diagrama,
+    obtener_ruta_original,
+)
+from core.motor import (
+    ejecutar_consulta_sql,
+    generar_respuesta_asistente,
+)
+from core.auditoria import (
+    obtener_historial_versiones,
+    inicializar_version_inicial_si_no_existe,
+    guardar_nueva_version,
+    guardar_nueva_version_excel,
+    obtener_contenido_version,
+    obtener_bytes_snapshot,
+    cargar_hoja_excel_dataframe,
+    generar_diff_texto,
+    generar_diff_lado_a_lado_html,
+    obtener_todos_los_eventos_auditoria,
+    generar_timeline_versiones_html,
+)
+from core.estilos import cargar_estilos_css
+from core.configuracion import (
+    CSV_PATH,
+    DOCS_DIR,
+    ASSETS_DIR,
+    ORIGINALS_DIR,
+    HISTORY_DIR,
+)
+from core.manual import renderizar_manual_usuario
+from excel_cleaner import procesar_excel_limpio
 import os
 import re
 import shutil
@@ -27,54 +77,6 @@ importlib.reload(core.plantillas)
 importlib.reload(core.visor)
 importlib.reload(core.manual)
 
-from excel_cleaner import procesar_excel_limpio
-from core.manual import renderizar_manual_usuario
-from core.configuracion import (
-    CSV_PATH,
-    DOCS_DIR,
-    ASSETS_DIR,
-    ORIGINALS_DIR,
-    HISTORY_DIR,
-)
-from core.estilos import cargar_estilos_css
-from core.auditoria import (
-    obtener_historial_versiones,
-    inicializar_version_inicial_si_no_existe,
-    guardar_nueva_version,
-    guardar_nueva_version_excel,
-    obtener_contenido_version,
-    obtener_bytes_snapshot,
-    cargar_hoja_excel_dataframe,
-    generar_diff_texto,
-)
-from core.motor import (
-    ejecutar_consulta_sql,
-    generar_respuesta_asistente,
-)
-from core.procesador import (
-    IMAGE_EXTENSIONS,
-    OFFICE_EXTENSIONS,
-    SUPPORTED_EXTENSIONS,
-    cargar_documentos_locales,
-    cargar_documento_individual,
-    calcular_sha256,
-    sanitizar_nombre_descarga,
-    generar_ficha_diagrama,
-    obtener_ruta_original,
-)
-from core.topologia import TOPOLOGY_MERMAID, PLANTILLAS_DIAGRAMAS, INFRA_SPECS
-from core.plantillas import (
-    generar_doc_plantilla,
-    obtener_todos_los_tipos_plantillas,
-    guardar_plantilla_personalizada,
-    cargar_plantillas_personalizadas,
-)
-from core.visor import (
-    renderizar_lado_a_lado,
-    renderizar_original_adaptativo,
-    mostrar_pdf_embebido,
-)
-
 
 # 1. Configuracion de Streamlit
 st.set_page_config(
@@ -102,15 +104,15 @@ with st.sidebar:
     st.markdown("### Navegación Principal")
     vista_seleccionada = sac.segmented(
         items=[
-            sac.SegmentedItem(label="[Consola AIOps]"),
-            sac.SegmentedItem(label="[Manual de Uso]"),
+            sac.SegmentedItem(label="Consola"),
+            sac.SegmentedItem(label="Manual de Uso"),
         ],
         size="sm",
         align="start",
         key="sb_nav_view_selector"
     )
     if not vista_seleccionada:
-        vista_seleccionada = "[Consola AIOps]"
+        vista_seleccionada = "Consola"
 
     st.markdown("---")
 
@@ -245,7 +247,8 @@ with st.sidebar:
             d)[1].lower() in ('.md', '.txt', '.csv') and not d.startswith("DIAGRAMA__"))
 
         with st.expander("Ver documentos cargados", expanded=False):
-            st.markdown("<div style='margin-bottom: 6px; font-size: 0.8rem; font-weight: 600;'>Filtrar por tipo:</div>", unsafe_allow_html=True)
+            st.markdown(
+                "<div style='margin-bottom: 6px; font-size: 0.8rem; font-weight: 600;'>Filtrar por tipo:</div>", unsafe_allow_html=True)
             tipo_filtro = sac.chip(
                 items=[
                     sac.ChipItem(label=f"Todos ({cant_docs})"),
@@ -386,7 +389,8 @@ with tab_chat:
                 label_visibility="collapsed"
             )
         with col_btn:
-            submitted = st.form_submit_button("Buscar", type="primary", use_container_width=True)
+            submitted = st.form_submit_button(
+                "Buscar", type="primary", use_container_width=True)
 
     # 2. Chips de consultas rápidas
     st.markdown("<div style='margin-top: -6px; margin-bottom: 8px; font-size: 0.8rem; font-weight: 600; opacity: 0.85;'>Consultas Rápidas Sugeridas:</div>", unsafe_allow_html=True)
@@ -409,11 +413,13 @@ with tab_chat:
         if st.button("SN-8842-A", use_container_width=True, key="btn_quick_sn"):
             prompt_rapido = "SN-8842-A"
 
-    query_a_ejecutar = prompt_rapido if prompt_rapido else (query_input.strip() if submitted and query_input.strip() else None)
+    query_a_ejecutar = prompt_rapido if prompt_rapido else (
+        query_input.strip() if submitted and query_input.strip() else None)
 
     if query_a_ejecutar:
         with st.spinner("Procesando consulta..."):
-            respuesta = generar_respuesta_asistente(query_a_ejecutar, st.session_state.doc_store)
+            respuesta = generar_respuesta_asistente(
+                query_a_ejecutar, st.session_state.doc_store)
             # Guardar al inicio (índice 0) para que aparezca primero arriba
             st.session_state.historial_busquedas.insert(0, {
                 "query": query_a_ejecutar,
@@ -444,7 +450,8 @@ with tab_chat:
     else:
         col_res_t, col_res_btn = st.columns([4, 1])
         with col_res_t:
-            st.markdown(f"<div style='font-size: 0.95rem; font-weight: 600;'>Historial de Resultados ({len(st.session_state.historial_busquedas)} consultas):</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='font-size: 0.95rem; font-weight: 600;'>Historial de Resultados ({len(st.session_state.historial_busquedas)} consultas):</div>", unsafe_allow_html=True)
         with col_res_btn:
             if st.button("Limpiar Resultados", use_container_width=True, key="btn_clear_search_history_top"):
                 st.session_state.historial_busquedas = []
@@ -721,102 +728,70 @@ with tab_docs:
                         st.caption(
                             "*Al guardar, la versión actual pasará al historial inmutable y el asistente Copilot responderá con la información actualizada inmediatamente.*")
 
-            # SUBTAB 3: HISTORIAL
+            # SUBTAB 3: HISTORIAL Y CONTROL DE VERSIONES
             with subtab_hist:
-                st.markdown("#### Registro Histórico y Trazabilidad")
+                st.markdown("#### Historial de Revisiones y Control de Cambios")
                 st.caption(
-                    "Historial inmutable de todas las revisiones aplicadas sobre este documento.")
+                    "Registro cronológico inmutable de revisiones, descarga de snapshots y reversión controlada (Rollback).")
 
+                # 1. Tabla de Historial
                 df_hist = pd.DataFrame(historial)[
-                    ["version", "timestamp", "autor", "comentario", "caracteres"]]
-                df_hist.columns = ["Versión", "Fecha y Hora",
-                                   "Editor / Responsable", "Motivo del Cambio", "Tamaño (caracteres)"]
-                st.dataframe(df_hist, use_container_width=True,
-                             hide_index=True)
+                    ["version", "timestamp", "autor", "comentario", "caracteres"]
+                ]
+                df_hist.columns = [
+                    "Versión",
+                    "Fecha y Hora",
+                    "Editor / Responsable",
+                    "Motivo del Cambio",
+                    "Tamaño (caracteres)"
+                ]
+                st.dataframe(df_hist, use_container_width=True, hide_index=True)
 
                 st.markdown("---")
-                st.markdown("##### Comparador Visual de Cambios (Diff)")
-                st.caption(
-                    "Compare las diferencias exactas de contenido entre dos versiones de este documento.")
 
-                if len(historial) >= 2:
-                    col_cmp1, col_cmp2 = st.columns(2)
-                    nombres_versiones = [
-                        f"v{item['version']} - {item['timestamp']} ({item['autor']})" for item in historial]
-                    mapa_versiones = {
-                        f"v{item['version']} - {item['timestamp']} ({item['autor']})": item for item in historial}
-
-                    with col_cmp1:
-                        ver_base_sel = st.selectbox(
-                            "Versión Base (Anterior):", nombres_versiones, index=0, key=f"diff_base_{doc_seleccionado}")
-                    with col_cmp2:
-                        ver_comp_sel = st.selectbox("Versión a Comparar (Nueva):", nombres_versiones, index=len(
-                            nombres_versiones) - 1, key=f"diff_comp_{doc_seleccionado}")
-
-                    item_base = mapa_versiones[ver_base_sel]
-                    item_comp = mapa_versiones[ver_comp_sel]
-
-                    texto_base = obtener_contenido_version(
-                        doc_seleccionado, item_base["archivo_snapshot"])
-                    texto_comp = obtener_contenido_version(
-                        doc_seleccionado, item_comp["archivo_snapshot"])
-
-                    diff_resultado = generar_diff_texto(
-                        texto_ant=texto_base,
-                        texto_nuevo=texto_comp,
-                        label_ant=f"v{item_base['version']} ({item_base['autor']})",
-                        label_nuevo=f"v{item_comp['version']} ({item_comp['autor']})"
-                    )
-
-                    with st.expander(f"Ver Diferencias (Diff): v{item_base['version']} vs v{item_comp['version']}", expanded=True):
-                        st.code(diff_resultado, language="diff")
-                else:
-                    st.caption(
-                        "Se requieren al menos 2 versiones para comparar diferencias.")
-
-                st.markdown("---")
-                st.markdown("##### Inspeccionar y Descargar Versión Histórica")
-                st.caption(
-                    "Seleccione cualquier versión previa para descargar su archivo snapshot o previsualizar su contenido.")
-
+                # 2. Inspección y Descarga de Versiones
+                st.markdown("##### Inspeccionar y Descargar Versión Previa")
                 opciones_versiones = {
                     f"v{item['version']} - {item['timestamp']} ({item['autor']}): {item['comentario']}": item
                     for item in reversed(historial)
                 }
 
-                v_sel_label = st.selectbox("Seleccione una versión histórica:", list(
-                    opciones_versiones.keys()), key=f"select_hist_ver_{doc_seleccionado}")
+                v_sel_label = st.selectbox(
+                    "Seleccione una versión para inspeccionar o descargar:",
+                    list(opciones_versiones.keys()),
+                    key=f"select_hist_ver_{doc_seleccionado}"
+                )
                 item_seleccionado = opciones_versiones[v_sel_label]
                 contenido_snapshot = obtener_contenido_version(
-                    doc_seleccionado, item_seleccionado["archivo_snapshot"])
+                    doc_seleccionado, item_seleccionado["archivo_snapshot"]
+                )
 
-                # Botones de Descarga por Version
                 excel_snap = item_seleccionado.get("archivo_excel_snapshot")
                 col_dl_v1, col_dl_v2 = st.columns([1, 1])
 
                 with col_dl_v1:
                     if excel_snap:
-                        excel_snap_bytes = obtener_bytes_snapshot(
-                            doc_seleccionado, excel_snap)
+                        excel_snap_bytes = obtener_bytes_snapshot(doc_seleccionado, excel_snap)
                         if excel_snap_bytes:
                             st.download_button(
                                 label=f"Descargar Versión v{item_seleccionado['version']} (.xlsx)",
                                 data=excel_snap_bytes,
                                 file_name=sanitizar_nombre_descarga(
-                                    doc_seleccionado, item_seleccionado['version'], ".xlsx"),
+                                    doc_seleccionado, item_seleccionado['version'], ".xlsx"
+                                ),
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                 use_container_width=True,
                                 key=f"btn_dl_excel_hist_{doc_seleccionado}_{item_seleccionado['version']}"
                             )
                         else:
-                            st.info(
-                                "Archivo snapshot Excel no disponible en disco.")
+                            st.info("Archivo snapshot Excel no disponible en disco.")
                     else:
                         st.download_button(
                             label=f"Descargar Versión v{item_seleccionado['version']} (.md)",
                             data=contenido_snapshot.encode("utf-8"),
                             file_name=sanitizar_nombre_descarga(
-                                doc_seleccionado, item_seleccionado['version'], ".md"),
+                                doc_seleccionado, item_seleccionado['version'], ".md"
+                            ),
                             mime="text/markdown",
                             use_container_width=True,
                             key=f"btn_dl_md_hist_{doc_seleccionado}_{item_seleccionado['version']}"
@@ -828,49 +803,57 @@ with tab_docs:
                             label=f"Descargar Representación v{item_seleccionado['version']} (.md)",
                             data=contenido_snapshot.encode("utf-8"),
                             file_name=sanitizar_nombre_descarga(
-                                doc_seleccionado, item_seleccionado['version'], ".md"),
+                                doc_seleccionado, item_seleccionado['version'], ".md"
+                            ),
                             mime="text/markdown",
                             use_container_width=True,
                             key=f"btn_dl_md_rep_{doc_seleccionado}_{item_seleccionado['version']}"
                         )
                     else:
                         st.caption(
-                            f"Snapshot inmutable generado el **{item_seleccionado['timestamp']}** por **{item_seleccionado['autor']}**.")
+                            f"Snapshot generado el **{item_seleccionado['timestamp']}** por **{item_seleccionado['autor']}**."
+                        )
 
                 with st.expander(f"Previsualizar contenido de la Versión v{item_seleccionado['version']}", expanded=False):
                     st.markdown(contenido_snapshot)
 
+                # 3. Rollback
                 if item_seleccionado["version"] != ultima_version:
-                    st.markdown(
-                        f"##### Revertir Documento a la Versión v{item_seleccionado['version']} (Rollback)")
-                    st.caption(
-                        "Para garantizar la trazabilidad corporativa, debe especificar el Editor y la justificación técnica del Rollback.")
+                    st.markdown("---")
+                    st.markdown(f"##### Revertir Documento a la Versión v{item_seleccionado['version']} (Rollback)")
+                    st.caption("Especifique el Editor responsable y la justificación técnica para mantener la trazabilidad de auditoría.")
 
                     col_rb_a, col_rb_m = st.columns([1, 2])
                     with col_rb_a:
-                        autor_rb = st.text_input("Editor / Técnico que ejecuta el Rollback (*)", placeholder="Ej: Juan Pérez / SysAdmin",
-                                                 key=f"author_rb_{doc_seleccionado}_{item_seleccionado['version']}")
+                        autor_rb = st.text_input(
+                            "Editor / Técnico que ejecuta el Rollback (*)",
+                            placeholder="Ej: Juan Pérez / SysAdmin",
+                            key=f"author_rb_{doc_seleccionado}_{item_seleccionado['version']}"
+                        )
                     with col_rb_m:
-                        motivo_rb = st.text_input("Motivo o Justificación del Rollback (*)",
-                                                  placeholder=f"Ej: Reversión por inconsistencia en v{ultima_version}", key=f"motive_rb_{doc_seleccionado}_{item_seleccionado['version']}")
+                        motivo_rb = st.text_input(
+                            "Motivo o Justificación del Rollback (*)",
+                            placeholder=f"Ej: Reversión por inconsistencia en v{ultima_version}",
+                            key=f"motive_rb_{doc_seleccionado}_{item_seleccionado['version']}"
+                        )
 
-                    if st.button(f"Confirmar y Ejecutar Rollback a la Versión v{item_seleccionado['version']}", type="primary", key=f"btn_confirm_rollback_{doc_seleccionado}_{item_seleccionado['version']}"):
+                    if st.button(
+                        f"Confirmar y Ejecutar Rollback a la Versión v{item_seleccionado['version']}",
+                        type="primary",
+                        key=f"btn_confirm_rollback_{doc_seleccionado}_{item_seleccionado['version']}"
+                    ):
                         if not autor_rb or not autor_rb.strip():
-                            st.error(
-                                "Error de Auditoría: Debe ingresar el Editor / Técnico responsable de ejecutar el Rollback.")
+                            st.error("Error de Auditoría: Debe ingresar el Editor / Técnico responsable de ejecutar el Rollback.")
                         elif not motivo_rb or not motivo_rb.strip():
-                            st.error(
-                                "Error de Auditoría: Debe ingresar la justificación técnica del Rollback.")
+                            st.error("Error de Auditoría: Debe ingresar la justificación técnica del Rollback.")
                         else:
-                            excel_snap = item_seleccionado.get(
-                                "archivo_excel_snapshot")
+                            excel_snap = item_seleccionado.get("archivo_excel_snapshot")
                             snap_full_path = os.path.join(
-                                HISTORY_DIR, doc_seleccionado, excel_snap) if excel_snap else ""
+                                HISTORY_DIR, doc_seleccionado, excel_snap
+                            ) if excel_snap else ""
                             if excel_snap and os.path.exists(snap_full_path):
-                                shutil.copy2(snap_full_path, os.path.join(
-                                    DOCS_DIR, doc_seleccionado))
-                                nuevo_md = procesar_excel_limpio(
-                                    os.path.join(DOCS_DIR, doc_seleccionado))
+                                shutil.copy2(snap_full_path, os.path.join(DOCS_DIR, doc_seleccionado))
+                                nuevo_md = procesar_excel_limpio(os.path.join(DOCS_DIR, doc_seleccionado))
                                 nueva_v = guardar_nueva_version(
                                     doc_name=doc_seleccionado,
                                     nuevo_contenido=nuevo_md,
@@ -886,14 +869,73 @@ with tab_docs:
                                     comentario=f"[Rollback a v{item_seleccionado['version']}] {motivo_rb.strip()}",
                                     doc_store=st.session_state.doc_store
                                 )
-                            st.toast(
-                                f"Documento restaurado a v{item_seleccionado['version']} (Registrado como v{nueva_v})")
+                            st.toast(f"Documento restaurado a v{item_seleccionado['version']} (Registrado como v{nueva_v})")
                             st.success(
-                                f"Rollback completado con éxito. Se generó la versión [Version v{nueva_v}] restaurando la versión [Version v{item_seleccionado['version']}]. Responsable: {autor_rb.strip()}")
+                                f"Rollback completado con éxito. Se generó la versión [Version v{nueva_v}] restaurando la versión [Version v{item_seleccionado['version']}]. Responsable: {autor_rb.strip()}"
+                            )
                             st.rerun()
-                else:
-                    st.info(
-                        f"La versión v{item_seleccionado['version']} es la versión activa actual. Para ejecutar un Rollback, elija una versión previa en el selector superior.")
+
+                # 4. Herramientas Complementarias en Expanders
+                if len(historial) >= 2:
+                    with st.expander("Comparar diferencias de texto entre dos versiones (Diff simple)", expanded=False):
+                        col_cmp1, col_cmp2 = st.columns(2)
+                        nombres_versiones = [
+                            f"v{item['version']} - {item['timestamp']} ({item['autor']})" for item in historial
+                        ]
+                        mapa_versiones = {
+                            f"v{item['version']} - {item['timestamp']} ({item['autor']})": item for item in historial
+                        }
+                        with col_cmp1:
+                            ver_base_sel = st.selectbox(
+                                "Versión Base (Anterior):",
+                                nombres_versiones,
+                                index=0,
+                                key=f"diff_base_simple_{doc_seleccionado}"
+                            )
+                        with col_cmp2:
+                            ver_comp_sel = st.selectbox(
+                                "Versión a Comparar (Nueva):",
+                                nombres_versiones,
+                                index=len(nombres_versiones) - 1,
+                                key=f"diff_comp_simple_{doc_seleccionado}"
+                            )
+
+                        item_base = mapa_versiones[ver_base_sel]
+                        item_comp = mapa_versiones[ver_comp_sel]
+                        texto_base = obtener_contenido_version(doc_seleccionado, item_base["archivo_snapshot"])
+                        texto_comp = obtener_contenido_version(doc_seleccionado, item_comp["archivo_snapshot"])
+
+                        diff_unificado = generar_diff_texto(
+                            texto_ant=texto_base,
+                            texto_nuevo=texto_comp,
+                            label_ant=f"v{item_base['version']} ({item_base['autor']})",
+                            label_nuevo=f"v{item_comp['version']} ({item_comp['autor']})"
+                        )
+                        st.code(diff_unificado, language="diff")
+
+                with st.expander("Registro Central de Auditoría Global (Audit Log)", expanded=False):
+                    eventos_globales = obtener_todos_los_eventos_auditoria()
+                    if eventos_globales:
+                        df_aud = pd.DataFrame(eventos_globales)
+                        col_fa, col_fd = st.columns([1, 2])
+                        with col_fa:
+                            acciones_disp = ["Todas"] + sorted(list(set(df_aud["accion"].dropna().unique())))
+                            filtro_acc = st.selectbox("Filtrar por Acción:", acciones_disp, key=f"filter_aud_acc_s_{doc_seleccionado}")
+                        with col_fd:
+                            docs_disp = ["Todos los Documentos", f"Solo este documento ({doc_seleccionado})"]
+                            filtro_doc_aud = st.selectbox("Filtrar por Documento:", docs_disp, key=f"filter_aud_doc_s_{doc_seleccionado}")
+
+                        df_aud_filtrado = df_aud.copy()
+                        if filtro_acc != "Todas":
+                            df_aud_filtrado = df_aud_filtrado[df_aud_filtrado["accion"] == filtro_acc]
+                        if filtro_doc_aud.startswith("Solo este"):
+                            df_aud_filtrado = df_aud_filtrado[df_aud_filtrado["documento"] == doc_seleccionado]
+
+                        df_aud_display = df_aud_filtrado[["timestamp", "documento", "accion", "version_anterior", "version_nueva", "editor_responsable", "motivo_justificacion"]]
+                        df_aud_display.columns = ["Timestamp", "Documento", "Acción", "Versión Ant.", "Versión Nueva", "Editor Responsable", "Motivo / Justificación"]
+                        st.dataframe(df_aud_display, use_container_width=True, hide_index=True)
+                    else:
+                        st.info("No hay eventos registrados en el log de auditoría global.")
     else:
         st.warning(
             "No hay documentos indexados. Cargue un archivo en el panel lateral.")
@@ -901,13 +943,15 @@ with tab_docs:
 # ----------------- TAB 4: PLANTILLAS Y RUNBOOKS -----------------
 with tab_templates:
     st.subheader("Generador Rápido de Documentación y Runbooks")
-    st.caption("Crea y publica procedimientos técnicos estandarizados o define nuevos tipos personalizados en 2 minutos.")
+    st.caption(
+        "Crea y publica procedimientos técnicos estandarizados o define nuevos tipos personalizados en 2 minutos.")
 
     sac.steps(
         items=[
             sac.StepsItem(title="Paso 1", subtitle="Selección y Metadatos"),
             sac.StepsItem(title="Paso 2", subtitle="Parámetros Técnicos"),
-            sac.StepsItem(title="Paso 3", subtitle="Previsualización y Publicación"),
+            sac.StepsItem(title="Paso 3",
+                          subtitle="Previsualización y Publicación"),
         ],
         size="sm",
         return_index=False
@@ -929,10 +973,14 @@ with tab_templates:
         es_crear_nuevo = tipo_plantilla_sel == "[+ Crear Nuevo Tipo de Procedimiento...]"
 
         if es_crear_nuevo:
-            st.info("[NUEVO TIPO] Defina el nombre y estructura de este nuevo tipo de procedimiento.")
-            nuevo_tipo_nombre = st.text_input("Nombre del Nuevo Tipo de Procedimiento (*)", placeholder="Ej: Procedimiento de Auditoría de Accesos y Permisos", key="input_nuevo_tipo_proc")
-            guardar_catalogo = st.checkbox("Guardar este nuevo Tipo de Plantilla en el catálogo permanente", value=True)
-            tipo_plantilla = nuevo_tipo_nombre.strip() if nuevo_tipo_nombre.strip() else "Procedimiento Personalizado"
+            st.info(
+                "[NUEVO TIPO] Defina el nombre y estructura de este nuevo tipo de procedimiento.")
+            nuevo_tipo_nombre = st.text_input("Nombre del Nuevo Tipo de Procedimiento (*)",
+                                              placeholder="Ej: Procedimiento de Auditoría de Accesos y Permisos", key="input_nuevo_tipo_proc")
+            guardar_catalogo = st.checkbox(
+                "Guardar este nuevo Tipo de Plantilla en el catálogo permanente", value=True)
+            tipo_plantilla = nuevo_tipo_nombre.strip(
+            ) if nuevo_tipo_nombre.strip() else "Procedimiento Personalizado"
         else:
             tipo_plantilla = tipo_plantilla_sel
             guardar_catalogo = False
@@ -940,8 +988,10 @@ with tab_templates:
 
         col_g1, col_g2 = st.columns(2)
         with col_g1:
-            autor = st.text_input("Autor / Técnico Responsable (*)", value="Developer / DevOps", key="proc_autor_input")
-            nombre_servicio = st.text_input("Servicio o Componente (*)", value="Booking Core Engine", key="proc_srv_input")
+            autor = st.text_input("Autor / Técnico Responsable (*)",
+                                  value="Developer / DevOps", key="proc_autor_input")
+            nombre_servicio = st.text_input(
+                "Servicio o Componente (*)", value="Booking Core Engine", key="proc_srv_input")
         with col_g2:
             nivel_arq = st.selectbox("Nivel de Arquitectura", [
                 "L4 - Aplicación y Negocio",
@@ -949,15 +999,19 @@ with tab_templates:
                 "L2 - Virtualización y Cómputo",
                 "L1 - Hardware e Infraestructura Base"
             ], key="proc_nivel_input")
-            ambiente = st.selectbox("Ambiente Objetivo", ["Producción", "Staging / QA", "Desarrollo", "Datacenter DR", "Todos los Ambientes"], key="proc_amb_input")
+            ambiente = st.selectbox("Ambiente Objetivo", [
+                                    "Producción", "Staging / QA", "Desarrollo", "Datacenter DR", "Todos los Ambientes"], key="proc_amb_input")
 
         col_g3, col_g4 = st.columns(2)
         with col_g3:
-            criticidad = st.selectbox("Criticidad / SLA", ["Crítico 7x24 (P1)", "Alta (P2)", "Media (P3)", "Baja (P4)"], index=2, key="proc_crit_input")
+            criticidad = st.selectbox(
+                "Criticidad / SLA", ["Crítico 7x24 (P1)", "Alta (P2)", "Media (P3)", "Baja (P4)"], index=2, key="proc_crit_input")
         with col_g4:
-            ventana = st.text_input("Ventana de Mantenimiento", value="02:00 a 04:00 AM (Horario no hábil)", key="proc_vent_input")
+            ventana = st.text_input(
+                "Ventana de Mantenimiento", value="02:00 a 04:00 AM (Horario no hábil)", key="proc_vent_input")
 
-        servidores = st.text_input("Servidores / Nodos / IPs Involucrados", value="BALANCER001, 10.24.0.125, VM-BOOKING-01", key="proc_srvs_input")
+        servidores = st.text_input("Servidores / Nodos / IPs Involucrados",
+                                   value="BALANCER001, 10.24.0.125, VM-BOOKING-01", key="proc_srvs_input")
 
         st.markdown("---")
         st.markdown("##### Parámetros Específicos del Procedimiento")
@@ -971,56 +1025,93 @@ with tab_templates:
 
         # Formulario dinámico según tipo
         if "Rollback" in tipo_plantilla:
-            params["criterio"] = st.text_area("Criterio de Activación de Rollback", value="Latencia > 500ms en New Relic por más de 3 min o Error Rate 5xx > 2%")
-            params["pasos"] = st.text_area("Pasos de Reversión (Comandos / Acciones)", value="1. Ejecutar pipeline de Rollback en Azure DevOps release-v2.4.1\n2. Revertir cambios de esquema en BD Postgres si aplica\n3. Limpiar caché en Redis Sentinel: redis-cli FLUSHDB")
-            params["verif"] = st.text_area("Comandos de Verificación de Salud", value="curl -I https://api.booking.internal/health\nsystemctl status booking-service")
+            params["criterio"] = st.text_area(
+                "Criterio de Activación de Rollback", value="Latencia > 500ms en New Relic por más de 3 min o Error Rate 5xx > 2%")
+            params["pasos"] = st.text_area("Pasos de Reversión (Comandos / Acciones)",
+                                           value="1. Ejecutar pipeline de Rollback en Azure DevOps release-v2.4.1\n2. Revertir cambios de esquema en BD Postgres si aplica\n3. Limpiar caché en Redis Sentinel: redis-cli FLUSHDB")
+            params["verif"] = st.text_area("Comandos de Verificación de Salud",
+                                           value="curl -I https://api.booking.internal/health\nsystemctl status booking-service")
         elif "Paso a Producción" in tipo_plantilla:
-            params["version"] = st.text_input("Versión / Tag de Release", value="v2.5.0")
-            params["pipeline"] = st.text_input("Pipeline Azure DevOps / Release ID", value="https://dev.azure.com/smucorp/pipelines/142")
-            params["variables"] = st.text_area("Variables de Entorno / Configuración", value="REDIS_HOST=10.24.0.126\nJWT_SECRET=[CONFIGURADO EN KEYVAULT]\nLOG_LEVEL=INFO")
-            params["smoke"] = st.text_area("Checklist de Validación (Smoke Tests)", value="- [ ] Endpoint /health respondiendo HTTP 200\n- [ ] Transacciones fluyendo en VZOR Suite\n- [ ] Cero alertas críticas en Nagios")
+            params["version"] = st.text_input(
+                "Versión / Tag de Release", value="v2.5.0")
+            params["pipeline"] = st.text_input(
+                "Pipeline Azure DevOps / Release ID", value="https://dev.azure.com/smucorp/pipelines/142")
+            params["variables"] = st.text_area(
+                "Variables de Entorno / Configuración", value="REDIS_HOST=10.24.0.126\nJWT_SECRET=[CONFIGURADO EN KEYVAULT]\nLOG_LEVEL=INFO")
+            params["smoke"] = st.text_area("Checklist de Validación (Smoke Tests)",
+                                           value="- [ ] Endpoint /health respondiendo HTTP 200\n- [ ] Transacciones fluyendo en VZOR Suite\n- [ ] Cero alertas críticas en Nagios")
         elif "Postmortem" in tipo_plantilla:
-            params["incidente_id"] = st.text_input("ID del Ticket / Incidente", value="INC-88912")
-            params["impacto"] = st.text_area("Resumen del Impacto", value="Indisponibilidad del servicio de autorización por 14 minutos. 120 transacciones rechazadas.")
-            params["causa"] = st.text_area("Diagnóstico de Causa Raíz (RCA)", value="Agotamiento de pool de conexiones JDBC en WSO2 Enterprise Integrator debido a query no indexada.")
-            params["solucion"] = st.text_area("Solución Inmediata Aplicada", value="Reinicio del nodo worker WSO2 y ampliación de maxConnections a 150.")
-            params["preventiva"] = st.text_area("Medida Preventiva para Evitar Recurrencia", value="Creación de índice en tabla t_auth_tokens y ajuste de timeout en WSO2.")
+            params["incidente_id"] = st.text_input(
+                "ID del Ticket / Incidente", value="INC-88912")
+            params["impacto"] = st.text_area(
+                "Resumen del Impacto", value="Indisponibilidad del servicio de autorización por 14 minutos. 120 transacciones rechazadas.")
+            params["causa"] = st.text_area(
+                "Diagnóstico de Causa Raíz (RCA)", value="Agotamiento de pool de conexiones JDBC en WSO2 Enterprise Integrator debido a query no indexada.")
+            params["solucion"] = st.text_area(
+                "Solución Inmediata Aplicada", value="Reinicio del nodo worker WSO2 y ampliación de maxConnections a 150.")
+            params["preventiva"] = st.text_area("Medida Preventiva para Evitar Recurrencia",
+                                                value="Creación de índice en tabla t_auth_tokens y ajuste de timeout en WSO2.")
         elif "Microservicio" in tipo_plantilla:
-            params["endpoint"] = st.text_input("Endpoint Base / Ruta API", value="/api/v1/booking")
-            params["auth"] = st.text_input("Método de Autenticación", value="OAuth2 Bearer Token (Redis Sentinel)")
-            params["dependencias"] = st.text_area("Dependencias Backend y Nodos", value="* VM: VM-BOOKING-01 (10.24.0.125)\n* DB: Postgres HA (10.24.0.130)\n* Gateway: WSO2 API Manager")
+            params["endpoint"] = st.text_input(
+                "Endpoint Base / Ruta API", value="/api/v1/booking")
+            params["auth"] = st.text_input(
+                "Método de Autenticación", value="OAuth2 Bearer Token (Redis Sentinel)")
+            params["dependencias"] = st.text_area(
+                "Dependencias Backend y Nodos", value="* VM: VM-BOOKING-01 (10.24.0.125)\n* DB: Postgres HA (10.24.0.130)\n* Gateway: WSO2 API Manager")
         elif "Parchado" in tipo_plantilla or "Mantenimiento de SO" in tipo_plantilla:
-            params["paquetes"] = st.text_area("Alcance y Paquetes a Actualizar", value="Actualización de seguridad mensual del kernel y paquetes críticos de OpenSSL.")
-            params["pasos_parchado"] = st.text_area("Pasos de Aplicación de Parches", value="1. Tomar snapshot de VM en VMware vCloud Director\n2. yum update -y / apt-get update && apt-get upgrade -y\n3. Reinicio controlado de nodo secundario\n4. Validación de servicios")
-            params["rollback_parchado"] = st.text_area("Plan de Reversión en caso de Fallo", value="Revertir al snapshot de VM en VMware vCloud Director.")
+            params["paquetes"] = st.text_area(
+                "Alcance y Paquetes a Actualizar", value="Actualización de seguridad mensual del kernel y paquetes críticos de OpenSSL.")
+            params["pasos_parchado"] = st.text_area(
+                "Pasos de Aplicación de Parches", value="1. Tomar snapshot de VM en VMware vCloud Director\n2. yum update -y / apt-get update && apt-get upgrade -y\n3. Reinicio controlado de nodo secundario\n4. Validación de servicios")
+            params["rollback_parchado"] = st.text_area(
+                "Plan de Reversión en caso de Fallo", value="Revertir al snapshot de VM en VMware vCloud Director.")
         elif "Certificados" in tipo_plantilla or "SSL" in tipo_plantilla:
-            params["dominio"] = st.text_input("Dominio / CN del Certificado", value="*.smucorp.internal")
-            params["ruta_cert"] = st.text_input("Ruta de Instalación en el Servidor", value="/etc/ssl/certs/api_smucorp.crt")
-            params["comandos_renov"] = st.text_area("Comandos de Generación y Carga", value="openssl req -new -newkey rsa:2048 -nodes -keyout api.key -out api.csr\n# Copiar certificado firmado a /etc/ssl/certs/")
-            params["validacion_ssl"] = st.text_area("Comandos de Validación SSL", value="echo | openssl s_client -connect localhost:443 -servername api.smucorp.internal 2>/dev/null | openssl x509 -noout -dates")
+            params["dominio"] = st.text_input(
+                "Dominio / CN del Certificado", value="*.smucorp.internal")
+            params["ruta_cert"] = st.text_input(
+                "Ruta de Instalación en el Servidor", value="/etc/ssl/certs/api_smucorp.crt")
+            params["comandos_renov"] = st.text_area(
+                "Comandos de Generación y Carga", value="openssl req -new -newkey rsa:2048 -nodes -keyout api.key -out api.csr\n# Copiar certificado firmado a /etc/ssl/certs/")
+            params["validacion_ssl"] = st.text_area(
+                "Comandos de Validación SSL", value="echo | openssl s_client -connect localhost:443 -servername api.smucorp.internal 2>/dev/null | openssl x509 -noout -dates")
         elif "Disaster Recovery" in tipo_plantilla or "DRP" in tipo_plantilla:
-            params["rpo_rto"] = st.text_input("Objetivos RPO / RTO", value="RPO: 15 minutos | RTO: 1 hora")
-            params["activacion_drp"] = st.text_area("Criterios de Activación del DRP", value="Indisponibilidad total del Datacenter Principal por más de 30 minutos.")
-            params["pasos_drp"] = st.text_area("Pasos de Conmutación a Datacenter DR", value="1. Conmutar DNS externo al Datacenter Secundario\n2. Promover réplica de Base de Datos PostgreSQL a Primario\n3. Iniciar workers de WSO2 en sitio secundario")
+            params["rpo_rto"] = st.text_input(
+                "Objetivos RPO / RTO", value="RPO: 15 minutos | RTO: 1 hora")
+            params["activacion_drp"] = st.text_area(
+                "Criterios de Activación del DRP", value="Indisponibilidad total del Datacenter Principal por más de 30 minutos.")
+            params["pasos_drp"] = st.text_area(
+                "Pasos de Conmutación a Datacenter DR", value="1. Conmutar DNS externo al Datacenter Secundario\n2. Promover réplica de Base de Datos PostgreSQL a Primario\n3. Iniciar workers de WSO2 en sitio secundario")
         elif "Respaldo" in tipo_plantilla or "Base de Datos" in tipo_plantilla:
-            params["motor_bd"] = st.text_input("Motor de Base de Datos", value="PostgreSQL 15 HA / Oracle 19c RAC")
-            params["comando_backup"] = st.text_area("Comando / Script de Respaldo", value="pg_dump -h 10.24.0.130 -U admin -Fc db_booking > /backups/booking_$(date +%F).dump")
-            params["comando_restore"] = st.text_area("Comando / Script de Restauración", value="pg_restore -h 10.24.0.130 -U admin -d db_booking /backups/booking_snapshot.dump")
+            params["motor_bd"] = st.text_input(
+                "Motor de Base de Datos", value="PostgreSQL 15 HA / Oracle 19c RAC")
+            params["comando_backup"] = st.text_area(
+                "Comando / Script de Respaldo", value="pg_dump -h 10.24.0.130 -U admin -Fc db_booking > /backups/booking_$(date +%F).dump")
+            params["comando_restore"] = st.text_area(
+                "Comando / Script de Restauración", value="pg_restore -h 10.24.0.130 -U admin -d db_booking /backups/booking_snapshot.dump")
         elif "Contingencia" in tipo_plantilla or "Failover" in tipo_plantilla:
-            params["sintoma"] = st.text_area("Síntoma de Falla / Alerta Disparadora", value="Host ESXi no responde en vCloud o alerta CRITICAL en Nagios por ping timeout.")
-            params["pasos"] = st.text_area("Procedimiento de Conmutación (Failover)", value="1. Conmutar tráfico en HAProxy a BALANCER002 (10.24.0.126)\n2. Activar réplica en VMware vCloud Director\n3. Validar resolución DNS interna")
+            params["sintoma"] = st.text_area("Síntoma de Falla / Alerta Disparadora",
+                                             value="Host ESXi no responde en vCloud o alerta CRITICAL en Nagios por ping timeout.")
+            params["pasos"] = st.text_area("Procedimiento de Conmutación (Failover)",
+                                           value="1. Conmutar tráfico en HAProxy a BALANCER002 (10.24.0.126)\n2. Activar réplica en VMware vCloud Director\n3. Validar resolución DNS interna")
         else:
-            params["objetivo"] = st.text_area("Objetivo y Alcance del Procedimiento", value=f"Procedimiento estandarizado para la ejecución segura de {tipo_plantilla} en los componentes de {nombre_servicio}.")
-            params["prerequisitos"] = st.text_area("Requisitos Previos y Permisos Necesarios", value="* Acceso SSH con privilegios sudo en los servidores\n* Notificación previa a Mesa de Ayuda / Operaciones 7x24\n* Snapshot o backup preventivo verificado")
-            params["pasos_custom"] = st.text_area("Pasos de Ejecución Detallados (Comandos / Acciones)", value="1. Validar estado previo del servicio: systemctl status servicio\n2. Ejecutar script de actualización o mantenimiento\n3. Verificar logs en /var/log/syslog o New Relic")
-            params["verificacion_custom"] = st.text_area("Validación y Criterios de Aceptación", value="* Transacciones operativas sin errores 5xx\n* Métricas de CPU y Memoria dentro de umbrales normales (<70%)\n* Nagios check_http reportando estado OK")
-            params["rollback_custom"] = st.text_area("Plan de Contingencia / Reversión en caso de Fallo", value="1. Detener ejecución de scripts de inmediato\n2. Restaurar archivos de configuración desde backup local\n3. Reiniciar servicio y notificar al líder técnico")
+            params["objetivo"] = st.text_area("Objetivo y Alcance del Procedimiento",
+                                              value=f"Procedimiento estandarizado para la ejecución segura de {tipo_plantilla} en los componentes de {nombre_servicio}.")
+            params["prerequisitos"] = st.text_area("Requisitos Previos y Permisos Necesarios",
+                                                   value="* Acceso SSH con privilegios sudo en los servidores\n* Notificación previa a Mesa de Ayuda / Operaciones 7x24\n* Snapshot o backup preventivo verificado")
+            params["pasos_custom"] = st.text_area("Pasos de Ejecución Detallados (Comandos / Acciones)",
+                                                  value="1. Validar estado previo del servicio: systemctl status servicio\n2. Ejecutar script de actualización o mantenimiento\n3. Verificar logs en /var/log/syslog o New Relic")
+            params["verificacion_custom"] = st.text_area(
+                "Validación y Criterios de Aceptación", value="* Transacciones operativas sin errores 5xx\n* Métricas de CPU y Memoria dentro de umbrales normales (<70%)\n* Nagios check_http reportando estado OK")
+            params["rollback_custom"] = st.text_area("Plan de Contingencia / Reversión en caso de Fallo",
+                                                     value="1. Detener ejecución de scripts de inmediato\n2. Restaurar archivos de configuración desde backup local\n3. Reiniciar servicio y notificar al líder técnico")
 
-        doc_generado_md, nombre_archivo_sugerido = generar_doc_plantilla(tipo_plantilla, autor, nombre_servicio, nivel_arq, params)
+        doc_generado_md, nombre_archivo_sugerido = generar_doc_plantilla(
+            tipo_plantilla, autor, nombre_servicio, nivel_arq, params)
 
     with col_t2:
         st.markdown("#### 2. Previsualización en Vivo del Documento")
-        nombre_final = st.text_input("Nombre de Archivo Final (.md)", value=nombre_archivo_sugerido, key="input_nombre_archivo_proc_final")
+        nombre_final = st.text_input("Nombre de Archivo Final (.md)",
+                                     value=nombre_archivo_sugerido, key="input_nombre_archivo_proc_final")
 
         with st.container(border=True):
             st.markdown(doc_generado_md)
@@ -1034,7 +1125,8 @@ with tab_templates:
                 guardar_plantilla_personalizada(
                     nombre=nuevo_tipo_nombre.strip(),
                     descripcion=f"Plantilla personalizada para {nuevo_tipo_nombre.strip()}",
-                    campos=["objetivo", "prerequisitos", "pasos_custom", "verificacion_custom", "rollback_custom"]
+                    campos=["objetivo", "prerequisitos", "pasos_custom",
+                            "verificacion_custom", "rollback_custom"]
                 )
 
             ruta_destino = os.path.join(DOCS_DIR, nombre_final)
@@ -1050,6 +1142,8 @@ with tab_templates:
                 comentario=f"Creación inicial mediante plantilla: {tipo_plantilla}"
             )
             st.toast(f"Procedimiento guardado como {nombre_final}")
-            st.success(f"¡Procedimiento guardado e indexado exitosamente como **{nombre_final}** (Versión [Version v1])!")
-            st.info("El Chat Copilot, DuckDB y el visualizador Lado a Lado ya pueden consultar y renderizar este nuevo procedimiento.")
+            st.success(
+                f"¡Procedimiento guardado e indexado exitosamente como **{nombre_final}** (Versión [Version v1])!")
+            st.info(
+                "El Chat Copilot, DuckDB y el visualizador Lado a Lado ya pueden consultar y renderizar este nuevo procedimiento.")
             st.rerun()

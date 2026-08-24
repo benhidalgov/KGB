@@ -1,5 +1,6 @@
 import os
 import json
+import html
 import shutil
 import difflib
 from datetime import datetime
@@ -278,3 +279,159 @@ def obtener_bytes_snapshot(doc_name: str, filename_snapshot: str) -> bytes | Non
         with open(snap_path, "rb") as f:
             return f.read()
     return None
+
+
+def generar_diff_lado_a_lado_html(texto_ant: str, texto_nuevo: str, label_ant: str = "Versión A", label_nuevo: str = "Versión B") -> dict:
+    """Genera una vista visual diff lado a lado (Split Diff) en HTML Theme-Safe con conteo de cambios."""
+    lineas_ant = texto_ant.splitlines()
+    lineas_nuevo = texto_nuevo.splitlines()
+
+    matcher = difflib.SequenceMatcher(None, lineas_ant, lineas_nuevo)
+    filas_html = []
+
+    adiciones = 0
+    eliminaciones = 0
+    modificaciones = 0
+    sin_cambio = 0
+
+    for tag, alo, ahi, blo, bhi in matcher.get_opcodes():
+        if tag == 'equal':
+            for i in range(ahi - alo):
+                sin_cambio += 1
+                num_a = alo + i + 1
+                num_b = blo + i + 1
+                txt = html.escape(lineas_ant[alo + i]) if lineas_ant[alo + i] else "&nbsp;"
+                filas_html.append(f"""
+                <div class="diff-row">
+                    <div class="diff-cell"><span class="diff-num">{num_a}</span><span class="diff-text">{txt}</span></div>
+                    <div class="diff-cell"><span class="diff-num">{num_b}</span><span class="diff-text">{txt}</span></div>
+                </div>""")
+        elif tag == 'replace':
+            count_a = ahi - alo
+            count_b = bhi - blo
+            modificaciones += max(count_a, count_b)
+            max_c = max(count_a, count_b)
+            for i in range(max_c):
+                if i < count_a:
+                    num_a = alo + i + 1
+                    txt_a = html.escape(lineas_ant[alo + i]) if lineas_ant[alo + i] else "&nbsp;"
+                    left_html = f'<div class="diff-cell diff-del"><span class="diff-num">{num_a}</span><span class="diff-text">- {txt_a}</span></div>'
+                else:
+                    left_html = '<div class="diff-cell diff-empty"><span class="diff-num"></span><span class="diff-text"></span></div>'
+
+                if i < count_b:
+                    num_b = blo + i + 1
+                    txt_b = html.escape(lineas_nuevo[blo + i]) if lineas_nuevo[blo + i] else "&nbsp;"
+                    right_html = f'<div class="diff-cell diff-add"><span class="diff-num">{num_b}</span><span class="diff-text">+ {txt_b}</span></div>'
+                else:
+                    right_html = '<div class="diff-cell diff-empty"><span class="diff-num"></span><span class="diff-text"></span></div>'
+
+                filas_html.append(f'<div class="diff-row">{left_html}{right_html}</div>')
+        elif tag == 'delete':
+            count_a = ahi - alo
+            eliminaciones += count_a
+            for i in range(count_a):
+                num_a = alo + i + 1
+                txt_a = html.escape(lineas_ant[alo + i]) if lineas_ant[alo + i] else "&nbsp;"
+                left_html = f'<div class="diff-cell diff-del"><span class="diff-num">{num_a}</span><span class="diff-text">- {txt_a}</span></div>'
+                right_html = '<div class="diff-cell diff-empty"><span class="diff-num"></span><span class="diff-text"></span></div>'
+                filas_html.append(f'<div class="diff-row">{left_html}{right_html}</div>')
+        elif tag == 'insert':
+            count_b = bhi - blo
+            adiciones += count_b
+            for i in range(count_b):
+                num_b = blo + i + 1
+                txt_b = html.escape(lineas_nuevo[blo + i]) if lineas_nuevo[blo + i] else "&nbsp;"
+                left_html = '<div class="diff-cell diff-empty"><span class="diff-num"></span><span class="diff-text"></span></div>'
+                right_html = f'<div class="diff-cell diff-add"><span class="diff-num">{num_b}</span><span class="diff-text">+ {txt_b}</span></div>'
+                filas_html.append(f'<div class="diff-row">{left_html}{right_html}</div>')
+
+    stats = {
+        "adiciones": adiciones,
+        "eliminaciones": eliminaciones,
+        "modificaciones": modificaciones,
+        "sin_cambio": sin_cambio,
+        "total_lineas": len(filas_html)
+    }
+
+    if not filas_html:
+        diff_html = '<div class="diff-container"><div style="padding: 16px; opacity: 0.8;">No hay contenido que comparar.</div></div>'
+    else:
+        diff_html = f"""<div class="diff-container">
+    <div class="diff-stats-bar">
+        <div class="diff-stat-group">
+            <span class="badge-ok">+{adiciones} adiciones</span>
+            <span class="badge-crit">-{eliminaciones} eliminaciones</span>
+            <span class="badge-warn">~{modificaciones} modificaciones</span>
+            <span class="badge-tag">{sin_cambio} líneas iguales</span>
+        </div>
+        <div>
+            <span class="badge-info">Comparación Lado a Lado</span>
+        </div>
+    </div>
+    <div class="diff-header-row">
+        <div class="diff-header-col">[Versión Base] {label_ant}</div>
+        <div class="diff-header-col">[Versión Comparada] {label_nuevo}</div>
+    </div>
+    <div class="diff-body">
+        {"".join(filas_html)}
+    </div>
+</div>"""
+
+    return {
+        "html": diff_html,
+        "stats": stats
+    }
+
+
+def obtener_todos_los_eventos_auditoria() -> list:
+    """Recupera todos los eventos registrados en el log global de auditoría en orden cronológico inverso."""
+    if os.path.exists(AUDIT_LOG_PATH):
+        try:
+            with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
+                eventos = json.load(f)
+                return list(reversed(eventos))
+        except Exception:
+            return []
+    return []
+
+
+def generar_timeline_versiones_html(historial: list) -> str:
+    """Genera una vista visual de línea de tiempo cronológica para el historial de versiones."""
+    if not historial:
+        return ""
+
+    items_html = []
+    for item in reversed(historial):
+        v_num = item.get("version", 1)
+        ts = item.get("timestamp", "N/A")
+        autor = item.get("autor", "Desconocido")
+        comentario = item.get("comentario", "")
+        caracteres = item.get("caracteres", 0)
+
+        es_rollback = "rollback" in comentario.lower()
+        if es_rollback:
+            badge_tipo = '<span class="badge-crit">[ROLLBACK]</span>'
+        elif v_num == 1:
+            badge_tipo = '<span class="badge-ok">[BASE v1]</span>'
+        else:
+            badge_tipo = '<span class="badge-info">[REVISIÓN]</span>'
+
+        items_html.append(f"""
+        <div class="version-timeline-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <div>
+                    {badge_tipo}
+                    <span style="font-weight: 700; font-size: 0.95rem; margin-left: 6px;">Versión v{v_num}</span>
+                </div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">{ts}</div>
+            </div>
+            <div style="font-size: 0.88rem; margin: 4px 0;"><b>Motivo:</b> {html.escape(comentario)}</div>
+            <div style="font-size: 0.78rem; opacity: 0.75; display: flex; justify-content: space-between; margin-top: 6px; border-top: 1px dashed rgba(128,128,128,0.2); padding-top: 4px;">
+                <span><b>Editor:</b> {html.escape(autor)}</span>
+                <span><b>Tamaño:</b> {caracteres} caracteres</span>
+            </div>
+        </div>""")
+
+    return f'<div class="version-timeline-container">{"".join(items_html)}</div>'
+
