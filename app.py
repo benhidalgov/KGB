@@ -87,6 +87,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 st.markdown(cargar_estilos_css(), unsafe_allow_html=True)
+# Eje 1: Linea de acento superior (gradiente indigo -> verde)
+st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
 
 # 2. Inicializacion de Estado y Documentos
 if "historial_busquedas" not in st.session_state:
@@ -331,6 +333,15 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
 
+    # Footer del Sidebar
+    session_ts = datetime.datetime.now().strftime("%Y-%m-%d  %H:%M")
+    st.markdown(f"""
+<div class="sidebar-footer">
+    <span class="sidebar-footer-version">[v1.0] Copilot</span>
+    <span class="sidebar-footer-ts">Sesion: {session_ts}</span>
+</div>
+    """, unsafe_allow_html=True)
+
 
 # 4. Navbar Hero Card (Barra Flotante con Relieve)
 with st.container(border=True):
@@ -412,26 +423,28 @@ with tab_chat:
             submitted = st.form_submit_button(
                 "Buscar", type="primary", use_container_width=True)
 
-    # 2. Chips de consultas rápidas
-    st.markdown("<div style='margin-top: -6px; margin-bottom: 8px; font-size: 0.8rem; font-weight: 600; opacity: 0.85;'>Consultas Rápidas Sugeridas:</div>", unsafe_allow_html=True)
+    # 2. Chips de consultas rapidas
+    st.markdown("<div style='margin-top: -6px; margin-bottom: 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;'>Consultas rapidas:</div>", unsafe_allow_html=True)
+    st.markdown('<div class="quick-chip-row">', unsafe_allow_html=True)
     col_q1, col_q2, col_q3, col_q4, col_q5 = st.columns(5)
     prompt_rapido = None
 
     with col_q1:
-        if st.button("BALANCER001", use_container_width=True, key="btn_quick_b1"):
+        if st.button(">_ BALANCER001", use_container_width=True, key="btn_quick_b1"):
             prompt_rapido = "BALANCER001"
     with col_q2:
-        if st.button("Autenticación JWT", use_container_width=True, key="btn_quick_jwt"):
-            prompt_rapido = "Autenticación JWT"
+        if st.button(">_ Auth JWT", use_container_width=True, key="btn_quick_jwt"):
+            prompt_rapido = "Autenticacion JWT"
     with col_q3:
-        if st.button("10.24.0.125", use_container_width=True, key="btn_quick_ip"):
+        if st.button(">_ 10.24.0.125", use_container_width=True, key="btn_quick_ip"):
             prompt_rapido = "10.24.0.125"
     with col_q4:
-        if st.button("Failover Redis", use_container_width=True, key="btn_quick_redis"):
+        if st.button(">_ Failover Redis", use_container_width=True, key="btn_quick_redis"):
             prompt_rapido = "Failover Redis"
     with col_q5:
-        if st.button("SN-8842-A", use_container_width=True, key="btn_quick_sn"):
+        if st.button(">_ SN-8842-A", use_container_width=True, key="btn_quick_sn"):
             prompt_rapido = "SN-8842-A"
+    st.markdown('</div>', unsafe_allow_html=True)
 
     query_a_ejecutar = prompt_rapido if prompt_rapido else (
         query_input.strip() if submitted and query_input.strip() else None)
@@ -450,23 +463,35 @@ with tab_chat:
 
     st.markdown("---")
 
-    # 3. Resultados: Los más nuevos se muestran ARRIBA
+    # 3. Resultados: Los mas nuevos se muestran ARRIBA
     if not st.session_state.historial_busquedas:
-        st.markdown(
-            '<div class="search-result-card">'
-            '<div class="search-header-row">'
-            '<div><span class="badge-info">Consola de Búsqueda</span> <span class="search-doc-title" style="margin-left: 8px;">Búsqueda Unificada de Infraestructura y Procedimientos</span></div>'
-            '<div><span class="badge-ok">[Motor Activo]</span></div>'
-            '</div>'
-            '<div style="font-size: 0.88rem; line-height: 1.6;">'
-            '<b>Capacidades operativas disponibles:</b><br/>'
-            '• <b>Consulta analítica de inventario y mantenimientos:</b> por número de serie, IP, servidor o técnico.<br/>'
-            '• <b>Recuperación de procedimientos técnicos:</b> manuales, rollbacks y contingencias con coincidencia semántica.<br/>'
-            '• <b>Inspección de diagramas y topologías:</b> acceso directo y comparador visual Lado a Lado (Side-by-Side).'
-            '</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown("""
+<div class="empty-state-container">
+    <div class="empty-state-console-icon">&gt;_ infraestructura</div>
+    <div class="empty-state-title">Consola de Busqueda Unificada</div>
+    <div class="empty-state-subtitle">
+        Consulta el inventario CMDB, procedimientos tecnicos, diagramas de topologia
+        y documentacion de contingencia desde un unico punto de acceso.
+    </div>
+    <div class="empty-state-caps-grid">
+        <div class="empty-cap-card" style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.22);">
+            <div class="empty-cap-card-label" style="color:#6366F1;">[INFO] Inventario CMDB</div>
+            <div class="empty-cap-card-title">Consulta analitica SQL</div>
+            <div class="empty-cap-card-desc">Por numero de serie, IP, servidor, tecnico o nivel de arquitectura L1-L4.</div>
+        </div>
+        <div class="empty-cap-card" style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.22);">
+            <div class="empty-cap-card-label" style="color:#10B981;">[OK] Procedimientos</div>
+            <div class="empty-cap-card-title">Recuperacion semantica</div>
+            <div class="empty-cap-card-desc">Manuales de contingencia, runbooks, rollback y procedimientos operativos estandar.</div>
+        </div>
+        <div class="empty-cap-card" style="background:rgba(217,119,6,0.07);border:1px solid rgba(217,119,6,0.22);">
+            <div class="empty-cap-card-label" style="color:#D97706;">[DOC] Diagramas</div>
+            <div class="empty-cap-card-title">Topologia y arquitectura</div>
+            <div class="empty-cap-card-desc">Inspeccion visual de diagramas con visor lado a lado (Side-by-Side) y control de versiones.</div>
+        </div>
+    </div>
+</div>
+        """, unsafe_allow_html=True)
     else:
         col_res_t, col_res_btn = st.columns([4, 1])
         with col_res_t:
@@ -528,30 +553,140 @@ with tab_analytics:
             key="filtro_rango_fechas_mantenimientos"
         )
 
-    condiciones = ["1=1"]
-    if filtro_nivel != "Todos":
-        condiciones.append(f"nivel_arquitectura = '{filtro_nivel}'")
-    if filtro_estado != "Todos":
-        condiciones.append(f"estado = '{filtro_estado}'")
-    if filtro_tec.strip():
-        condiciones.append(
-            f"LOWER(tecnico) LIKE LOWER('%{filtro_tec.strip()}%')")
+    if not os.path.exists(CSV_PATH):
+        st.markdown(f"""
+<div style="
+    background: linear-gradient(135deg, rgba(217,119,6,0.08) 0%, rgba(217,119,6,0.03) 100%);
+    border: 1px solid rgba(217,119,6,0.30);
+    border-left: 4px solid #D97706;
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+    margin: 16px 0;
+">
+    <div style="font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #D97706; margin-bottom: 6px;">[WARN] Inventario no disponible</div>
+    <div style="font-size: 0.9rem; line-height: 1.6;">
+        El archivo <code>data/mantenimientos.csv</code> no existe en el entorno actual.<br/>
+        Suba el archivo CSV de mantenimientos mediante el <b>Panel de Ingesta</b> en el sidebar,
+        o copie el archivo a <code>data/mantenimientos.csv</code> y use el boton <b>Reindexar</b>.
+    </div>
+</div>
+        """, unsafe_allow_html=True)
+    else:
+        condiciones = ["1=1"]
+        if filtro_nivel != "Todos":
+            condiciones.append(f"nivel_arquitectura = '{filtro_nivel}'")
+        if filtro_estado != "Todos":
+            condiciones.append(f"estado = '{filtro_estado}'")
+        if filtro_tec.strip():
+            condiciones.append(
+                f"LOWER(tecnico) LIKE LOWER('%{filtro_tec.strip()}%')")
 
-    if isinstance(rango_fechas, (tuple, list)):
-        if len(rango_fechas) == 2:
-            f_ini, f_fin = rango_fechas
-            condiciones.append(f"fecha >= '{f_ini.strftime('%Y-%m-%d')}' AND fecha <= '{f_fin.strftime('%Y-%m-%d')}'")
-        elif len(rango_fechas) == 1:
-            f_ini = rango_fechas[0]
-            condiciones.append(f"fecha >= '{f_ini.strftime('%Y-%m-%d')}'")
-    elif isinstance(rango_fechas, datetime.date):
-        condiciones.append(f"fecha = '{rango_fechas.strftime('%Y-%m-%d')}'")
+        if isinstance(rango_fechas, (tuple, list)):
+            if len(rango_fechas) == 2:
+                f_ini, f_fin = rango_fechas
+                condiciones.append(f"fecha >= '{f_ini.strftime('%Y-%m-%d')}' AND fecha <= '{f_fin.strftime('%Y-%m-%d')}'")
+            elif len(rango_fechas) == 1:
+                f_ini = rango_fechas[0]
+                condiciones.append(f"fecha >= '{f_ini.strftime('%Y-%m-%d')}'")
+        elif isinstance(rango_fechas, datetime.date):
+            condiciones.append(f"fecha = '{rango_fechas.strftime('%Y-%m-%d')}'")
 
-    sql_query = f"SELECT * FROM read_csv_auto('{CSV_PATH}') WHERE {' AND '.join(condiciones)} ORDER BY fecha DESC"
-    df_filtrado = duckdb.sql(sql_query).df()
+        sql_query = f"SELECT * FROM read_csv_auto('{CSV_PATH}') WHERE {' AND '.join(condiciones)} ORDER BY fecha DESC"
+        try:
+            df_filtrado = duckdb.sql(sql_query).df()
+        except Exception as e:
+            st.error(f"[CRIT] Error al ejecutar la consulta SQL: {e}")
+            df_filtrado = pd.DataFrame()
 
-    st.markdown(f"<div style='font-size: 0.85rem; margin-bottom: 6px; font-weight: 500;'><span class='badge-info'>{len(df_filtrado)} registros coincidentes</span></div>", unsafe_allow_html=True)
-    st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+        # KPI Dashboard: Fila de metricas dinamicas
+        total_reg = len(df_filtrado)
+        cnt_op = int((df_filtrado['estado'] == 'Operativo').sum()) if 'estado' in df_filtrado.columns else 0
+        cnt_rev = int((df_filtrado['estado'] == 'En Revision').sum()) if 'estado' in df_filtrado.columns else 0
+        cnt_crit = int((df_filtrado['estado'] == 'Critico').sum()) if 'estado' in df_filtrado.columns else 0
+
+        tec_activo = "N/D"
+        if 'tecnico' in df_filtrado.columns and total_reg > 0:
+            try:
+                tec_activo = df_filtrado['tecnico'].value_counts().idxmax()
+            except Exception:
+                pass
+
+        pct_op = round((cnt_op / total_reg * 100), 1) if total_reg > 0 else 0
+        pct_crit = round((cnt_crit / total_reg * 100), 1) if total_reg > 0 else 0
+
+        st.markdown(f"""
+<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 14px 0 18px 0;">
+
+  <div style="
+    background: linear-gradient(135deg, rgba(99,102,241,0.10) 0%, rgba(99,102,241,0.04) 100%);
+    border: 1px solid rgba(99,102,241,0.28);
+    border-top: 3px solid #6366F1;
+    border-radius: 10px;
+    padding: 14px 16px;
+    animation: fadeInUp 0.3s ease both;
+  ">
+    <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px;">Total Registros</div>
+    <div style="font-size: 1.85rem; font-weight: 700; line-height: 1; color: #6366F1;">{total_reg}</div>
+    <div style="font-size: 0.72rem; opacity: 0.6; margin-top: 4px;">en el periodo filtrado</div>
+  </div>
+
+  <div style="
+    background: linear-gradient(135deg, rgba(16,185,129,0.10) 0%, rgba(16,185,129,0.04) 100%);
+    border: 1px solid rgba(16,185,129,0.28);
+    border-top: 3px solid #10B981;
+    border-radius: 10px;
+    padding: 14px 16px;
+    animation: fadeInUp 0.35s ease both;
+  ">
+    <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px;">Operativos</div>
+    <div style="font-size: 1.85rem; font-weight: 700; line-height: 1; color: #10B981;">{cnt_op}</div>
+    <div style="font-size: 0.72rem; opacity: 0.6; margin-top: 4px;">{pct_op}% del total</div>
+  </div>
+
+  <div style="
+    background: linear-gradient(135deg, rgba(217,119,6,0.10) 0%, rgba(217,119,6,0.04) 100%);
+    border: 1px solid rgba(217,119,6,0.28);
+    border-top: 3px solid #D97706;
+    border-radius: 10px;
+    padding: 14px 16px;
+    animation: fadeInUp 0.40s ease both;
+  ">
+    <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px;">En Revision</div>
+    <div style="font-size: 1.85rem; font-weight: 700; line-height: 1; color: #D97706;">{cnt_rev}</div>
+    <div style="font-size: 0.72rem; opacity: 0.6; margin-top: 4px;">revision activa</div>
+  </div>
+
+  <div style="
+    background: linear-gradient(135deg, rgba(225,29,72,0.10) 0%, rgba(225,29,72,0.04) 100%);
+    border: 1px solid rgba(225,29,72,0.28);
+    border-top: 3px solid #E11D48;
+    border-radius: 10px;
+    padding: 14px 16px;
+    animation: fadeInUp 0.45s ease both;
+  ">
+    <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px;">Criticos</div>
+    <div style="font-size: 1.85rem; font-weight: 700; line-height: 1; color: #E11D48;">{cnt_crit}</div>
+    <div style="font-size: 0.72rem; opacity: 0.6; margin-top: 4px;">{pct_crit}% del total</div>
+  </div>
+
+  <div style="
+    background: linear-gradient(135deg, rgba(128,128,128,0.08) 0%, rgba(128,128,128,0.03) 100%);
+    border: 1px solid rgba(128,128,128,0.22);
+    border-top: 3px solid rgba(128,128,128,0.45);
+    border-radius: 10px;
+    padding: 14px 16px;
+    animation: fadeInUp 0.50s ease both;
+  ">
+    <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px;">Tecnico Mas Activo</div>
+    <div style="font-size: 1.05rem; font-weight: 700; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{tec_activo}</div>
+    <div style="font-size: 0.72rem; opacity: 0.6; margin-top: 4px;">mayor cantidad de registros</div>
+  </div>
+
+</div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"<div style='font-size: 0.85rem; margin-bottom: 8px; font-weight: 500;'><span class='badge-info'>{total_reg} registros coincidentes</span></div>", unsafe_allow_html=True)
+        st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
 
     with st.expander("Ejecutar Consulta SQL Personalizada"):
         custom_sql = st.text_area(
@@ -559,8 +694,12 @@ with tab_analytics:
             value=f"SELECT nivel_arquitectura, count(*) as total_mantenimientos FROM read_csv_auto('{CSV_PATH}') GROUP BY nivel_arquitectura"
         )
         if st.button("Ejecutar"):
-            df_custom = ejecutar_consulta_sql(custom_sql)
-            st.dataframe(df_custom, use_container_width=True)
+            if not os.path.exists(CSV_PATH):
+                st.warning("[WARN] El archivo mantenimientos.csv no esta disponible. Cargue el CSV primero.")
+            else:
+                df_custom = ejecutar_consulta_sql(custom_sql)
+                st.dataframe(df_custom, use_container_width=True)
+
 
 # ----------------- TAB 3: DOCUMENTACION TECNICA Y VERSIONADO -----------------
 with tab_docs:
