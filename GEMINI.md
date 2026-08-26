@@ -29,7 +29,7 @@ Para preservar la coherencia y el acabado de ingenieria, utilizar exclusivamente
 | :--- | :--- | :--- | :--- |
 | `[OK]` / `[OPERATIVO]` | `.badge-ok` | `#10B981` (Verde Menta) | Estado saludable, conexion activa, validacion exitosa |
 | `[WARN]` / `[ALERTA]` | `.badge-warn` | `#D97706` (Naranja Ocre) | Servidor en revision, sin coincidencia exacta, advertencia |
-| `[CRIT]` / `[INCIDENTE]` | `.badge-crit` | `#E11D48` (Carmesí) | Servidor critico, falla de servicio, lineas eliminadas en Diff |
+| `[CRIT]` / `[INCIDENTE]` | `.badge-crit` | `rgb(106, 57, 123)` / `#6A397B` (Ciruela / Púrpura) | Servidor critico, falla de servicio, lineas eliminadas en Diff |
 | `[INFO]` / `[CONSOLA]` | `.badge-info` | `#6366F1` (Índigo) | Componentes de arquitectura, origen CMDB, metadata tecnica |
 | `[DOC]` / `[EXCEL]` | `.badge-tag` | `rgba(128,128,128,...)` | Tipo de archivo, formato, nivel de arquitectura (L1-L4) |
 | `● ONLINE` | `.badge-pulse-online` | `#10B981` (Pulso animado) | Indicador de disponibilidad del servicio en Navbar |

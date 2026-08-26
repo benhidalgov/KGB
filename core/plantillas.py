@@ -6,7 +6,7 @@ import json
 
 PLANTILLAS_CUSTOM_PATH = os.path.join("data", "plantillas_custom.json")
 
-PLANTILLAS_PREDEFINIDAS = [
+PLANTILLAS_BASE_RESERVADAS = [
     "Procedimiento de Rollback de Emergencia",
     "Paso a Producción / Despliegue CI/CD",
     "Reporte Postmortem / Incidente P1 (RCA)",
@@ -17,6 +17,9 @@ PLANTILLAS_PREDEFINIDAS = [
     "Procedimiento de Disaster Recovery (DRP)",
     "Plan de Respaldo y Restauración de Base de Datos"
 ]
+
+# Lista activa de plantillas predefinidas (desactivadas por ahora, se activan solo las que agregue el usuario)
+PLANTILLAS_PREDEFINIDAS = []
 
 
 def cargar_plantillas_personalizadas() -> dict:
@@ -47,9 +50,11 @@ def guardar_plantilla_personalizada(nombre: str, descripcion: str, campos: list)
 
 
 def obtener_todos_los_tipos_plantillas() -> list:
-    """Devuelve la lista unificada de tipos predefinidos y tipos personalizados."""
+    """Devuelve la lista de plantillas disponibles (personalizadas agregadas y opción de crear nueva)."""
     custom = list(cargar_plantillas_personalizadas().keys())
-    return PLANTILLAS_PREDEFINIDAS + [f"[Personalizado] {k}" for k in custom] + ["[+ Crear Nuevo Tipo de Procedimiento...]"]
+    opciones = [f"[Plantilla] {k}" for k in custom]
+    opciones.append("[+ Crear Nueva Plantilla / Procedimiento...]")
+    return opciones
 
 
 def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, params: dict) -> tuple[str, str]:

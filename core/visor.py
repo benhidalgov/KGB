@@ -173,10 +173,12 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
     size_kb = os.path.getsize(ruta_original) / 1024
 
     st.markdown(f"""
-    <div style="background-color: rgba(128, 128, 128, 0.06); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 6px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.82rem; display: flex; justify-content: space-between;">
-        <span><b>Archivo Fuente:</b> <code>{fname}</code></span>
-        <span><b>Formato:</b> <code>{ext.upper().replace('.', '')}</code></span>
-        <span><b>Tamaño:</b> <code>{size_kb:.1f} KB</code></span>
+    <div class="visor-source-meta-bar">
+        <div class="visor-source-meta-title"><b>Archivo Fuente:</b> <code>{fname}</code></div>
+        <div class="visor-source-meta-tags">
+            <span class="badge-tag">{ext.upper().replace('.', '')}</span>
+            <span class="badge-tag">{size_kb:.1f} KB</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -213,11 +215,11 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
     # 4. Documentos Word y Presentaciones PowerPoint
     elif ext in (".docx", ".doc", ".pptx", ".ppt"):
         st.markdown(f"""
-        <div style="background-color: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; padding: 18px; text-align: center; margin: 15px 0;">
-            <p style="font-weight: 600; font-size: 1rem; margin-bottom: 6px;">Documento Ofimático: {fname}</p>
-            <p style="font-size: 0.85rem; opacity: 0.85; margin-bottom: 12px;">
+        <div class="visor-office-notice-card">
+            <div class="visor-office-title">Documento Ofimático: {fname}</div>
+            <div class="visor-office-desc">
                 El contenido estructurado y tablas de este archivo se encuentran normalizados e indexados en la columna izquierda.
-            </p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -250,7 +252,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
     mime_type = mime_map.get(ext, "application/octet-stream")
 
     st.download_button(
-        label=f"Descargar Archivo Original ({fname})",
+        label=f"Descargar Archivo ({fname})",
         data=bytes_orig,
         file_name=fname,
         mime=mime_type,

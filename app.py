@@ -8,6 +8,7 @@ from core.plantillas import (
     obtener_todos_los_tipos_plantillas,
     guardar_plantilla_personalizada,
     cargar_plantillas_personalizadas,
+    PLANTILLAS_BASE_RESERVADAS,
 )
 from core.topologia import TOPOLOGY_MERMAID, PLANTILLAS_DIAGRAMAS, INFRA_SPECS
 from core.procesador import (
@@ -105,15 +106,35 @@ cargar_documentos_locales(st.session_state.doc_store)
 
 # 3. Sidebar (Panel de Control e Ingesta)
 with st.sidebar:
-    st.markdown("### Panel de Ingesta y Operaciones")
+    st.markdown("""
+<div class="sidebar-header-card">
+    <div class="sidebar-header-title-row">
+        <span class="sidebar-header-title">Panel de Control</span>
+        <span class="badge-info" style="font-size:0.68rem;padding:1px 6px;">[OPERACIONES]</span>
+    </div>
+    <div class="sidebar-header-sub">Ingesta de activos, explorador de base documental y telemetría de motores.</div>
+</div>
+""", unsafe_allow_html=True)
 
     # Ingesta de Archivos
-    st.markdown("#### Subir Archivo/s")
+    st.markdown("#### Ingesta de Archivos")
+    st.markdown("""
+<div class="sidebar-format-tags">
+    <span class="sidebar-format-tag">[PDF]</span>
+    <span class="sidebar-format-tag">[DOCX]</span>
+    <span class="sidebar-format-tag">[XLSX]</span>
+    <span class="sidebar-format-tag">[DIAGRAMAS]</span>
+    <span class="sidebar-format-tag">[MD]</span>
+    <span class="sidebar-format-tag">[CSV]</span>
+</div>
+""", unsafe_allow_html=True)
+
     uploaded_files = st.file_uploader(
         "Arrastra o selecciona tus archivos:",
         type=["pdf", "docx", "xlsx", "xls", "csv", "txt",
               "md", "pptx", "png", "jpg", "jpeg", "svg", "webp"],
         accept_multiple_files=True,
+        label_visibility="collapsed",
         help="Formatos soportados: PDF, Word (.docx), Excel (.xlsx/.xls), Markdown (.md), Diagramas e Imágenes (.png, .jpg, .svg), CSV, TXT, PPTX."
     )
 
@@ -152,8 +173,7 @@ with st.sidebar:
                     with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
                         ex_content = f_ex.read()
                     if calcular_sha256(ex_content.encode("utf-8")) == calcular_sha256(ficha_content.encode("utf-8")):
-                        st.info(
-                            f"[OMITIDO] El diagrama '{clean_name}' ya está registrado con el mismo contenido.")
+                        st.toast(f"[INFO] Diagrama '{clean_name}' ya registrado sin cambios.")
                     else:
                         with open(md_save_path, "w", encoding="utf-8") as f_out:
                             f_out.write(ficha_content)
@@ -165,8 +185,7 @@ with st.sidebar:
                             comentario=f"Actualización de activo gráfico '{clean_name}'",
                             doc_store=st.session_state.doc_store
                         )
-                        st.success(
-                            f"[NUEVA VERSION] Diagrama '{clean_name}' actualizado como [Version v{nueva_v}].")
+                        st.toast(f"[OK] Diagrama '{clean_name}' actualizado [Version v{nueva_v}]")
                 else:
                     with open(md_save_path, "w", encoding="utf-8") as f_out:
                         f_out.write(ficha_content)
@@ -177,8 +196,7 @@ with st.sidebar:
                         autor="Técnico / Panel Lateral",
                         comentario=f"Carga inicial de activo gráfico '{clean_name}'"
                     )
-                    st.success(
-                        f"[Diagrama] {clean_name} (Indexado como Version v1)")
+                    st.toast(f"[OK] Diagrama '{clean_name}' indexado como Version v1")
 
             # Caso 2: Documentos Ofimáticos, Excel, PDF, Texto y Markdown
             else:
@@ -189,8 +207,7 @@ with st.sidebar:
                     existente_hash = calcular_sha256(existente_bytes)
 
                     if nuevo_hash == existente_hash:
-                        st.info(
-                            f"[OMITIDO] El archivo '{clean_name}' ya se encuentra indexado con el mismo contenido exacto.")
+                        st.toast(f"[INFO] Archivo '{clean_name}' ya indexado sin cambios.")
                     else:
                         with open(save_path, "wb") as f:
                             f.write(buf)
@@ -203,8 +220,7 @@ with st.sidebar:
                             comentario=f"Actualización de archivo '{clean_name}' mediante carga en panel lateral",
                             doc_store=st.session_state.doc_store
                         )
-                        st.success(
-                            f"[NUEVA VERSION] Se actualizó '{clean_name}' registrando la versión [Version v{nueva_v}].")
+                        st.toast(f"[OK] Archivo '{clean_name}' actualizado [Version v{nueva_v}]")
                 else:
                     with open(save_path, "wb") as f:
                         f.write(buf)
@@ -216,45 +232,41 @@ with st.sidebar:
                         autor="Técnico / Panel Lateral",
                         comentario="Carga inicial de archivo en panel lateral"
                     )
-                    tag = "[Excel]" if ext_uf in (
-                        '.xlsx', '.xls') else "[PDF]" if ext_uf == '.pdf' else "[Documento]"
-                    st.success(
-                        f"{tag} {clean_name} (Indexado como Version v1)")
+                    st.toast(f"[OK] Documento '{clean_name}' indexado como Version v1")
 
     st.markdown("---")
 
     # Resumen y Filtro de Base Documental
-    cant_docs = len(st.session_state.doc_store)
-    st.markdown(f"#### Documentos cargados -> ({cant_docs})")
+    cant_docs_side = len(st.session_state.doc_store)
+    st.markdown(f"#### Explorador Documental <span class='badge-info' style='font-size:0.68rem;padding:1px 6px;'>[{cant_docs_side}]</span>", unsafe_allow_html=True)
 
-    if cant_docs > 0:
+    if cant_docs_side > 0:
         conteo_img = sum(1 for d in st.session_state.doc_store if d.startswith(
             "DIAGRAMA__") or any(d.lower().endswith(ext) for ext in IMAGE_EXTENSIONS))
         conteo_excel = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[
-                           1].lower() in ('.xlsx', '.xls'))
+            1].lower() in ('.xlsx', '.xls'))
         conteo_doc = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[
-                         1].lower() in ('.docx', '.pdf', '.pptx', '.doc'))
+            1].lower() in ('.docx', '.pdf', '.pptx', '.doc'))
         conteo_txt = sum(1 for d in st.session_state.doc_store if os.path.splitext(
             d)[1].lower() in ('.md', '.txt', '.csv') and not d.startswith("DIAGRAMA__"))
 
-        with st.expander("Ver documentos cargados", expanded=False):
-            st.markdown(
-                "<div style='margin-bottom: 6px; font-size: 0.8rem; font-weight: 600;'>Filtrar por tipo:</div>", unsafe_allow_html=True)
-            tipo_filtro = sac.chip(
-                items=[
-                    sac.ChipItem(label=f"Todos ({cant_docs})"),
-                    sac.ChipItem(label=f"Diagramas ({conteo_img})"),
-                    sac.ChipItem(label=f"Excel ({conteo_excel})"),
-                    sac.ChipItem(label=f"Documentos ({conteo_doc})"),
-                    sac.ChipItem(label=f"Markdown ({conteo_txt})"),
-                ],
-                size="xs",
-                radius="sm",
-                align="start",
-                key="sb_type_chip_filter"
+        with st.expander("Filtrar e inspeccionar archivos", expanded=False):
+            opciones_filtro = [
+                f"Todos ({cant_docs_side})",
+                f"Diagramas ({conteo_img})",
+                f"Excel ({conteo_excel})",
+                f"Documentos ({conteo_doc})",
+                f"Markdown ({conteo_txt})",
+            ]
+            tipo_filtro = st.pills(
+                "Filtrar por tipo:",
+                options=opciones_filtro,
+                default=opciones_filtro[0],
+                label_visibility="visible",
+                key="sb_type_pill_filter"
             )
             if not tipo_filtro:
-                tipo_filtro = f"Todos ({cant_docs})"
+                tipo_filtro = opciones_filtro[0]
 
             doc_filter = st.text_input(
                 "Buscar por nombre...", key="sb_doc_filter", placeholder="Nombre de archivo...")
@@ -277,19 +289,40 @@ with st.sidebar:
                 docs_filtrados.append(d)
 
             if docs_filtrados:
+                doc_items_html = ['<div class="sidebar-doc-list">']
                 for d in docs_filtrados:
                     ext = os.path.splitext(d)[1].lower()
                     if d.startswith("DIAGRAMA__") or ext in IMAGE_EXTENSIONS:
-                        tag = "[Diagrama]"
+                        tag = '<span class="badge-ok" style="font-size:0.64rem;padding:1px 4px;">[DIAGRAMA]</span>'
+                        display_name = d.replace("DIAGRAMA__", "").replace(".md", "")
                     elif ext in ('.xlsx', '.xls'):
-                        tag = "[Excel]"
+                        tag = '<span class="badge-info" style="font-size:0.64rem;padding:1px 4px;">[EXCEL]</span>'
+                        display_name = d
                     elif ext in ('.pdf', '.docx', '.pptx', '.doc'):
-                        tag = "[Doc]"
+                        tag = '<span class="badge-warn" style="font-size:0.64rem;padding:1px 4px;">[DOC]</span>'
+                        display_name = d
                     else:
-                        tag = "[Txt]"
+                        tag = '<span class="badge-tag" style="font-size:0.64rem;padding:1px 4px;">[MD]</span>'
+                        display_name = d
+
                     size_kb = len(st.session_state.doc_store[d]) / 1024
                     f_d = obtener_fecha_carga_documento(d)
-                    st.markdown(f"`{tag}` **{d}** <span style='font-size: 0.75rem; opacity: 0.7;'>({f_d.strftime('%Y-%m-%d')} · {size_kb:.1f} KB)</span>", unsafe_allow_html=True)
+                    fecha_str = f_d.strftime('%Y-%m-%d')
+
+                    doc_items_html.append(f"""
+<div class="sidebar-doc-card">
+    <div class="sidebar-doc-card-header">
+        <span class="sidebar-doc-name">{display_name}</span>
+        {tag}
+    </div>
+    <div class="sidebar-doc-meta">
+        <span>{fecha_str}</span>
+        <span>{size_kb:.1f} KB</span>
+    </div>
+</div>
+""")
+                doc_items_html.append('</div>')
+                st.markdown("".join(doc_items_html), unsafe_allow_html=True)
             else:
                 st.caption("No hay documentos que coincidan con el filtro.")
     else:
@@ -298,37 +331,41 @@ with st.sidebar:
     st.markdown("---")
 
     # Acciones Rapidas
-    st.markdown("#### Acciones Rápidas")
+    st.markdown("#### Acciones de Consola")
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        if st.button("Reindexar", help="Recarga todos los documentos desde data/docs/ y data/docs/assets/", use_container_width=True):
+        if st.button(">_ Reindexar", help="Recarga todos los documentos desde data/docs/ y data/docs/assets/", use_container_width=True):
             cargar_documentos_locales(st.session_state.doc_store, force=True)
-            st.toast("Base documental y assets reindexados con éxito")
+            st.toast("[OK] Base documental y assets reindexados con éxito")
             st.rerun()
     with col_btn2:
-        if st.button("Limpiar Chat", help="Reinicia el historial de búsquedas y chat", use_container_width=True):
+        if st.button(">_ Limpiar Chat", help="Reinicia el historial de búsquedas y chat", use_container_width=True):
             st.session_state.historial_busquedas = []
             st.session_state.messages = []
-            st.toast("Historial de búsquedas reiniciado")
+            st.toast("[INFO] Historial de consultas reiniciado")
             st.rerun()
 
     st.markdown("---")
 
     # Estado del Sistema
-    st.markdown("#### Estado del Sistema")
+    st.markdown("#### Telemetría de Motores")
     st.markdown(f"""
-<div style="background-color: rgba(128, 128, 128, 0.08); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 8px; padding: 10px; font-size: 0.8rem;">
-    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-        <span><b>DuckDB SQL:</b></span> <span class="badge-ok">Conectado</span>
+<div class="sidebar-telemetry-box">
+    <div class="sidebar-telemetry-row">
+        <span class="sidebar-telemetry-engine">DuckDB SQL:</span>
+        <span class="sidebar-status-dot-ok">ONLINE</span>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-        <span><b>MarkItDown Engine:</b></span> <span class="badge-ok">Activo</span>
+    <div class="sidebar-telemetry-row">
+        <span class="sidebar-telemetry-engine">MarkItDown Parser:</span>
+        <span class="sidebar-status-dot-ok">ACTIVO</span>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-        <span><b>Visor Side-by-Side:</b></span> <span class="badge-ok">Habilitado</span>
+    <div class="sidebar-telemetry-row">
+        <span class="sidebar-telemetry-engine">Visor Lado a Lado:</span>
+        <span class="sidebar-status-dot-ok">HABILITADO</span>
     </div>
-    <div style="display: flex; justify-content: space-between;">
-        <span><b>Docs Indexados:</b></span> <b>{cant_docs} archivos</b>
+    <div class="sidebar-telemetry-row">
+        <span class="sidebar-telemetry-engine">Docs en Memoria:</span>
+        <span class="badge-ok" style="font-size:0.68rem;padding:1px 6px;">{cant_docs_side} docs</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -340,17 +377,27 @@ with st.sidebar:
     <span class="sidebar-footer-version">[v1.0] Copilot</span>
     <span class="sidebar-footer-ts">Sesion: {session_ts}</span>
 </div>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 
 # 4. Navbar Hero Card (Barra Flotante con Relieve)
+cant_docs = len(st.session_state.doc_store)
+total_srvs = 0
+if os.path.exists(CSV_PATH):
+    try:
+        df_tot = pd.read_csv(CSV_PATH)
+        total_srvs = len(df_tot)
+    except Exception:
+        pass
+
 with st.container(border=True):
     st.markdown('<div class="navbar-anchor" style="display:none;"></div>', unsafe_allow_html=True)
-    col_brand, col_nav_mode, col_stats = st.columns([1.6, 1.3, 1.5], gap="small", vertical_alignment="center")
+    col_brand, col_nav_mode, col_stats = st.columns([1.8, 1.3, 1.0], gap="small", vertical_alignment="center")
 
     with col_brand:
         st.markdown("""
         <div class="navbar-brand-container">
+            <span class="navbar-brand-badge">[CLI]</span>
             <span class="navbar-brand-title">Copilot de Infraestructura</span>
             <div class="navbar-brand-badges">
                 <span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span>
@@ -370,24 +417,11 @@ with st.container(border=True):
             vista_seleccionada = "Consola"
 
     with col_stats:
-        cant_docs = len(st.session_state.doc_store)
-        total_srvs = 0
-        if os.path.exists(CSV_PATH):
-            try:
-                df_tot = pd.read_csv(CSV_PATH)
-                total_srvs = len(df_tot)
-            except Exception:
-                pass
-
         st.markdown(f"""
         <div class="navbar-stats-container">
             <div class="navbar-stat-chip">
                 <span class="navbar-stat-label">Documentos:</span>
                 <span class="navbar-stat-value-ok">{cant_docs}</span>
-            </div>
-            <div class="navbar-stat-chip">
-                <span class="navbar-stat-label">CMDB:</span>
-                <span class="navbar-stat-value-info">{total_srvs}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -421,28 +455,27 @@ with tab_chat:
             submitted = st.form_submit_button(
                 "Buscar", type="primary", use_container_width=True)
 
-    # 2. Chips de consultas rapidas
-    st.markdown("<div style='margin-top: -6px; margin-bottom: 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;'>Consultas rapidas:</div>", unsafe_allow_html=True)
-    st.markdown('<div class="quick-chip-row">', unsafe_allow_html=True)
-    col_q1, col_q2, col_q3, col_q4, col_q5 = st.columns(5)
+    # 2. Chips de consultas rapidas responsivos
+    st.markdown("<div style='margin-top: -6px; margin-bottom: 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;'>Consultas rapidas:</div>", unsafe_allow_html=True)
+    quick_queries = [
+        ">_ BALANCER001",
+        ">_ Autenticacion JWT",
+        ">_ 10.24.0.125",
+        ">_ Failover Redis",
+        ">_ SN-8842-A",
+        ">_ PureStorage SAN",
+    ]
+    selected_quick = st.pills(
+        "Consultas rapidas",
+        options=quick_queries,
+        default=None,
+        label_visibility="collapsed",
+        key="tab1_quick_query_pills"
+    )
     prompt_rapido = None
-
-    with col_q1:
-        if st.button(">_ BALANCER001", use_container_width=True, key="btn_quick_b1"):
-            prompt_rapido = "BALANCER001"
-    with col_q2:
-        if st.button(">_ Auth JWT", use_container_width=True, key="btn_quick_jwt"):
-            prompt_rapido = "Autenticacion JWT"
-    with col_q3:
-        if st.button(">_ 10.24.0.125", use_container_width=True, key="btn_quick_ip"):
-            prompt_rapido = "10.24.0.125"
-    with col_q4:
-        if st.button(">_ Failover Redis", use_container_width=True, key="btn_quick_redis"):
-            prompt_rapido = "Failover Redis"
-    with col_q5:
-        if st.button(">_ SN-8842-A", use_container_width=True, key="btn_quick_sn"):
-            prompt_rapido = "SN-8842-A"
-    st.markdown('</div>', unsafe_allow_html=True)
+    if selected_quick:
+        prompt_rapido = selected_quick.replace(">_ ", "").strip()
+        st.session_state.tab1_quick_query_pills = None
 
     query_a_ejecutar = prompt_rapido if prompt_rapido else (
         query_input.strip() if submitted and query_input.strip() else None)
@@ -655,15 +688,15 @@ with tab_analytics:
   </div>
 
   <div style="
-    background: linear-gradient(135deg, rgba(225,29,72,0.10) 0%, rgba(225,29,72,0.04) 100%);
-    border: 1px solid rgba(225,29,72,0.28);
-    border-top: 3px solid #E11D48;
+    background: linear-gradient(135deg, rgba(106, 57, 123, 0.14) 0%, rgba(106, 57, 123, 0.04) 100%);
+    border: 1px solid rgba(106, 57, 123, 0.30);
+    border-top: 3px solid rgb(106, 57, 123);
     border-radius: 10px;
     padding: 14px 16px;
     animation: fadeInUp 0.45s ease both;
   ">
     <div style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px;">Criticos</div>
-    <div style="font-size: 1.85rem; font-weight: 700; line-height: 1; color: #E11D48;">{cnt_crit}</div>
+    <div style="font-size: 1.85rem; font-weight: 700; line-height: 1; color: rgb(106, 57, 123);">{cnt_crit}</div>
     <div style="font-size: 0.72rem; opacity: 0.6; margin-top: 4px;">{pct_crit}% del total</div>
   </div>
 
@@ -1208,26 +1241,48 @@ with tab_templates:
 
         lista_tipos = obtener_todos_los_tipos_plantillas()
         tipo_plantilla_sel = st.selectbox(
-            "Tipo de Procedimiento",
+            "Plantilla / Tipo de Procedimiento",
             lista_tipos,
             key="select_tipo_procedimiento_gen"
         )
 
-        es_crear_nuevo = tipo_plantilla_sel == "[+ Crear Nuevo Tipo de Procedimiento...]"
+        es_crear_nuevo = "[+ Crear" in tipo_plantilla_sel
 
         if es_crear_nuevo:
             st.info(
-                "[NUEVO TIPO] Defina el nombre y estructura de este nuevo tipo de procedimiento.")
-            nuevo_tipo_nombre = st.text_input("Nombre del Nuevo Tipo de Procedimiento (*)",
-                                              placeholder="Ej: Procedimiento de Auditoría de Accesos y Permisos", key="input_nuevo_tipo_proc")
+                "[NUEVA PLANTILLA] Ingrese el nombre y parámetros de la plantilla que desea crear y documentar.")
+            nuevo_tipo_nombre = st.text_input("Nombre de la Plantilla / Tipo de Procedimiento (*)",
+                                              placeholder="Ej: Auditoría de Accesos y Permisos", key="input_nuevo_tipo_proc")
             guardar_catalogo = st.checkbox(
-                "Guardar este nuevo Tipo de Plantilla en el catálogo permanente", value=True)
+                "Guardar este tipo de plantilla en el catálogo permanente", value=True)
             tipo_plantilla = nuevo_tipo_nombre.strip(
             ) if nuevo_tipo_nombre.strip() else "Procedimiento Personalizado"
         else:
-            tipo_plantilla = tipo_plantilla_sel
+            tipo_plantilla = tipo_plantilla_sel.replace("[Plantilla]", "").replace("[Personalizado]", "").strip()
             guardar_catalogo = False
             nuevo_tipo_nombre = ""
+
+        # Catálogo base reservado en expander opcional
+        with st.expander("Explorar catálogo de plantillas base reservadas (Opcional)", expanded=False):
+            st.caption("Estas plantillas predefinidas se encuentran reservadas para su uso opcional. Puede activar cualquiera para integrarla a su catálogo:")
+            col_res_sel, col_res_btn = st.columns([3, 1])
+            with col_res_sel:
+                base_a_activar = st.selectbox(
+                    "Seleccionar plantilla base a activar:",
+                    PLANTILLAS_BASE_RESERVADAS,
+                    key="sel_plantilla_base_res"
+                )
+            with col_res_btn:
+                st.write("")
+                st.write("")
+                if st.button("[+ Activar]", key="btn_activar_plantilla_base", use_container_width=True):
+                    guardar_plantilla_personalizada(
+                        nombre=base_a_activar,
+                        descripcion=f"Plantilla activada desde catálogo base: {base_a_activar}",
+                        campos=["criterio", "pasos", "verif"]
+                    )
+                    st.toast(f"[OK] Plantilla '{base_a_activar}' activada en el catálogo")
+                    st.rerun()
 
         col_g1, col_g2 = st.columns(2)
         with col_g1:

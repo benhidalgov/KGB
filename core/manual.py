@@ -144,7 +144,7 @@ Si te pasaron una carpeta con 200 archivos o quieres sincronizar una unidad comp
 # Opción 1: Procesa todo lo que dejes dentro de la carpeta data/inbox/
 python batch_ingest.py
 
-# Opción 2: Procesa una carpeta de red compartida (Z:\) usando 8 hilos en paralelo
+# Opción 2: Procesa una carpeta de red compartida (Z:\) 
 python batch_ingest.py --origen Z:\Infraestructura\Manuales --workers 8
 ```
 
