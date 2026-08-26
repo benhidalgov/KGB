@@ -83,9 +83,19 @@ graph TD
 
 ### Componentes de Ingesta
 * **Procesador Excel Limpio (`excel_cleaner.py`):** Parser y extractor que preserva encabezados, omite ruido estructural y segmenta libros complejos por hojas individuales (`## Hoja: ...`).
-* **MarkItDown (Microsoft):** Motor multiformato para conversion de Word (`mammoth`), Excel (`openpyxl`), PDF (`pypdf`), PowerPoint (`python-pptx`) y Markdown.
-* **Worker de Ingesta Masiva (`batch_ingest.py`):** Script para conversion por lotes en paralelo con deteccion automatica de cambios mediante firmas SHA-256 registradas en `data/ingestion_manifest.json`.
-* **Fichas Tecnicas Complejas de Servidores:** Estandarizacion de matrices de celdas combinadas con datos de monitoreo PRTG (sensores de CPU, Memoria, PING, Disco, HTTP), umbrales (Warning/Critical), criticidad de ambiente y matrices de escalamiento (ej. `BALANCER001`).
+* **MarkItDown (Microsoft):** Motor multiformato para conversión de Word (`mammoth`), Excel (`openpyxl`), PDF (`pypdf`), PowerPoint (`python-pptx`) y Markdown. Configurado con `keep_data_uris=True` para preservar imágenes incrustadas.
+* **Worker de Ingesta Masiva (`batch_ingest.py`):** Script para conversión por lotes en paralelo con detección automática de cambios mediante firmas SHA-256 registradas en `data/ingestion_manifest.json`.
+* **Fichas Técnicas Complejas de Servidores:** Estandarización de matrices de celdas combinadas con datos de monitoreo PRTG (sensores de CPU, Memoria, PING, Disco, HTTP), umbrales (Warning/Critical), criticidad de ambiente y matrices de escalamiento (ej. `BALANCER001`).
+* **Normalizador Integral de Nombres (`core/procesador.py`):**
+  * `normalizar_nombre_archivo`: Limpieza física a `snake_case` seguro en disco sin espacios, sin tildes y con versionado normalizado (ej. `cmdb_unicard_v1_1.xlsx`).
+  * `normalizar_titulo_display`: Generación de títulos corporativos limpios en la interfaz con soporte nativo para acrónimos técnicos (`CMDB`, `SAN`, `WSO2`, `JWT`, `IP`, `HPE`, `SSL`, `TLS`, `API`, `VM`, `DRP`, `DNS`, `SSH`, `CI/CD`, `VLAN`, `DMZ`, `APM`, `NSX`, `SQL`, `CSV`, `PDF`, `AV`, `L1`-`L4`) y marcas registradas (`PureStorage`, `VMware`, `vCloud`, `Redis`, `Nagios`, `NewRelic`).
+* **Procesador de Medios e Imágenes para Vista Formateada (`core/procesador.py`):**
+  * `preparar_markdown_con_imagenes`: Inyección de Data URIs base64 para renderizado seguro en navegador web sin requerir endpoints estáticos adicionales.
+  * `extraer_imagenes_de_docx`: Extracción y auto-recuperación de imágenes binarias empaquetadas en archivos DOCX (`word/media/`).
+* **Caché Multinivel de Alto Rendimiento:**
+  * `@st.cache_data` indexada por `(filepath, mtime)` en `_cargar_documento_individual_cached`, reduciendo tiempos de parseo de 3.28s a 0.0025s.
+  * `functools.lru_cache` para auditoría, metadata y cálculo de fechas de carga.
+  * `@st.cache_data` en lectura de libros Excel multihoja (`cargar_hoja_excel_dataframe`).
 
 ---
 

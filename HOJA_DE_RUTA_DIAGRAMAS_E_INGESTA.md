@@ -49,11 +49,31 @@ Este documento contiene el registro de avances completados y la planificación t
   - **Paleta Obsidian & Indigo (Theme-Safe):** Acentos en Índigo (`#6366F1`), estados operativos `[OK]` (`#10B981`), `[WARN]` (`#D97706`), `[CRIT]` (`#E11D48`) y bordes laterales de 3.5px en tarjetas de búsqueda.
   - **Gobernanza:** Prohibición estricta de la palabra "AIOps" y política de cero emojis en todo el proyecto.
 
+- [x] **Paso 8: Normalizador Integral de Nombres y Estandarización de Archivos** *(COMPLETADO)*
+  - Sanitización automática de nombres de archivo a `snake_case` seguro en disco (`normalizar_nombre_archivo`), eliminando acentos, caracteres conflictivos y dobles extensiones.
+  - Formateo corporativo en interfaz (`normalizar_titulo_display`) respetando acrónimos técnicos (`CMDB`, `SAN`, `WSO2`, `JWT`, `IP`, `HPE`, `PureStorage`, `VMware`, etc.).
+  - Integración transversal en panel lateral de carga, ingesta masiva (`batch_ingest.py`), explorador documental, selector de documentos (`format_func`) y tarjetas de búsqueda.
+
+- [x] **Paso 9: Renderizado de Imágenes en Vista Formateada y Extracción de Medios DOCX** *(COMPLETADO)*
+  - Activación de `keep_data_uris=True` en Microsoft MarkItDown para preservar imágenes completas de documentos Word (.docx).
+  - Normalizador de medios Markdown (`preparar_markdown_con_imagenes`) que resuelve rutas locales relativas a Data URIs base64.
+  - Motor de auto-recuperación (`extraer_imagenes_de_docx`) para reconstruir imágenes en caliente desde el contenedor ZIP de Word.
+  - Inyección de esquemas gráficos centrados con caption en fichas de diagramas (`DIAGRAMA__*.md`).
+  - Separación entre visualización enriquecida (`unsafe_allow_html=True`) en **Vista Formateada** y código Markdown limpio en **Código Markdown**.
+
+- [x] **Paso 10: Optimización de Rendimiento, Caché Multinivel e Integridad de Sesión** *(COMPLETADO)*
+  - Supresión de reloads superfluos de módulos que ralentizaban la interacción en cada ciclo de Streamlit.
+  - Caché `@st.cache_data` indexada por `mtime` en `_cargar_documento_individual_cached`, reduciendo el parsing inicial de 3.28s a 0.0025s.
+  - Carga condicional en `st.session_state` para evitar lecturas de disco innecesarias.
+  - Caché LRU para auditoría, metadata y fechas de carga de documentos.
+  - Caché de hojas de cálculo Excel (`cargar_hoja_excel_dataframe` y `obtener_nombres_hojas_excel`).
+  - Claves dinámicas versionadas (`quick_pills_version`) para evitar `StreamlitAPIException`.
+
 ---
 
 ## 2. Próximos Pasos y Roadmap de Desarrollo
 
-### Paso 8: Extracción de Contenido Gráfico (OCR y Visión Multimodal con IA)
+### Paso 11: Extracción de Contenido Gráfico (OCR y Visión Multimodal con IA)
 **Objetivo:** Hacer que los diagramas sean buscables por el Copilot mediante su contenido textual interno (nombres de servidores, puertos, flujos, direcciones IP dentro de la imagen).
 
 1. **Estrategia A — OCR Local (Offline / Sin costo de API):**
@@ -68,7 +88,7 @@ Este documento contiene el registro de avances completados y la planificación t
 
 ---
 
-### Paso 9: Galería Multimedia y Visor de Topologías Interactivo
+### Paso 12: Galería Multimedia y Visor de Topologías Interactivo
 **Objetivo:** Ofrecer una experiencia visual inmersiva para navegar mapas de infraestructura y diagramas de procesos.
 
 1. **Galería Visual de Diagramas:**
@@ -78,7 +98,7 @@ Este documento contiene el registro de avances completados y la planificación t
 
 ---
 
-### Paso 10: Demonio de Sincronización Automática con Carpetas de Red
+### Paso 13: Demonio de Sincronización Automática con Carpetas de Red
 **Objetivo:** Mantener el Copilot sincronizado automáticamente con repositorios corporativos compartidos (`Z:\` o rutas UNC) en segundo plano.
 
 1. **Tarea Programada / Background Watcher:**

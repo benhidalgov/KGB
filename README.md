@@ -7,10 +7,12 @@ Plataforma corporativa de asistencia técnica y gestión documental para infraes
 ## 1. Capacidades Principales
 
 * **Motor Dual de Búsqueda:** Consultas exactas por IP, host o serie sobre CMDB con DuckDB, y búsqueda full-text con MarkItDown en manuales y diagramas.
-* **Visor Lado a Lado:** Inspección sincronizada entre Markdown normalizado y el archivo original (PDF embebido, Excel interactivo, diagramas en alta resolución o Word).
+* **Visor Lado a Lado con Imágenes Activas:** Inspección sincronizada entre Markdown normalizado y el archivo original (PDF embebido, Excel interactivo, diagramas en alta resolución o Word). La **Vista Formateada** renderiza esquemas y todas las imágenes embebidas de documentos Word (.docx) mediante Data URIs base64.
+* **Normalizador Integral de Nombres:** Sanitización automática de nombres físicos a `snake_case` seguro en disco y generación de títulos ejecutivos corporativos en la interfaz con soporte nativo de acrónimos técnicos (CMDB, SAN, WSO2, JWT, IP, HPE, PureStorage, etc.).
 * **Control de Versiones y Auditoría:** Historial inmutable en `data/history/` (`v1`, `v2`...), comparador visual *Diff*, Rollback protegido y registro central en `data/audit_log.json`.
 * **Generador de Runbooks:** Creación rápida de procedimientos estandarizados (Rollback, Despliegue, Postmortem P1, Failover) y definición de plantillas personalizadas.
 * **Ingesta Masiva Recursiva:** Procesamiento multihilo (`batch_ingest.py`) con firmas SHA-256 y soporte para carpetas compartidas de red (`Z:\` o rutas UNC).
+* **Arquitectura de Alto Rendimiento:** Ingesta en memoria optimizada con `@st.cache_data` indexada por `mtime` (reducción de 3.28s a 0.0025s), eliminación de reloads redundantes y caché LRU en metadatos y auditoría.
 * **Diseño Theme-Safe (Obsidian & Indigo):** Interfaz adaptativa 100% legible en Tema Claro y Oscuro, sin emojis y con terminología técnica formal.
 
 ---
@@ -54,10 +56,10 @@ streamlit run app.py
 ## 4. Guía Rápida por Módulo
 
 * **Navbar Superior:** Título corporativo, estado `● ONLINE`, selector de vista (`[Consola]` | `[Manual de Uso]`) y contadores en tiempo real de Documentos y CMDB.
-* **Panel Lateral (Sidebar):** Carga de archivos arrastrando y soltando, filtros por tipo y acciones rápidas (`Reindexar`, `Limpiar Chat`).
-* **Pestaña 1 (Consultas y Búsqueda):** Barra de búsqueda superior con chips de acceso rápido (`BALANCER001`, `JWT`, `10.24.0.125`), tarjetas con bordes temáticos y fragmentos resaltados.
-* **Pestaña 2 (Historial de Mantenimientos):** Tabla interactiva con filtros por Nivel (L1-L4), Estado y Técnico, más consola SQL DuckDB en vivo.
-* **Pestaña 3 (Documentación Técnica y Versionado):** Visor Lado a Lado (Markdown vs Original), editor en cuadrícula para Excel, editor de texto, comparador Diff, descarga de snapshots y botón de Rollback protegido.
+* **Panel Lateral (Sidebar):** Carga de archivos con sanitización automática (`normalizar_nombre_archivo`), explorador con títulos ejecutivos limpios (`normalizar_titulo_display`), filtros por tipo y acciones rápidas (`Reindexar`, `Limpiar Chat`).
+* **Pestaña 1 (Consultas y Búsqueda):** Barra de búsqueda superior con chips de acceso rápido (`BALANCER001`, `JWT`, `10.24.0.125`), tarjetas con bordes temáticos, fragmentos resaltados y nombres normalizados de archivo.
+* **Pestaña 2 (Historial de Mantenimientos):** Tabla interactiva con filtros por Nivel (L1-L4), Estado y Técnico, más consola SQL DuckDB en vivo con DataFrames cacheados.
+* **Pestaña 3 (Documentación Técnica y Versionado):** Selector con formateo corporativo (`format_func`), visor Lado a Lado (Markdown vs Original), renderizado de diagramas e imágenes DOCX en la **Vista Formateada**, editor en cuadrícula para Excel, editor de texto, comparador Diff, descarga de snapshots y botón de Rollback protegido.
 * **Pestaña 4 (Plantillas y Runbooks):** Asistente de 3 pasos con formularios dinámicos para redactar, previsualizar y publicar procedimientos en la base de conocimiento (`v1`).
 * **Ingesta Masiva por Lote:** `python batch_ingest.py --origen Z:\RutaRed --workers 8`.
 
@@ -69,9 +71,11 @@ streamlit run app.py
 | :--- | :--- | :--- |
 | **Interfaz Web** | Streamlit + Antd Components | Dashboard corporativo y componentes interactivos |
 | **Motor SQL** | DuckDB + Pandas | Consultas en memoria sobre inventarios y mantenimientos |
-| **Conversión Documental** | Microsoft MarkItDown + OpenPyXL | Extracción de texto estructurado de PDFs, Word y Excel |
+| **Conversión Documental** | Microsoft MarkItDown + OpenPyXL | Extracción de texto estructurado de PDFs, Word y Excel con `keep_data_uris=True` |
+| **Procesador de Medios** | Python `base64` + `zipfile` | Inyección de Data URIs para imágenes y extracción de gráficos en Word |
 | **Auditoría e Integridad** | Python `hashlib` (SHA-256) + `difflib` | Versionado inmutable, Diff y bitácora de auditoría |
 | **Diagramas** | Mermaid.js | Topologías e infraestructura en 4 niveles (L1-L4) |
+| **Caché y Rendimiento** | `@st.cache_data` + `functools.lru_cache` | Aceleración de I/O en documentos, hojas Excel y metadatos |
 
 ---
 
