@@ -288,18 +288,15 @@ def renderizar_lado_a_lado(
         return
 
     # Para documentos estándar (Word, PDF, Excel, Markdown)
-    col_mode_sel, col_mode_help = st.columns([2.5, 1.5])
+    col_mode_sel, col_mode_help = st.columns([2.5, 1.5], vertical_alignment="center")
     with col_mode_sel:
         st.markdown("<div style='margin-bottom: 4px; font-size: 0.85rem; font-weight: 600;'>Modo de Visualización:</div>", unsafe_allow_html=True)
-        modo_vista = sac.segmented(
-            items=[
-                sac.SegmentedItem(label="[Lado a Lado]"),
-                sac.SegmentedItem(label="[Solo Markdown]"),
-                sac.SegmentedItem(label="[Solo Formato Original]"),
-            ],
-            size="sm",
-            align="start",
-            key=f"sac_modo_vista_{doc_name}_{key_suffix}"
+        modo_vista = st.segmented_control(
+            label="Modo de Visualización",
+            options=["[Lado a Lado]", "[Solo Markdown]", "[Solo Formato Original]"],
+            default="[Lado a Lado]",
+            label_visibility="collapsed",
+            key=f"seg_modo_vista_{doc_name}_{key_suffix}"
         )
         if not modo_vista:
             modo_vista = "[Lado a Lado]"

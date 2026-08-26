@@ -346,30 +346,28 @@ with st.sidebar:
 # 4. Navbar Hero Card (Barra Flotante con Relieve)
 with st.container(border=True):
     st.markdown('<div class="navbar-anchor" style="display:none;"></div>', unsafe_allow_html=True)
-    col_brand, col_nav_mode, col_stats = st.columns([2.5, 1.8, 2.7], gap="medium")
+    col_brand, col_nav_mode, col_stats = st.columns([1.6, 1.3, 1.5], gap="small", vertical_alignment="center")
 
     with col_brand:
         st.markdown("""
         <div class="navbar-brand-container">
-            <span class="navbar-brand-title" style="font-size: 1.25rem; font-weight: 700;">Copilot de Infraestructura</span>
-            <span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span>
-            <span class="badge-info" style="font-size: 0.72rem; padding: 2px 6px;">[Docs]</span>
+            <span class="navbar-brand-title">Copilot de Infraestructura</span>
+            <div class="navbar-brand-badges">
+                <span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
     with col_nav_mode:
-        vista_seleccionada = sac.segmented(
-            items=[
-                sac.SegmentedItem(label="Consola"),
-                sac.SegmentedItem(label="Manual de Uso"),
-            ],
-            size="sm",
-            align="center",
-            use_container_width=True,
+        vista_seleccionada = st.segmented_control(
+            label="Vista de Navegación",
+            options=["Consola", "Manual de Uso"],
+            default="Consola",
+            label_visibility="collapsed",
             key="top_navbar_view_selector"
         )
         if not vista_seleccionada:
-            vista_seleccionada = "Consola "
+            vista_seleccionada = "Consola"
 
     with col_stats:
         cant_docs = len(st.session_state.doc_store)
@@ -382,13 +380,13 @@ with st.container(border=True):
                 pass
 
         st.markdown(f"""
-        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; height: 100%;">
+        <div class="navbar-stats-container">
             <div class="navbar-stat-chip">
                 <span class="navbar-stat-label">Documentos:</span>
                 <span class="navbar-stat-value-ok">{cant_docs}</span>
             </div>
             <div class="navbar-stat-chip">
-                <span class="navbar-stat-label">Inventario CMDB:</span>
+                <span class="navbar-stat-label">CMDB:</span>
                 <span class="navbar-stat-value-info">{total_srvs}</span>
             </div>
         </div>

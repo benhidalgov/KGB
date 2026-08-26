@@ -587,20 +587,20 @@ code, pre {
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor) {
     background: linear-gradient(
         135deg,
-        rgba(99, 102, 241, 0.10) 0%,
-        rgba(99, 102, 241, 0.04) 50%,
-        rgba(16, 185, 129, 0.04) 100%
+        rgba(99, 102, 241, 0.08) 0%,
+        rgba(99, 102, 241, 0.03) 50%,
+        rgba(16, 185, 129, 0.03) 100%
     ) !important;
     backdrop-filter: blur(12px) saturate(1.4) !important;
     -webkit-backdrop-filter: blur(12px) saturate(1.4) !important;
-    border: 1px solid rgba(99, 102, 241, 0.30) !important;
-    border-radius: 14px !important;
-    padding: 10px 18px !important;
-    margin-bottom: 14px !important;
+    border: 1px solid rgba(99, 102, 241, 0.25) !important;
+    border-radius: 12px !important;
+    padding: 6px 12px !important;
+    margin-bottom: 12px !important;
     box-shadow:
-        0 4px 24px rgba(0, 0, 0, 0.14),
+        0 4px 20px rgba(0, 0, 0, 0.12),
         0 1px 0 rgba(255, 255, 255, 0.06) inset,
-        0 0 0 1px rgba(99, 102, 241, 0.10) inset !important;
+        0 0 0 1px rgba(99, 102, 241, 0.08) inset !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     animation: slideInDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) both !important;
     position: relative !important;
@@ -622,56 +622,83 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor)::before {
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor):hover {
-    border-color: rgba(99, 102, 241, 0.50) !important;
+    border-color: rgba(99, 102, 241, 0.45) !important;
     box-shadow:
-        0 8px 32px rgba(99, 102, 241, 0.18),
+        0 6px 24px rgba(99, 102, 241, 0.15),
         0 1px 0 rgba(255, 255, 255, 0.08) inset,
-        0 0 0 1px rgba(99, 102, 241, 0.16) inset !important;
+        0 0 0 1px rgba(99, 102, 241, 0.12) inset !important;
     transform: translateY(-1px) !important;
 }
 
 .navbar-brand-container {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 4px;
+    gap: 6px;
     flex-wrap: wrap;
+    row-gap: 2px;
+}
+
+.navbar-brand-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+}
+
+.navbar-brand-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .badge-pulse-online {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     background-color: rgba(16, 185, 129, 0.18);
     color: #10B981;
     border: 1px solid rgba(16, 185, 129, 0.4);
-    padding: 2px 8px;
+    padding: 1px 6px;
     border-radius: 20px;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.03em;
+    white-space: nowrap;
 }
 
 .pulse-dot {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background-color: #10B981;
     display: inline-block;
     animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+.navbar-stats-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    flex-wrap: wrap;
+    row-gap: 4px;
+}
+
 .navbar-stat-chip {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     background-color: rgba(128, 128, 128, 0.07);
-    border: 1px solid rgba(128, 128, 128, 0.22);
-    border-radius: 8px;
-    padding: 6px 14px;
-    font-size: 0.9rem;
+    border: 1px solid rgba(128, 128, 128, 0.20);
+    border-radius: 5px;
+    padding: 2px 6px;
+    font-size: 0.76rem;
     font-weight: 500;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .navbar-stat-chip:hover {
@@ -682,7 +709,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor):hover {
 
 .navbar-stat-label {
     opacity: 0.85;
-    font-size: 0.86rem;
+    font-size: 0.74rem;
     font-weight: 500;
 }
 
@@ -690,9 +717,9 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor):hover {
     background-color: rgba(16, 185, 129, 0.18);
     color: #10B981;
     border: 1px solid rgba(16, 185, 129, 0.35);
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-size: 0.95rem;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.78rem;
     font-weight: 700;
 }
 
@@ -700,9 +727,9 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor):hover {
     background-color: rgba(99, 102, 241, 0.18);
     color: #6366F1;
     border: 1px solid rgba(99, 102, 241, 0.35);
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-size: 0.95rem;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.78rem;
     font-weight: 700;
 }
 
@@ -1028,3 +1055,59 @@ button[data-baseweb="tab"][aria-selected="true"]::after {
     opacity: 0.55;
     font-family: var(--font-mono);
 }
+
+/* ========================================================================
+   22. SEGMENTED CONTROL THEME-SAFE (Obsidian & Indigo)
+   ======================================================================== */
+div[data-testid="stSegmentedControl"] {
+    background-color: rgba(128, 128, 128, 0.08) !important;
+    border: 1px solid rgba(99, 102, 241, 0.25) !important;
+    border-radius: 8px !important;
+    padding: 2px !important;
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+
+div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+div[data-testid="stSegmentedControl"] button {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    border-radius: 6px !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    padding: 3px 8px !important;
+    border: none !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    color: inherit !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+div[data-testid="stSegmentedControl"] button:hover {
+    background-color: rgba(99, 102, 241, 0.12) !important;
+    color: #6366F1 !important;
+}
+
+div[data-testid="stSegmentedControl"] button[aria-checked="true"],
+div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+div[data-testid="stSegmentedControl"] button[aria-selected="true"],
+div[data-testid="stSegmentedControl"] button[data-checked="true"] {
+    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35) !important;
+}
+
