@@ -34,6 +34,7 @@ from core.auditoria import (
     obtener_contenido_version,
     obtener_bytes_snapshot,
     cargar_hoja_excel_dataframe,
+    obtener_nombres_hojas_excel,
     generar_diff_texto,
     generar_diff_lado_a_lado_html,
     obtener_todos_los_eventos_auditoria,
@@ -53,32 +54,22 @@ from excel_cleaner import procesar_excel_limpio
 import os
 import re
 import shutil
-import importlib
 import datetime
 import duckdb
 import pandas as pd
 import streamlit as st
 import streamlit_antd_components as sac
 
-import core.configuracion
-import core.estilos
-import core.auditoria
-import core.motor
-import core.procesador
-import core.topologia
-import core.plantillas
-import core.visor
-import core.manual
 
-importlib.reload(core.configuracion)
-importlib.reload(core.estilos)
-importlib.reload(core.auditoria)
-importlib.reload(core.motor)
-importlib.reload(core.procesador)
-importlib.reload(core.topologia)
-importlib.reload(core.plantillas)
-importlib.reload(core.visor)
-importlib.reload(core.manual)
+@st.cache_data(show_spinner=False)
+def obtener_dataframe_mantenimientos(mtime: float) -> pd.DataFrame:
+    """Carga mantenimientos.csv en cache evitando accesos repetitivos a disco."""
+    if os.path.exists(CSV_PATH):
+        try:
+            return pd.read_csv(CSV_PATH)
+        except Exception:
+            return pd.DataFrame()
+    return pd.DataFrame()
 
 
 # 1. Configuracion de Streamlit
@@ -100,8 +91,10 @@ if "messages" not in st.session_state:
 
 if "doc_store" not in st.session_state:
     st.session_state.doc_store = {}
+    cargar_documentos_locales(st.session_state.doc_store)
 
-cargar_documentos_locales(st.session_state.doc_store)
+if "quick_pills_version" not in st.session_state:
+    st.session_state.quick_pills_version = 0
 
 
 # 3. Sidebar (Panel de Control e Ingesta)
@@ -382,13 +375,9 @@ with st.sidebar:
 
 # 4. Navbar Hero Card (Barra Flotante con Relieve)
 cant_docs = len(st.session_state.doc_store)
-total_srvs = 0
-if os.path.exists(CSV_PATH):
-    try:
-        df_tot = pd.read_csv(CSV_PATH)
-        total_srvs = len(df_tot)
-    except Exception:
-        pass
+mtime_csv = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
+df_mantenimientos_cache = obtener_dataframe_mantenimientos(mtime_csv)
+total_srvs = len(df_mantenimientos_cache)
 
 with st.container(border=True):
     st.markdown('<div class="navbar-anchor" style="display:none;"></div>', unsafe_allow_html=True)
@@ -465,17 +454,21 @@ with tab_chat:
         ">_ SN-8842-A",
         ">_ PureStorage SAN",
     ]
+    if "quick_pills_version" not in st.session_state:
+        st.session_state.quick_pills_version = 0
+
+    pills_key = f"tab1_quick_query_pills_{st.session_state.quick_pills_version}"
     selected_quick = st.pills(
         "Consultas rapidas",
         options=quick_queries,
         default=None,
         label_visibility="collapsed",
-        key="tab1_quick_query_pills"
+        key=pills_key
     )
     prompt_rapido = None
     if selected_quick:
         prompt_rapido = selected_quick.replace(">_ ", "").strip()
-        st.session_state.tab1_quick_query_pills = None
+        st.session_state.quick_pills_version += 1
 
     query_a_ejecutar = prompt_rapido if prompt_rapido else (
         query_input.strip() if submitted and query_input.strip() else None)
@@ -553,12 +546,11 @@ with tab_analytics:
     # Límites temporales desde el dataset
     min_date = datetime.date(2026, 1, 1)
     max_date = datetime.date(2026, 12, 31)
-    if os.path.exists(CSV_PATH):
+    if not df_mantenimientos_cache.empty and 'fecha' in df_mantenimientos_cache.columns:
         try:
-            df_fechas = pd.read_csv(CSV_PATH)
-            df_fechas['fecha_dt'] = pd.to_datetime(df_fechas['fecha'], errors='coerce')
-            val_min = df_fechas['fecha_dt'].min()
-            val_max = df_fechas['fecha_dt'].max()
+            fechas_dt = pd.to_datetime(df_mantenimientos_cache['fecha'], errors='coerce')
+            val_min = fechas_dt.min()
+            val_max = fechas_dt.max()
             if pd.notnull(val_min):
                 min_date = val_min.date()
             if pd.notnull(val_max):
@@ -886,11 +878,8 @@ with tab_docs:
                     ('.xlsx', '.xls')) and os.path.exists(excel_orig_path)
 
                 if es_excel:
-                    try:
-                        xls = pd.ExcelFile(excel_orig_path)
-                        sheet_names_edit = xls.sheet_names
-                    except Exception:
-                        sheet_names_edit = []
+                    mtime_excel = os.path.getmtime(excel_orig_path) if os.path.exists(excel_orig_path) else 0.0
+                    sheet_names_edit = obtener_nombres_hojas_excel(excel_orig_path, mtime_excel)
 
                     st.markdown("#### Edición en Vivo de Libro Excel")
                     st.caption(
@@ -910,7 +899,7 @@ with tab_docs:
                                 "Motivo del Cambio (*)", placeholder="Ej: Actualización de IP de nodo", key=f"motive_input_grid_{doc_seleccionado}")
 
                     df_to_edit = cargar_hoja_excel_dataframe(
-                        excel_orig_path, hoja_editar)
+                        excel_orig_path, hoja_editar, mtime_excel)
                     st.markdown(
                         f"**Cuadrícula de la Hoja:** `{hoja_editar}` *(Doble clic en una celda para editar, use el botón final para agregar filas)*")
                     df_modificado = st.data_editor(

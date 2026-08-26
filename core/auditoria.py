@@ -3,14 +3,16 @@ import json
 import html
 import shutil
 import difflib
+import functools
 from datetime import datetime
 import pandas as pd
+import streamlit as st
 from excel_cleaner import procesar_excel_limpio
 from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR
 
 
-def obtener_fecha_carga_documento(doc_name: str):
-    """Obtiene la fecha (date) de carga o creacion inicial de un documento."""
+@functools.lru_cache(maxsize=512)
+def _obtener_fecha_carga_documento_cached(doc_name: str, mtime: float):
     hist = obtener_historial_versiones(doc_name)
     if hist and len(hist) > 0 and "timestamp" in hist[0]:
         try:
@@ -24,12 +26,19 @@ def obtener_fecha_carga_documento(doc_name: str):
         p = os.path.join(ruta_base, doc_name)
         if os.path.exists(p):
             try:
-                mtime = os.path.getmtime(p)
-                return datetime.fromtimestamp(mtime).date()
+                mtime_f = os.path.getmtime(p)
+                return datetime.fromtimestamp(mtime_f).date()
             except Exception:
                 pass
 
     return datetime.now().date()
+
+
+def obtener_fecha_carga_documento(doc_name: str):
+    """Obtiene la fecha (date) de carga o creacion inicial de un documento con cache basada en mtime."""
+    meta_path = os.path.join(HISTORY_DIR, doc_name, "metadata.json")
+    mtime = os.path.getmtime(meta_path) if os.path.exists(meta_path) else 0.0
+    return _obtener_fecha_carga_documento_cached(doc_name, mtime)
 
 
 def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, version_nueva: int, autor: str, motivo: str):
@@ -78,8 +87,8 @@ def generar_diff_texto(texto_ant: str, texto_nuevo: str, label_ant: str = "Versi
     return diff_text
 
 
-def obtener_historial_versiones(doc_name: str) -> list:
-    """Obtiene el registro cronologico de versiones de un documento."""
+@functools.lru_cache(maxsize=512)
+def _obtener_historial_versiones_cached(doc_name: str, mtime: float) -> list:
     meta_path = os.path.join(HISTORY_DIR, doc_name, "metadata.json")
     if os.path.exists(meta_path):
         try:
@@ -88,6 +97,13 @@ def obtener_historial_versiones(doc_name: str) -> list:
         except Exception:
             return []
     return []
+
+
+def obtener_historial_versiones(doc_name: str) -> list:
+    """Obtiene el registro cronologico de versiones de un documento con cache basada en mtime."""
+    meta_path = os.path.join(HISTORY_DIR, doc_name, "metadata.json")
+    mtime = os.path.getmtime(meta_path) if os.path.exists(meta_path) else 0.0
+    return list(_obtener_historial_versiones_cached(doc_name, mtime))
 
 
 import hashlib
@@ -333,8 +349,19 @@ def obtener_contenido_version(doc_name: str, snapshot_fname: str) -> str:
     return ""
 
 
-def cargar_hoja_excel_dataframe(filepath: str, sheet_name: str) -> pd.DataFrame:
-    """Carga una hoja de calculo Excel en un DataFrame normalizado para visualizacion en cuadricula."""
+@st.cache_data(show_spinner=False)
+def obtener_nombres_hojas_excel(filepath: str, mtime: float = 0.0) -> list:
+    """Obtiene los nombres de las hojas de un libro Excel con cache."""
+    try:
+        xls = pd.ExcelFile(filepath)
+        return xls.sheet_names
+    except Exception:
+        return ["Hoja1"]
+
+
+@st.cache_data(show_spinner=False)
+def cargar_hoja_excel_dataframe(filepath: str, sheet_name: str, mtime: float = 0.0) -> pd.DataFrame:
+    """Carga una hoja de calculo Excel en un DataFrame normalizado para visualizacion en cuadricula con cache."""
     try:
         df = pd.read_excel(filepath, sheet_name=sheet_name)
         df = df.dropna(how='all', axis=0).dropna(how='all', axis=1)
@@ -461,8 +488,8 @@ def generar_diff_lado_a_lado_html(texto_ant: str, texto_nuevo: str, label_ant: s
     }
 
 
-def obtener_todos_los_eventos_auditoria() -> list:
-    """Recupera todos los eventos registrados en el log global de auditoría en orden cronológico inverso."""
+@functools.lru_cache(maxsize=16)
+def _obtener_todos_los_eventos_auditoria_cached(mtime: float) -> list:
     if os.path.exists(AUDIT_LOG_PATH):
         try:
             with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
@@ -471,6 +498,12 @@ def obtener_todos_los_eventos_auditoria() -> list:
         except Exception:
             return []
     return []
+
+
+def obtener_todos_los_eventos_auditoria() -> list:
+    """Recupera todos los eventos registrados en el log global de auditoría en orden cronológico inverso con cache."""
+    mtime = os.path.getmtime(AUDIT_LOG_PATH) if os.path.exists(AUDIT_LOG_PATH) else 0.0
+    return list(_obtener_todos_los_eventos_auditoria_cached(mtime))
 
 
 def generar_timeline_versiones_html(historial: list) -> str:

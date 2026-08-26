@@ -3,6 +3,7 @@ import os
 import re
 import glob
 from datetime import datetime
+import streamlit as st
 from excel_cleaner import procesar_excel_limpio
 from core.configuracion import DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR
 
@@ -180,8 +181,8 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
     return None
 
 
-def cargar_documento_individual(filepath: str) -> str:
-    """Convierte un archivo individual al formato Markdown estructurado según su extensión con decodificación resiliente."""
+@st.cache_data(show_spinner=False)
+def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
     ext = os.path.splitext(filepath)[1].lower()
     fname = os.path.basename(filepath)
 
@@ -205,6 +206,12 @@ def cargar_documento_individual(filepath: str) -> str:
             return res.text_content
         except Exception:
             return leer_texto_resiliente(filepath)
+
+
+def cargar_documento_individual(filepath: str) -> str:
+    """Convierte un archivo individual al formato Markdown estructurado según su extensión con decodificación resiliente y cache por mtime."""
+    mtime = os.path.getmtime(filepath) if os.path.exists(filepath) else 0.0
+    return _cargar_documento_individual_cached(filepath, mtime)
 
 
 def cargar_documentos_locales(doc_store: dict, force: bool = False) -> dict:

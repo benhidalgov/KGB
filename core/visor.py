@@ -4,7 +4,7 @@ import re
 import streamlit as st
 import pandas as pd
 import streamlit_antd_components as sac
-from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version
+from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, obtener_nombres_hojas_excel
 from core.procesador import IMAGE_EXTENSIONS, calcular_sha256, sanitizar_nombre_descarga
 from core.configuracion import DOCS_DIR
 
@@ -189,11 +189,8 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
 
     # 2. Libros Excel
     elif ext in (".xlsx", ".xls"):
-        try:
-            xls = pd.ExcelFile(ruta_original)
-            sheet_names = xls.sheet_names
-        except Exception:
-            sheet_names = ["Hoja1"]
+        mtime_orig = os.path.getmtime(ruta_original) if os.path.exists(ruta_original) else 0.0
+        sheet_names = obtener_nombres_hojas_excel(ruta_original, mtime_orig)
 
         col_sh, col_info = st.columns([2, 1])
         with col_sh:
@@ -205,7 +202,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
         with col_info:
             st.caption(f"Libro con {len(sheet_names)} hoja(s)")
 
-        df_hoja = cargar_hoja_excel_dataframe(ruta_original, hoja_sel)
+        df_hoja = cargar_hoja_excel_dataframe(ruta_original, hoja_sel, mtime_orig)
         st.dataframe(df_hoja, use_container_width=True, height=420)
 
     # 3. Documentos PDF

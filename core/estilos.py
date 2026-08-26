@@ -3,9 +3,11 @@ Gestor de estilos visuales CSS para la interfaz de Streamlit.
 Carga las reglas CSS desacopladas desde core/estilos.css.
 """
 import os
+import streamlit as st
 from core.configuracion import ESTILOS_CSS_PATH
 
 
+@st.cache_data(show_spinner=False)
 def cargar_estilos_css() -> str:
     """Lee el archivo CSS externo y retorna las reglas envueltas en <style> para Streamlit."""
     if os.path.exists(ESTILOS_CSS_PATH):
