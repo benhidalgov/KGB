@@ -1,6 +1,66 @@
+import re
+
 """
-Definicion del diagrama topologico Mermaid y especificacion de componentes por capas.
+Definicion del diagrama topologico Mermaid, funciones de escape seguro y especificacion de componentes por capas.
 """
+
+
+def escapar_etiqueta_mermaid(texto: str) -> str:
+    """Sanitiza y escapa texto para su inserción segura en nodos y etiquetas Mermaid."""
+    if not texto:
+        return ""
+    t = str(texto).strip()
+    t = t.replace('"', '#quot;')
+    t = t.replace('<', '&lt;')
+    t = t.replace('>', '&gt;')
+    t = t.replace('&', '&amp;')
+    t = t.replace('\n', '<br/>')
+    return t
+
+
+def sanitizar_id_nodo_mermaid(identificador: str) -> str:
+    """Genera un identificador alfanumérico seguro para el nodo sin espacios ni caracteres conflictivos."""
+    if not identificador:
+        return "NODO_UNKNOWN"
+    s = str(identificador).strip()
+    if s and s[0].isdigit():
+        s = f"N_{s}"
+    s = re.sub(r'[^a-zA-Z0-9_]', '_', s)
+    return re.sub(r'_+', '_', s)
+
+
+def generar_nodo_mermaid(id_nodo: str, etiqueta: str, forma: str = "rect") -> str:
+    """Genera la representación Mermaid de un nodo con ID seguro y etiqueta escapada.
+    Formas soportadas: 'rect' (rectángulo), 'round' (redondeado), 'rhombus' (rombo), 'circle' (círculo).
+    """
+    safe_id = sanitizar_id_nodo_mermaid(id_nodo)
+    safe_label = escapar_etiqueta_mermaid(etiqueta)
+
+    if forma == "round":
+        return f'{safe_id}("{safe_label}")'
+    elif forma == "rhombus":
+        return f'{safe_id}{{"{safe_label}"}}'
+    elif forma == "circle":
+        return f'{safe_id}(("{safe_label}"))'
+    else:
+        return f'{safe_id}["{safe_label}"]'
+
+
+def generar_enlace_mermaid(origen: str, destino: str, etiqueta: str = "", estilo: str = "solido") -> str:
+    """Genera una arista/conexión dirigida segura entre dos nodos.
+    Estilos: 'solido' (-->), 'punteado' (-.->), 'grueso' (==>).
+    """
+    safe_orig = sanitizar_id_nodo_mermaid(origen)
+    safe_dest = sanitizar_id_nodo_mermaid(destino)
+    safe_lbl = escapar_etiqueta_mermaid(etiqueta) if etiqueta else ""
+
+    if estilo == "punteado":
+        return f'{safe_orig} -. "{safe_lbl}" .-> {safe_dest}' if safe_lbl else f'{safe_orig} -.-> {safe_dest}'
+    elif estilo == "grueso":
+        return f'{safe_orig} == "{safe_lbl}" ==> {safe_dest}' if safe_lbl else f'{safe_orig} ==> {safe_dest}'
+    else:
+        return f'{safe_orig} -- "{safe_lbl}" --> {safe_dest}' if safe_lbl else f'{safe_orig} --> {safe_dest}'
+
 
 TOPOLOGY_MERMAID = """graph TD
     subgraph DevOps ["Capa DevOps y Despliegues (CI/CD)"]

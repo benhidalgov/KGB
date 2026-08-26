@@ -1,5 +1,6 @@
-﻿import os
+import os
 import re
+from datetime import datetime, date
 import openpyxl
 import pandas as pd
 
@@ -10,17 +11,45 @@ def _enmascarar_credenciales(texto: str) -> str:
     return re.sub(patron_pass, r'\1: [PROTEGIDO]', texto)
 
 
+def _formatear_valor_celda(val) -> str:
+    """Formatea valores individuales de celdas eliminando NaNs, formateando enteros y fechas limpias."""
+    if val is None or pd.isna(val):
+        return "-"
+    if isinstance(val, (datetime, date)):
+        return val.strftime("%Y-%m-%d %H:%M") if isinstance(val, datetime) and (val.hour or val.minute) else val.strftime("%Y-%m-%d")
+    if isinstance(val, float):
+        if val.is_integer():
+            return str(int(val))
+        return f"{val:.2f}".rstrip('0').rstrip('.')
+    
+    val_str = str(val).strip()
+    if val_str.lower() in ('none', 'nan', 'nat', 'null', '<na>', '', '#n/a', '#value!', '#ref!') or val_str.lower().startswith('unnamed:'):
+        return "-"
+    return val_str.replace("\n", " ").replace("|", "/")
+
+
 def _dataframe_a_markdown(df: pd.DataFrame) -> str:
-    """Convierte un DataFrame a Markdown limpio sin requerir tabulate."""
+    """Convierte un DataFrame a Markdown limpio sin requerir tabulate, con formato de celdas pulido."""
     if df.empty:
         return ""
-    cols = [str(c).strip() if c is not None else "" for c in df.columns]
+    
+    cols = [_formatear_valor_celda(c) for c in df.columns]
+    cols = [c if c != "-" and not c.lower().startswith("unnamed:") else f"Col_{i+1}" for i, c in enumerate(cols)]
+    
     header = "| " + " | ".join(cols) + " |"
     separator = "| " + " | ".join([":---"] * len(cols)) + " |"
     rows = []
+    
     for _, row in df.iterrows():
-        row_str = "| " + " | ".join(str(val).replace("\n", " ").replace("|", "/") if val is not None else "-" for val in row) + " |"
+        valores_limpios = [_formatear_valor_celda(val) for val in row]
+        # Omitir filas totalmente vacias o que solo tienen guiones
+        if all(v == "-" for v in valores_limpios):
+            continue
+        row_str = "| " + " | ".join(valores_limpios) + " |"
         rows.append(_enmascarar_credenciales(row_str))
+        
+    if not rows:
+        return ""
     return "\n".join([header, separator] + rows)
 
 
@@ -28,7 +57,12 @@ def _procesar_hoja_formulario(data: list) -> list:
     """Procesa hojas tipo formulario/ficha técnica (celdas combinadas, pares clave-valor dispersos)."""
     lineas = []
     for row in data:
-        non_empty = [str(c).strip() for c in row if c is not None and str(c).strip() not in ('None', 'nan', 'NaN', '', 'null', '-')]
+        non_empty = []
+        for c in row:
+            fval = _formatear_valor_celda(c)
+            if fval != "-" and not fval.lower().startswith("unnamed:"):
+                non_empty.append(fval)
+                
         if not non_empty:
             continue
         if len(non_empty) == 1:
@@ -72,18 +106,9 @@ def procesar_excel_limpio(filepath: str) -> str:
         ws = wb[sname]
         data = []
         for row in ws.iter_rows(values_only=True):
-            cleaned_row = []
-            for cell in row:
-                if cell is None:
-                    cleaned_row.append(None)
-                else:
-                    c_str = str(cell).strip()
-                    if c_str in ('None', 'nan', 'NaN', '', 'null'):
-                        cleaned_row.append(None)
-                    else:
-                        cleaned_row.append(c_str)
-            if any(cleaned_row):
-                data.append(cleaned_row)
+            cleaned_row = [_formatear_valor_celda(cell) for cell in row]
+            if any(c != "-" for c in cleaned_row):
+                data.append([c if c != "-" else None for c in cleaned_row])
 
         if not data:
             continue
@@ -140,7 +165,9 @@ def procesar_excel_limpio(filepath: str) -> str:
             df_table = df_table[~(df_table == '-').all(axis=1)]
 
             if not df_table.empty:
-                doc_md.append(_dataframe_a_markdown(df_table))
-                doc_md.append("")
+                md_tabla = _dataframe_a_markdown(df_table)
+                if md_tabla.strip():
+                    doc_md.append(md_tabla)
+                    doc_md.append("")
 
     return "\n".join(doc_md)

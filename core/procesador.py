@@ -17,13 +17,28 @@ def calcular_sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def leer_texto_resiliente(filepath: str) -> str:
+    """Lee un archivo de texto probando secuencialmente UTF-8 con BOM, UTF-8 y Latin-1/CP1252."""
+    for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            with open(filepath, "r", encoding=enc) as f:
+                return f.read()
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+        except Exception:
+            break
+    with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+        return f.read()
+
+
 def sanitizar_nombre_descarga(doc_name: str, version: int, ext_salida: str) -> str:
-    """Genera un nombre de archivo normalizado y limpio para descargas sin dobles extensiones.
+    """Genera un nombre de archivo normalizado y limpio para descargas sin dobles extensiones ni caracteres invalidos.
     Ejemplo: 'informe.docx', 2, '.md' -> 'informe_v2.md'
     """
     base_name = os.path.splitext(doc_name)[0]
     base_name = re.sub(r'\.(docx|pdf|pptx|xlsx|xls|txt|md|csv|png|jpg|jpeg|svg|webp)$', '', base_name, flags=re.IGNORECASE)
     base_name = re.sub(r'^v\d+[-_]', '', base_name, flags=re.IGNORECASE)
+    base_name = re.sub(r'[\\/:*?"<>|]', '_', base_name)
     if not ext_salida.startswith('.'):
         ext_salida = '.' + ext_salida
     return f"{base_name}_v{version}{ext_salida}"
@@ -42,7 +57,8 @@ def generar_ficha_diagrama(
     """Genera una ficha técnica Markdown estructurada asociada a un diagrama o imagen gráfica."""
     nombre_limpio = os.path.splitext(os.path.basename(image_filename))[0].replace("_", " ").replace("-", " ").title()
     fecha_hoy = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    orig_path_str = orig_rel_path if orig_rel_path else f"assets/{image_filename}"
+    clean_orig = orig_rel_path.replace("\\", "/") if orig_rel_path else f"assets/{image_filename}"
+    orig_path_str = clean_orig
     hash_str = sha256_hash if sha256_hash else "N/A"
     caption_txt = caption.strip() if caption.strip() else f"Esquema visual de {nombre_limpio}"
 
@@ -165,7 +181,7 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
 
 
 def cargar_documento_individual(filepath: str) -> str:
-    """Convierte un archivo individual al formato Markdown estructurado según su extensión."""
+    """Convierte un archivo individual al formato Markdown estructurado según su extensión con decodificación resiliente."""
     ext = os.path.splitext(filepath)[1].lower()
     fname = os.path.basename(filepath)
 
@@ -179,9 +195,8 @@ def cargar_documento_individual(filepath: str) -> str:
         with open(filepath, "rb") as f:
             fhash = calcular_sha256(f.read())
         return generar_ficha_diagrama(image_filename=fname, orig_rel_path=filepath, sha256_hash=fhash)
-    elif ext in (".md", ".txt", ".csv"):
-        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-            return f.read()
+    elif ext in (".md", ".txt", ".csv", ".json", ".sql", ".py"):
+        return leer_texto_resiliente(filepath)
     else:
         try:
             from markitdown import MarkItDown
@@ -189,8 +204,7 @@ def cargar_documento_individual(filepath: str) -> str:
             res = md_engine.convert(filepath)
             return res.text_content
         except Exception:
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                return f.read()
+            return leer_texto_resiliente(filepath)
 
 
 def cargar_documentos_locales(doc_store: dict, force: bool = False) -> dict:

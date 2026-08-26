@@ -7,6 +7,12 @@ analisis de causa raiz y simulacion de propagacion de fallas entre capas L1-L4.
 import math
 from typing import Dict, List, Tuple, Any, Optional
 import pandas as pd
+from core.topologia import (
+    generar_nodo_mermaid,
+    generar_enlace_mermaid,
+    escapar_etiqueta_mermaid,
+    sanitizar_id_nodo_mermaid
+)
 
 
 class RedNeuronalInfraestructura:
@@ -336,6 +342,43 @@ class RedNeuronalInfraestructura:
         self.agregar_sinapsis("ENGAGE_Web_2", "ENGAGE_SQL_2", 0.95, "PERSISTS_IN")
         self.agregar_sinapsis("CORSEG_App", "CORSEG_DB", 0.95, "PERSISTS_IN")
         self.agregar_sinapsis("CORSEG_App", "DATAMART_SQL", 0.88, "READS_DATA")
+
+    def exportar_grafo_mermaid(self, solo_capas: Optional[List[str]] = None) -> str:
+        """Exporta la topología neuronal a un diagrama Mermaid estructurado con escape seguro."""
+        lineas = ["graph TD"]
+
+        capas_dict: Dict[str, List[str]] = {}
+        for ci_id, meta in self.nodos.items():
+            capa = meta.get("capa", "General")
+            if solo_capas and capa not in solo_capas:
+                continue
+            capas_dict.setdefault(capa, []).append(ci_id)
+
+        for capa, cis in capas_dict.items():
+            sub_id = sanitizar_id_nodo_mermaid(f"Sub_{capa}")
+            capa_lbl = escapar_etiqueta_mermaid(f"Capa {capa}")
+            lineas.append(f'    subgraph {sub_id} ["{capa_lbl}"]')
+            for ci in cis:
+                meta = self.nodos[ci]
+                ip_str = f" ({meta['ip']})" if meta.get("ip") and meta["ip"] != "-" else ""
+                etiqueta = f"{meta['id']}{ip_str}"
+                lineas.append(f"        {generar_nodo_mermaid(ci, etiqueta, 'rect')}")
+            lineas.append("    end\n")
+
+        nodos_incluidos = set(ci for cis in capas_dict.values() for ci in cis)
+        for origen, sin_list in self.sinapsis_salientes.items():
+            if origen not in nodos_incluidos:
+                continue
+            for sin in sin_list:
+                destino = sin["destino"]
+                if destino not in nodos_incluidos:
+                    continue
+                peso = sin.get("peso", 0.9)
+                tipo = sin.get("tipo", "")
+                lbl = f"w={peso:.2f}" + (f" ({tipo})" if tipo else "")
+                lineas.append(f"    {generar_enlace_mermaid(origen, destino, lbl, 'solido')}")
+
+        return "\n".join(lineas)
 
 
 # Instancia singleton para uso en toda la aplicacion
