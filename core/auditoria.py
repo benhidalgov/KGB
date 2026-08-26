@@ -90,8 +90,47 @@ def obtener_historial_versiones(doc_name: str) -> list:
     return []
 
 
+import hashlib
+
+
+def calcular_sha256_texto(texto: str) -> str:
+    """Calcula el hash criptografico SHA-256 de una cadena de texto en UTF-8."""
+    if texto is None:
+        return ""
+    return hashlib.sha256(texto.encode("utf-8")).hexdigest()
+
+
+def verificar_integridad_snapshot(doc_name: str, version_num: int) -> dict:
+    """Verifica si el snapshot en disco coincide exactamente con el hash SHA-256 registrado."""
+    historial = obtener_historial_versiones(doc_name)
+    for entry in historial:
+        if entry.get("version") == version_num:
+            snap_file = entry.get("archivo_snapshot")
+            expected_hash = entry.get("sha256")
+            if not snap_file:
+                return {"valido": False, "motivo": "No existe referencia a archivo snapshot"}
+            
+            snap_path = os.path.join(HISTORY_DIR, doc_name, snap_file)
+            if not os.path.exists(snap_path):
+                return {"valido": False, "motivo": "Archivo snapshot no encontrado en disco"}
+            
+            with open(snap_path, "r", encoding="utf-8") as f:
+                actual_hash = calcular_sha256_texto(f.read())
+            
+            if not expected_hash:
+                return {"valido": True, "motivo": "Sin firma previa (version legacy)", "sha256": actual_hash}
+            
+            es_valido = (actual_hash == expected_hash)
+            return {
+                "valido": es_valido,
+                "motivo": "Integridad criptografica verificada" if es_valido else "Hash no coincide (posible alteracion)",
+                "sha256": actual_hash
+            }
+    return {"valido": False, "motivo": f"Version {version_num} no encontrada"}
+
+
 def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: str, autor: str = "Sistema", comentario: str = "Versión base inicial") -> list:
-    """Inicializa la version v1 si no existe registro historico previo."""
+    """Inicializa la version v1 si no existe registro historico previo con su firma SHA-256."""
     doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
     meta_path = os.path.join(doc_hist_dir, "metadata.json")
     if not os.path.exists(meta_path):
@@ -106,6 +145,8 @@ def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: st
             snapshot_excel_fname = f"v1_{doc_name}"
             shutil.copy2(doc_orig_path, os.path.join(doc_hist_dir, snapshot_excel_fname))
 
+        sha256_v1 = calcular_sha256_texto(contenido_actual)
+
         historial = [
             {
                 "version": 1,
@@ -114,6 +155,7 @@ def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: st
                 "comentario": comentario,
                 "archivo_snapshot": v1_filename,
                 "archivo_excel_snapshot": snapshot_excel_fname,
+                "sha256": sha256_v1,
                 "caracteres": len(contenido_actual)
             }
         ]
@@ -133,12 +175,14 @@ def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: st
 
 
 def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comentario: str, doc_store: dict) -> int:
-    """Guarda una nueva revision incrementando la version (vN+1) y preservando snapshots inmutables."""
+    """Guarda una nueva revision incrementando la version (vN+1), registrando SHA-256 y evitando duplicados sin cambios."""
     doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
     os.makedirs(doc_hist_dir, exist_ok=True)
     meta_path = os.path.join(doc_hist_dir, "metadata.json")
 
+    nuevo_hash = calcular_sha256_texto(nuevo_contenido)
     historial = obtener_historial_versiones(doc_name)
+
     if not historial:
         contenido_previo = doc_store.get(doc_name, nuevo_contenido)
         v1_filename = "v1.md"
@@ -151,9 +195,15 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
                 "autor": "Sistema / Creador",
                 "comentario": "Versión base inicial",
                 "archivo_snapshot": v1_filename,
+                "sha256": calcular_sha256_texto(contenido_previo),
                 "caracteres": len(contenido_previo)
             }
         ]
+    else:
+        # Prevencion de guardados duplicados sin cambios reales de contenido
+        ultimo_hash = historial[-1].get("sha256")
+        if ultimo_hash and ultimo_hash == nuevo_hash:
+            return len(historial)
 
     version_ant_num = len(historial)
     nueva_v_num = version_ant_num + 1
@@ -168,6 +218,7 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
         "autor": autor.strip() if autor and autor.strip() else "Técnico",
         "comentario": comentario.strip() if comentario and comentario.strip() else "Actualización de contenido",
         "archivo_snapshot": snapshot_fname,
+        "sha256": nuevo_hash,
         "caracteres": len(nuevo_contenido)
     }
     historial.append(nueva_entry)
@@ -201,7 +252,7 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
 
 
 def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.DataFrame, autor: str, comentario: str, doc_store: dict) -> int:
-    """Guarda una nueva version de un libro Excel modificando la hoja seleccionada y preservando el historial inmutable."""
+    """Guarda una nueva version de un libro Excel modificando la hoja seleccionada y registrando su hash SHA-256."""
     excel_path = os.path.join(DOCS_DIR, doc_name)
     doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
     os.makedirs(doc_hist_dir, exist_ok=True)
@@ -220,6 +271,7 @@ def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.Dat
                 "autor": "Sistema / Creador",
                 "comentario": "Version base inicial",
                 "archivo_snapshot": v1_filename,
+                "sha256": calcular_sha256_texto(contenido_previo),
                 "caracteres": len(contenido_previo)
             }
         ]
@@ -238,6 +290,7 @@ def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.Dat
     shutil.copy2(excel_path, os.path.join(doc_hist_dir, snapshot_excel_fname))
 
     nuevo_markdown = procesar_excel_limpio(excel_path)
+    nuevo_hash = calcular_sha256_texto(nuevo_markdown)
     snapshot_md_fname = f"v{nueva_v_num}.md"
     with open(os.path.join(doc_hist_dir, snapshot_md_fname), "w", encoding="utf-8") as f:
         f.write(nuevo_markdown)
@@ -251,6 +304,7 @@ def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.Dat
         "comentario": f"[{sheet_name}] {comentario.strip()}" if comentario and comentario.strip() else f"Edicion de hoja {sheet_name}",
         "archivo_snapshot": snapshot_md_fname,
         "archivo_excel_snapshot": snapshot_excel_fname,
+        "sha256": nuevo_hash,
         "caracteres": len(nuevo_markdown)
     }
     historial.append(nueva_entry)

@@ -977,32 +977,44 @@ with tab_docs:
                                     comentario=motivo_edit.strip(),
                                     doc_store=st.session_state.doc_store
                                 )
-                                st.toast(
-                                    f"Versión v{nueva_v} guardada y reindexada exitosamente")
-                                st.success(
-                                    f"¡Versión [Version v{nueva_v}] creada con éxito! Responsable: {autor_edit.strip()}. El Copilot y el RAG han sido actualizados en memoria.")
-                                st.rerun()
+                                if nueva_v == ultima_version:
+                                    st.toast("[INFO] El contenido no presenta cambios respecto a la versión actual")
+                                    st.info("[INFO] No se generó un nuevo snapshot porque el contenido es idéntico a la versión actual.")
+                                else:
+                                    st.toast(
+                                        f"[OK] Versión v{nueva_v} guardada y reindexada exitosamente")
+                                    st.success(
+                                        f"¡Versión [Version v{nueva_v}] creada con éxito! Responsable: {autor_edit.strip()}. El Copilot y el RAG han sido actualizados en memoria.")
+                                    st.rerun()
                     with col_btn_info:
                         st.caption(
-                            "*Al guardar, la versión actual pasará al historial inmutable y el asistente Copilot responderá con la información actualizada inmediatamente.*")
+                            "*Al guardar, la versión actual pasará al historial inmutable con firma SHA-256 y el asistente Copilot responderá con la información actualizada inmediatamente.*")
 
             # SUBTAB 3: HISTORIAL Y CONTROL DE VERSIONES
             with subtab_hist:
                 st.markdown("#### Historial de Revisiones y Control de Cambios")
                 st.caption(
-                    "Registro cronológico inmutable de revisiones, descarga de snapshots y reversión controlada (Rollback).")
+                    "Registro cronológico inmutable de revisiones con firma criptográfica SHA-256, descarga de snapshots y reversión controlada (Rollback).")
 
                 # 1. Tabla de Historial
-                df_hist = pd.DataFrame(historial)[
-                    ["version", "timestamp", "autor", "comentario", "caracteres"]
-                ]
-                df_hist.columns = [
-                    "Versión",
-                    "Fecha y Hora",
-                    "Editor / Responsable",
-                    "Motivo del Cambio",
-                    "Tamaño (caracteres)"
-                ]
+                columnas_hist = ["version", "timestamp", "autor", "comentario", "caracteres"]
+                tiene_sha = any("sha256" in item and item["sha256"] for item in historial)
+                if tiene_sha:
+                    columnas_hist.append("sha256")
+                
+                df_hist = pd.DataFrame(historial)
+                cols_presentes = [c for c in columnas_hist if c in df_hist.columns]
+                df_hist = df_hist[cols_presentes]
+                
+                map_nombres = {
+                    "version": "Versión",
+                    "timestamp": "Fecha y Hora",
+                    "autor": "Editor / Responsable",
+                    "comentario": "Motivo del Cambio",
+                    "caracteres": "Tamaño (chars)",
+                    "sha256": "Firma SHA-256"
+                }
+                df_hist.columns = [map_nombres.get(c, c) for c in cols_presentes]
                 st.dataframe(df_hist, use_container_width=True, hide_index=True)
 
                 st.markdown("---")
