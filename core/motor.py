@@ -4,6 +4,7 @@ import unicodedata
 import duckdb
 import pandas as pd
 from core.configuracion import CSV_PATH
+from core.procesador import normalizar_titulo_display
 
 
 def normalizar_texto(texto: str) -> str:
@@ -246,12 +247,14 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
 
         tipo_badge = "[Diagrama]" if doc_name.startswith("DIAGRAMA__") else "[Documento]"
         score_label = "Alta" if score >= 20 else "Media"
+        doc_titulo = normalizar_titulo_display(doc_name)
 
         resultado_html = f"""<div class="search-result-card" style="border-left: 3.5px solid #6366F1;">
     <div class="search-header-row">
         <div>
             <span class="badge-info">{tipo_badge}</span>
-            <span class="search-doc-title" style="margin-left: 8px;">{doc_name}</span>
+            <span class="search-doc-title" style="margin-left: 8px;">{doc_titulo}</span>
+            <span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65; margin-left: 6px;">({doc_name})</span>
         </div>
         <div>
             <span class="badge-ok">Relevancia: {score_label} ({score} pts)</span>
@@ -275,10 +278,11 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
                 sec_frag = limpiar_encabezados_snippet(extraer_fragmento_relevante(sec_content, prompt_usuario, max_chars=250))
                 sec_frag_res = resaltar_terminos_en_html(sec_frag, prompt_usuario)
                 sec_badge = "[Diagrama]" if sec_name.startswith("DIAGRAMA__") else "[Documento]"
+                sec_titulo = normalizar_titulo_display(sec_name)
                 resultado_html += f"""
 <div style="background-color: rgba(128, 128, 128, 0.03); border: 1px solid rgba(128, 128, 128, 0.18); border-radius: 6px; padding: 10px; margin-top: 8px; font-size: 0.85rem;">
     <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-        <span><b>{sec_badge} {sec_name}</b></span>
+        <span><b>{sec_badge} {sec_titulo}</b> <span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65;">({sec_name})</span></span>
         <span class="badge-tag">Score: {sec_score} pts</span>
     </div>
     <div style="font-size: 0.82rem; opacity: 0.9; line-height: 1.4;">{sec_frag_res}</div>

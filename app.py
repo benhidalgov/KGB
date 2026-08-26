@@ -19,6 +19,8 @@ from core.procesador import (
     cargar_documento_individual,
     calcular_sha256,
     sanitizar_nombre_descarga,
+    normalizar_nombre_archivo,
+    normalizar_titulo_display,
     generar_ficha_diagrama,
     obtener_ruta_original,
 )
@@ -26,21 +28,46 @@ from core.motor import (
     ejecutar_consulta_sql,
     generar_respuesta_asistente,
 )
-from core.auditoria import (
-    obtener_historial_versiones,
-    inicializar_version_inicial_si_no_existe,
-    guardar_nueva_version,
-    guardar_nueva_version_excel,
-    obtener_contenido_version,
-    obtener_bytes_snapshot,
-    cargar_hoja_excel_dataframe,
-    obtener_nombres_hojas_excel,
-    generar_diff_texto,
-    generar_diff_lado_a_lado_html,
-    obtener_todos_los_eventos_auditoria,
-    generar_timeline_versiones_html,
-    obtener_fecha_carga_documento,
-)
+try:
+    from core.auditoria import (
+        obtener_historial_versiones,
+        inicializar_version_inicial_si_no_existe,
+        guardar_nueva_version,
+        guardar_nueva_version_excel,
+        obtener_contenido_version,
+        obtener_bytes_snapshot,
+        cargar_hoja_excel_dataframe,
+        obtener_nombres_hojas_excel,
+        generar_diff_texto,
+        generar_diff_lado_a_lado_html,
+        obtener_todos_los_eventos_auditoria,
+        generar_timeline_versiones_html,
+        obtener_fecha_carga_documento,
+    )
+except ImportError:
+    import importlib
+    import sys
+    for mod_name in list(sys.modules.keys()):
+        if mod_name.startswith("core.") or mod_name == "core":
+            try:
+                importlib.reload(sys.modules[mod_name])
+            except Exception:
+                pass
+    from core.auditoria import (
+        obtener_historial_versiones,
+        inicializar_version_inicial_si_no_existe,
+        guardar_nueva_version,
+        guardar_nueva_version_excel,
+        obtener_contenido_version,
+        obtener_bytes_snapshot,
+        cargar_hoja_excel_dataframe,
+        obtener_nombres_hojas_excel,
+        generar_diff_texto,
+        generar_diff_lado_a_lado_html,
+        obtener_todos_los_eventos_auditoria,
+        generar_timeline_versiones_html,
+        obtener_fecha_carga_documento,
+    )
 from core.estilos import cargar_estilos_css
 from core.configuracion import (
     CSV_PATH,
@@ -133,9 +160,7 @@ with st.sidebar:
 
     if uploaded_files:
         for uf in uploaded_files:
-            clean_name = uf.name
-            clean_name = re.sub(
-                r'^v\d+[-_]', '', clean_name, flags=re.IGNORECASE)
+            clean_name = normalizar_nombre_archivo(uf.name)
             ext_uf = os.path.splitext(clean_name)[1].lower()
 
             buf = uf.getbuffer().tobytes()
@@ -285,18 +310,15 @@ with st.sidebar:
                 doc_items_html = ['<div class="sidebar-doc-list">']
                 for d in docs_filtrados:
                     ext = os.path.splitext(d)[1].lower()
+                    display_name = normalizar_titulo_display(d)
                     if d.startswith("DIAGRAMA__") or ext in IMAGE_EXTENSIONS:
                         tag = '<span class="badge-ok" style="font-size:0.64rem;padding:1px 4px;">[DIAGRAMA]</span>'
-                        display_name = d.replace("DIAGRAMA__", "").replace(".md", "")
                     elif ext in ('.xlsx', '.xls'):
                         tag = '<span class="badge-info" style="font-size:0.64rem;padding:1px 4px;">[EXCEL]</span>'
-                        display_name = d
                     elif ext in ('.pdf', '.docx', '.pptx', '.doc'):
                         tag = '<span class="badge-warn" style="font-size:0.64rem;padding:1px 4px;">[DOC]</span>'
-                        display_name = d
                     else:
                         tag = '<span class="badge-tag" style="font-size:0.64rem;padding:1px 4px;">[MD]</span>'
-                        display_name = d
 
                     size_kb = len(st.session_state.doc_store[d]) / 1024
                     f_d = obtener_fecha_carga_documento(d)
@@ -305,13 +327,14 @@ with st.sidebar:
                     doc_items_html.append(f"""
 <div class="sidebar-doc-card">
     <div class="sidebar-doc-card-header">
-        <span class="sidebar-doc-name">{display_name}</span>
+        <span class="sidebar-doc-name" title="{d}">{display_name}</span>
         {tag}
     </div>
     <div class="sidebar-doc-meta">
         <span>{fecha_str}</span>
         <span>{size_kb:.1f} KB</span>
     </div>
+    <div style="font-size:0.65rem; opacity:0.55; font-family:monospace; margin-top:2px; word-break:break-all;">{d}</div>
 </div>
 """)
                 doc_items_html.append('</div>')
@@ -792,6 +815,7 @@ with tab_docs:
                 doc_seleccionado = st.selectbox(
                     f"Seleccione Documento ({len(docs_disponibles_t4)} disponibles)",
                     docs_disponibles_t4,
+                    format_func=normalizar_titulo_display,
                     key="tab4_doc_selector"
                 )
             else:
@@ -809,10 +833,11 @@ with tab_docs:
             fecha_carga_corta = fecha_carga_inicial.split()[0] if " " in fecha_carga_inicial else fecha_carga_inicial
             ruta_original = obtener_ruta_original(
                 doc_seleccionado, doc_content)
+            titulo_display = normalizar_titulo_display(doc_seleccionado)
 
             st.markdown(f"""
 <div style="background-color: rgba(128, 128, 128, 0.08); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 6px; padding: 8px 14px; margin-bottom: 12px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div><b>Documento:</b> <span style="color:#6366F1; font-weight: 600; font-family: monospace;">{doc_seleccionado}</span></div>
+    <div><b>Documento:</b> <span style="color:#6366F1; font-weight: 600;">{titulo_display}</span> <span style="font-family: monospace; opacity: 0.65; font-size: 0.8rem;">({doc_seleccionado})</span></div>
     <div><b>Versión Activa:</b> <span class="badge-ok">v{ultima_version}</span></div>
     <div><b>Fecha de Carga:</b> <span class="badge-tag">[{fecha_carga_corta}]</span></div>
     <div><b>Último Editor:</b> <span style="color:#10B981; font-weight: 500;">{ultimo_editor}</span></div>

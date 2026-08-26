@@ -4,8 +4,14 @@ import re
 import streamlit as st
 import pandas as pd
 import streamlit_antd_components as sac
-from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, obtener_nombres_hojas_excel
-from core.procesador import IMAGE_EXTENSIONS, calcular_sha256, sanitizar_nombre_descarga
+try:
+    from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, obtener_nombres_hojas_excel
+except ImportError:
+    import importlib
+    import core.auditoria
+    importlib.reload(core.auditoria)
+    from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, obtener_nombres_hojas_excel
+from core.procesador import IMAGE_EXTENSIONS, calcular_sha256, sanitizar_nombre_descarga, preparar_markdown_con_imagenes
 from core.configuracion import DOCS_DIR
 
 
@@ -314,7 +320,8 @@ def renderizar_lado_a_lado(
             tab_md_rendered, tab_md_source = st.tabs(["Vista Formateada", "Código Markdown"])
             with tab_md_rendered:
                 with st.container(border=True):
-                    st.markdown(md_content)
+                    md_con_imgs = preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original)
+                    st.markdown(md_con_imgs, unsafe_allow_html=True)
             with tab_md_source:
                 st.code(md_content, language="markdown")
 
@@ -330,7 +337,8 @@ def renderizar_lado_a_lado(
         tab_md_rendered, tab_md_source = st.tabs(["Vista Formateada", "Código Markdown"])
         with tab_md_rendered:
             with st.container(border=True):
-                st.markdown(md_content)
+                md_con_imgs = preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original)
+                st.markdown(md_con_imgs, unsafe_allow_html=True)
         with tab_md_source:
             st.code(md_content, language="markdown")
 

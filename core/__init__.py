@@ -21,6 +21,7 @@ from core.auditoria import (
     obtener_contenido_version,
     obtener_bytes_snapshot,
     cargar_hoja_excel_dataframe,
+    obtener_nombres_hojas_excel,
     generar_diff_texto,
     generar_diff_lado_a_lado_html,
     obtener_todos_los_eventos_auditoria,
@@ -42,6 +43,10 @@ from core.procesador import (
     cargar_documentos_locales,
     calcular_sha256,
     sanitizar_nombre_descarga,
+    normalizar_nombre_archivo,
+    normalizar_titulo_display,
+    preparar_markdown_con_imagenes,
+    resolver_ruta_imagen_a_base64,
     generar_ficha_diagrama,
     obtener_ruta_original,
 )

@@ -19,6 +19,7 @@ from core.procesador import (
     IMAGE_EXTENSIONS,
     SUPPORTED_EXTENSIONS,
     generar_ficha_diagrama,
+    normalizar_nombre_archivo,
 )
 
 INPUT_DIR = INBOX_DIR
@@ -60,25 +61,26 @@ def procesar_un_archivo(fpath: str, rel_path: str, md_engine: MarkItDown) -> tup
         return rel_path, False, f'Extension {ext} no soportada.'
 
     try:
-        # Asegurar copia en data/originals/
+        # Asegurar copia en data/originals/ con nombre normalizado
         clean_rel = rel_path.replace(os.sep, "__").replace("/", "__")
-        orig_target_name = clean_rel
+        orig_target_name = normalizar_nombre_archivo(clean_rel)
         orig_target_path = os.path.join(ORIGINALS_DIR, orig_target_name)
         if not os.path.exists(orig_target_path) or fpath != orig_target_path:
             shutil.copy2(fpath, orig_target_path)
 
         # 1. Caso de Activos Gráficos / Diagramas
         if ext in IMAGE_EXTENSIONS:
-            asset_target = os.path.join(ASSETS_DIR, fname)
+            norm_fname = normalizar_nombre_archivo(fname)
+            asset_target = os.path.join(ASSETS_DIR, norm_fname)
             if not os.path.exists(asset_target) or fpath != asset_target:
                 shutil.copy2(fpath, asset_target)
 
             fhash = calcular_hash_archivo(fpath)
-            out_name = os.path.splitext(clean_rel)[0] + '.md'
+            out_name = os.path.splitext(orig_target_name)[0] + '.md'
             out_path = os.path.join(OUTPUT_DIR, out_name)
 
             md_content = generar_ficha_diagrama(
-                image_filename=fname,
+                image_filename=norm_fname,
                 orig_rel_path=rel_path,
                 sha256_hash=fhash,
                 categoria=os.path.dirname(rel_path) or "General / Raiz"
@@ -98,10 +100,10 @@ def procesar_un_archivo(fpath: str, rel_path: str, md_engine: MarkItDown) -> tup
             with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
                 md_content = f.read()
         else:
-            resultado = md_engine.convert(fpath)
+            resultado = md_engine.convert(fpath, keep_data_uris=True)
             md_content = resultado.text_content
 
-        out_name = os.path.splitext(clean_rel)[0] + '.md'
+        out_name = os.path.splitext(orig_target_name)[0] + '.md'
         out_path = os.path.join(OUTPUT_DIR, out_name)
 
         carpeta_origen = os.path.dirname(rel_path) or "Raiz"

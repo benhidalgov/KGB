@@ -2,6 +2,9 @@ import hashlib
 import os
 import re
 import glob
+import unicodedata
+import base64
+import zipfile
 from datetime import datetime
 import streamlit as st
 from excel_cleaner import procesar_excel_limpio
@@ -32,14 +35,85 @@ def leer_texto_resiliente(filepath: str) -> str:
         return f.read()
 
 
+# Mapeo de acrónimos técnicos y marcas conocidas para formateo corporativo
+ACRONIMOS_TECNICOS = {
+    'cmdb': 'CMDB', 'jwt': 'JWT', 'ip': 'IP', 'san': 'SAN', 'wso2': 'WSO2',
+    'hpe': 'HPE', 'ssl': 'SSL', 'tls': 'TLS', 'api': 'API', 'vm': 'VM',
+    'drp': 'DRP', 'dns': 'DNS', 'ssh': 'SSH', 'http': 'HTTP', 'https': 'HTTPS',
+    'cpu': 'CPU', 'ram': 'RAM', 'so': 'SO', 'cicd': 'CI/CD', 'vlan': 'VLAN',
+    'dmz': 'DMZ', 'apm': 'APM', 'nsx': 'NSX', 'sql': 'SQL', 'csv': 'CSV',
+    'pdf': 'PDF', 'av': 'AV', 'ha': 'HA', 'dc': 'DC', 'dr': 'DR', 'ad': 'AD',
+    'lan': 'LAN', 'wan': 'WAN', 'vpn': 'VPN', 'l1': 'L1', 'l2': 'L2',
+    'l3': 'L3', 'l4': 'L4', 'p1': 'P1', 'p2': 'P2', 'p3': 'P3',
+    'balancer001': 'BALANCER001', 'purestorage': 'PureStorage',
+    'vmware': 'VMware', 'vcloud': 'vCloud', 'redis': 'Redis',
+    'nagios': 'Nagios', 'newrelic': 'NewRelic', 'postgresql': 'PostgreSQL',
+    'mysql': 'MySQL', 'devops': 'DevOps'
+}
+
+CONECTORES_TITULO = {'de', 'del', 'la', 'las', 'el', 'los', 'y', 'en', 'para', 'por', 'con', 'a'}
+
+
+def normalizar_nombre_archivo(nombre: str) -> str:
+    """Normaliza un nombre de archivo a formato snake_case limpio y seguro para el sistema de archivos.
+    Elimina acentos, espacios, caracteres conflictivos y dobles extensiones.
+    Ejemplo: 'CMDB UNICARD v 1.1.xlsx' -> 'cmdb_unicard_v1_1.xlsx'
+    """
+    base, ext = os.path.splitext(nombre)
+    base = re.sub(r'\.(docx|pdf|pptx|xlsx|xls|txt|md|csv|png|jpg|jpeg|svg|webp)$', '', base, flags=re.IGNORECASE)
+    base = re.sub(r'^v\d+[-_]', '', base, flags=re.IGNORECASE)
+    base = unicodedata.normalize('NFKD', base).encode('ascii', 'ignore').decode('utf-8')
+    base = re.sub(r'(?i)\bv\s*(\d+)[\.\s_-]+(\d+)\b', r'v\1_\2', base)
+    base = re.sub(r'[^a-zA-Z0-9_-]', '_', base)
+    base = re.sub(r'_+', '_', base).strip('_').lower()
+    if not base:
+        base = "archivo_sin_nombre"
+    return f"{base}{ext.lower()}"
+
+
+def normalizar_titulo_display(nombre_o_doc: str) -> str:
+    """Convierte nombres técnicos de archivo en títulos corporativos limpios y legibles.
+    Preserva siglas y marcas registradas de arquitectura (CMDB, SAN, WSO2, etc.).
+    Ejemplo: 'almacenamiento_san_purestorage.md' -> 'Almacenamiento SAN PureStorage'
+    """
+    raw = str(nombre_o_doc).replace('DIAGRAMA__', '').replace('DOC__', '')
+    base, _ = os.path.splitext(raw)
+    base = re.sub(r'\.(docx|pdf|pptx|xlsx|xls|txt|md|csv|png|jpg|jpeg|svg|webp)$', '', base, flags=re.IGNORECASE)
+    base = re.sub(r'^v\d+[-_]', '', base, flags=re.IGNORECASE)
+    base = re.sub(r'^\d+(\.\d+)+[-_]?[a-zA-Z0-9]+[-_]', '', base)
+    base = re.sub(r'(?i)\bv[_ ]*(\d+)[_ ]+(\d+)\b', r'v\1.\2', base)
+    base = re.sub(r'(?i)\bv[_ ]*(\d+)\b', r'v\1', base)
+    texto = base.replace('_', ' ').replace('-', ' ')
+    texto = re.sub(r'\s+', ' ', texto).strip()
+
+    if not texto:
+        return str(nombre_o_doc)
+
+    palabras = texto.split()
+    palabras_formateadas = []
+    for i, p in enumerate(palabras):
+        p_low = p.lower()
+        if p_low in ACRONIMOS_TECNICOS:
+            palabras_formateadas.append(ACRONIMOS_TECNICOS[p_low])
+        elif p_low in CONECTORES_TITULO and i > 0:
+            palabras_formateadas.append(p_low)
+        elif re.match(r'^v\d+(\.\d+)*$', p_low):
+            palabras_formateadas.append(p_low)
+        elif p.isupper() and len(p) <= 4:
+            palabras_formateadas.append(p)
+        else:
+            palabras_formateadas.append(p.capitalize())
+
+    return ' '.join(palabras_formateadas)
+
+
 def sanitizar_nombre_descarga(doc_name: str, version: int, ext_salida: str) -> str:
     """Genera un nombre de archivo normalizado y limpio para descargas sin dobles extensiones ni caracteres invalidos.
     Ejemplo: 'informe.docx', 2, '.md' -> 'informe_v2.md'
     """
-    base_name = os.path.splitext(doc_name)[0]
-    base_name = re.sub(r'\.(docx|pdf|pptx|xlsx|xls|txt|md|csv|png|jpg|jpeg|svg|webp)$', '', base_name, flags=re.IGNORECASE)
-    base_name = re.sub(r'^v\d+[-_]', '', base_name, flags=re.IGNORECASE)
-    base_name = re.sub(r'[\\/:*?"<>|]', '_', base_name)
+    base_limpia = normalizar_nombre_archivo(doc_name)
+    base_name = os.path.splitext(base_limpia)[0]
+    base_name = re.sub(r'_v\d+$', '', base_name)
     if not ext_salida.startswith('.'):
         ext_salida = '.' + ext_salida
     return f"{base_name}_v{version}{ext_salida}"
@@ -79,17 +153,22 @@ def generar_ficha_diagrama(
 
 ---
 
-## 2. Resumen y Contexto Técnico
+## 2. Esquema del Diagrama
+![{caption_txt}](assets/{image_filename})
+
+---
+
+## 3. Resumen y Contexto Técnico
 {resumen_txt}
 
 ---
 
-## 3. Elementos Técnicos Identificados (Indexables)
+## 4. Elementos Técnicos Identificados (Indexables)
 {elementos_txt}
 
 ---
 
-## 4. Texto Extraído y Términos Clave
+## 5. Texto Extraído y Términos Clave
 ```text
 {ocr_txt}
 ```
@@ -202,10 +281,143 @@ def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
         try:
             from markitdown import MarkItDown
             md_engine = MarkItDown()
-            res = md_engine.convert(filepath)
+            res = md_engine.convert(filepath, keep_data_uris=True)
             return res.text_content
         except Exception:
             return leer_texto_resiliente(filepath)
+
+
+def extraer_imagenes_de_docx(docx_path: str) -> list[str]:
+    """Extrae las imágenes binarias de un archivo .docx empaquetado y las devuelve como lista de Data URIs base64."""
+    imgs = []
+    if not (docx_path and os.path.exists(docx_path) and docx_path.lower().endswith(".docx")):
+        return imgs
+    try:
+        with zipfile.ZipFile(docx_path, "r") as z:
+            media_files = [f for f in z.namelist() if f.startswith("word/media/")]
+            def sort_key(name):
+                nums = re.findall(r"\d+", os.path.basename(name))
+                return int(nums[0]) if nums else 9999
+            media_files.sort(key=sort_key)
+            for mf in media_files:
+                ext = os.path.splitext(mf)[1].lower().replace(".", "")
+                if ext in ("png", "jpg", "jpeg", "svg", "webp", "gif"):
+                    mime = "jpeg" if ext in ("jpg", "jpeg") else ext
+                    data = z.read(mf)
+                    b64 = base64.b64encode(data).decode("utf-8")
+                    imgs.append(f"data:image/{mime};base64,{b64}")
+    except Exception:
+        pass
+    return imgs
+
+
+def resolver_ruta_imagen_a_base64(src_path: str, ruta_original: str | None = None) -> str:
+    """Resuelve rutas de imagen locales o relativas a un Data URI base64 seguro para renderizado en navegador."""
+    if not src_path:
+        return ""
+    if src_path.startswith("data:image/") and not src_path.endswith("..."):
+        return src_path
+
+    clean_src = src_path.strip().replace("/", os.sep).replace("\\", os.sep)
+    fname = os.path.basename(clean_src)
+    candidatos = [
+        src_path,
+        os.path.join(DOCS_DIR, clean_src),
+        os.path.join(DOCS_DIR, "assets", fname),
+        os.path.join(ASSETS_DIR, fname),
+        os.path.join(ORIGINALS_DIR, fname),
+        os.path.join(DOCS_DIR, fname),
+    ]
+    if ruta_original and os.path.exists(ruta_original):
+        candidatos.append(os.path.join(os.path.dirname(ruta_original), fname))
+        candidatos.append(os.path.join(os.path.dirname(ruta_original), clean_src))
+
+    for cand in candidatos:
+        if os.path.exists(cand) and os.path.isfile(cand):
+            ext = os.path.splitext(cand)[1].lower().replace('.', '')
+            mime = 'jpeg' if ext in ('jpg', 'jpeg') else 'svg+xml' if ext == 'svg' else ext
+            try:
+                with open(cand, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("utf-8")
+                return f"data:image/{mime};base64,{b64}"
+            except Exception:
+                pass
+    return ""
+
+
+def preparar_markdown_con_imagenes(md_content: str, doc_name: str = "", ruta_original: str | None = None) -> str:
+    """Prepara el contenido Markdown para la pestaña de Vista Formateada incrustando imágenes en Data URIs base64.
+    Resuelve diagramas gráficos, imágenes locales relativas y repara imágenes truncadas de archivos DOCX.
+    """
+    if not md_content:
+        return ""
+    res = md_content
+
+    # 1. Recuperar imágenes truncadas de DOCX (data:image/...;base64...)
+    if "base64..." in res and ruta_original and ruta_original.lower().endswith(".docx") and os.path.exists(ruta_original):
+        imgs_docx = extraer_imagenes_de_docx(ruta_original)
+        if imgs_docx:
+            img_idx = [0]
+            def _sub_truncated(m):
+                idx = img_idx[0]
+                img_idx[0] += 1
+                if idx < len(imgs_docx):
+                    return f"![{m.group(1)}]({imgs_docx[idx]})"
+                return m.group(0)
+            res = re.sub(r'!\[([^\]]*)\]\((data:image/[^;]+;base64\.\.\.)\)', _sub_truncated, res)
+
+    # 2. Si es ficha técnica de diagrama y no posee tag de imagen visible, inyectar el esquema destacado
+    tiene_tag_img = bool(re.search(r'!\[.*?\]\(.*?\)|<img\s+[^>]*src=', res))
+    if not tiene_tag_img:
+        m_bin = re.search(r'\*\*Archivo Binario:\*\*\s*`([^`]+)`', res)
+        img_ref = m_bin.group(1) if m_bin else None
+        if not img_ref and ruta_original and any(ruta_original.lower().endswith(e) for e in IMAGE_EXTENSIONS):
+            img_ref = ruta_original
+
+        if img_ref:
+            b64_uri = resolver_ruta_imagen_a_base64(img_ref, ruta_original=ruta_original)
+            if b64_uri:
+                m_cap = re.search(r'\*\*Pie de Imagen \(Caption\):\*\*\s*(.+)', res)
+                caption = m_cap.group(1).strip() if m_cap else 'Esquema visual de arquitectura'
+                card_img = f"""
+<div style="text-align: center; margin: 16px 0 22px 0; padding: 14px; background: rgba(128,128,128,0.04); border: 1px solid rgba(128,128,128,0.18); border-radius: 8px;">
+    <img src="{b64_uri}" alt="{caption}" style="max-width: 100%; max-height: 600px; height: auto; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.12);" />
+    <div style="font-size: 0.8rem; font-weight: 500; opacity: 0.75; margin-top: 8px;">{caption}</div>
+</div>
+"""
+                partes = res.split('\n---\n', 1)
+                if len(partes) == 2:
+                    res = partes[0] + '\n---\n' + card_img + '\n' + partes[1]
+                else:
+                    res = card_img + '\n' + res
+
+    # 3. Resolver rutas relativas o nombres locales en etiquetas ![alt](src)
+    def _sub_md_img(m):
+        alt = m.group(1)
+        src = m.group(2)
+        if src.startswith("data:image/") and not src.endswith("..."):
+            return m.group(0)
+        b64 = resolver_ruta_imagen_a_base64(src, ruta_original=ruta_original)
+        if b64:
+            return f"![{alt}]({b64})"
+        return m.group(0)
+
+    res = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', _sub_md_img, res)
+
+    # 4. Resolver etiquetas HTML <img src="...">
+    def _sub_html_img(m):
+        full_tag = m.group(0)
+        src = m.group(1)
+        if src.startswith("data:image/") and not src.endswith("..."):
+            return full_tag
+        b64 = resolver_ruta_imagen_a_base64(src, ruta_original=ruta_original)
+        if b64:
+            return full_tag.replace(src, b64)
+        return full_tag
+
+    res = re.sub(r'<img\s+[^>]*src=["\']([^"\']+)["\'][^>]*>', _sub_html_img, res)
+
+    return res
 
 
 def cargar_documento_individual(filepath: str) -> str:
