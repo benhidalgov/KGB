@@ -1,3 +1,4 @@
+import os
 import re
 import html
 import unicodedata
@@ -6,6 +7,35 @@ import pandas as pd
 from core.configuracion import CSV_PATH
 from core.procesador import normalizar_titulo_display
 from core.vault import obtener_secreto
+
+# -------------------------------------------------------------------------
+# Caches de Alto Rendimiento en Memoria (Zero Disk I/O & Pre-computo)
+# -------------------------------------------------------------------------
+_DUCKDB_CON = None
+_DUCKDB_LAST_MTIME = -1.0
+_DOC_STORE_NORM_CACHE = {}  # {doc_name: (len_content, name_norm, content_norm)}
+_QUERY_RESPONSE_CACHE = {}  # {cache_key: card_html}
+_MAX_CACHE_ENTRIES = 128
+
+
+def limpiar_cache_consultas():
+    """Invalida todas las caches en memoria del motor (consultas, documentos normalizados y DuckDB)."""
+    global _QUERY_RESPONSE_CACHE, _DOC_STORE_NORM_CACHE, _DUCKDB_LAST_MTIME
+    _QUERY_RESPONSE_CACHE.clear()
+    _DOC_STORE_NORM_CACHE.clear()
+    _DUCKDB_LAST_MTIME = -1.0
+
+
+def _obtener_conexion_duckdb():
+    """Mantiene una conexión y tabla en memoria persistente en DuckDB, recargando solo cuando el CSV físico cambia."""
+    global _DUCKDB_CON, _DUCKDB_LAST_MTIME
+    current_mtime = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
+    if _DUCKDB_CON is None or current_mtime != _DUCKDB_LAST_MTIME:
+        _DUCKDB_CON = duckdb.connect(database=':memory:')
+        if os.path.exists(CSV_PATH):
+            _DUCKDB_CON.execute(f"CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM read_csv_auto('{CSV_PATH}')")
+        _DUCKDB_LAST_MTIME = current_mtime
+    return _DUCKDB_CON
 
 
 def normalizar_texto(texto: str) -> str:
@@ -16,20 +46,30 @@ def normalizar_texto(texto: str) -> str:
     return texto_sin_acentos.lower()
 
 
+def _obtener_texto_normalizado(doc_name: str, content: str) -> tuple[str, str]:
+    """Retorna (name_norm, content_norm) desde la cache o calcula una unica vez en memoria."""
+    c_len = len(content)
+    cached = _DOC_STORE_NORM_CACHE.get(doc_name)
+    if cached and cached[0] == c_len:
+        return cached[1], cached[2]
+
+    name_norm = normalizar_texto(doc_name)
+    content_norm = normalizar_texto(content)
+    _DOC_STORE_NORM_CACHE[doc_name] = (c_len, name_norm, content_norm)
+    return name_norm, content_norm
+
+
 def ejecutar_consulta_sql(query_sql: str) -> pd.DataFrame:
-    """Ejecuta una sentencia SQL en memoria sobre mantenimientos.csv mediante DuckDB."""
+    """Ejecuta una sentencia SQL ultrarrápida en memoria sobre mantenimientos.csv mediante DuckDB."""
     try:
-        con = duckdb.connect(database=':memory:')
-        con.execute(f"CREATE TABLE mantenimientos AS SELECT * FROM read_csv_auto('{CSV_PATH}')")
-        df = con.execute(query_sql).df()
-        con.close()
-        return df
+        con = _obtener_conexion_duckdb()
+        return con.execute(query_sql).df()
     except Exception as e:
         return pd.DataFrame({"Error": [str(e)]})
 
 
 def buscar_servidores_duckdb(termino: str) -> pd.DataFrame:
-    """Realiza búsqueda estructurada de servidores en DuckDB por IP, serie, servidor, componente o técnico."""
+    """Realiza búsqueda estructurada en memoria RAM de servidores en DuckDB por IP, serie, servidor, componente o técnico."""
     termino_sanitizado = normalizar_texto(termino.strip().replace("'", ""))
     if not termino_sanitizado:
         return pd.DataFrame()
@@ -66,18 +106,19 @@ def buscar_servidores_duckdb(termino: str) -> pd.DataFrame:
             descripcion,
             estado,
             nagios_check
-        FROM read_csv_auto('{CSV_PATH}')
+        FROM mantenimientos
         WHERE {where_clause}
         ORDER BY fecha DESC
     """
     try:
-        return duckdb.sql(query_sql).df()
+        con = _obtener_conexion_duckdb()
+        return con.execute(query_sql).df()
     except Exception:
         return pd.DataFrame()
 
 
 def buscar_en_documentos(query: str, doc_store: dict) -> list:
-    """Realiza una búsqueda textual insensible a mayúsculas y acentos con soporte de siglas cortas (>= 2 caracteres)."""
+    """Realiza una búsqueda textual acelerada por cache insensible a mayúsculas y acentos."""
     resultados = []
     query_norm = normalizar_texto(query)
     tokens = [t for t in query_norm.split() if len(t) >= 2]
@@ -89,8 +130,7 @@ def buscar_en_documentos(query: str, doc_store: dict) -> list:
         return []
 
     for doc_name, content in doc_store.items():
-        content_norm = normalizar_texto(content)
-        name_norm = normalizar_texto(doc_name)
+        name_norm, content_norm = _obtener_texto_normalizado(doc_name, content)
 
         score = 0
         # 1. Coincidencia de frase exacta
@@ -413,21 +453,35 @@ def generar_respuesta_asistente_local(
 
 def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
     """
-    Genera la respuesta técnica del Copilot.
+    Genera la respuesta técnica del Copilot con aceleración por caché en memoria RAM.
     Si GEMINI_API_KEY está configurada en la bóveda, ejecuta el flujo RAG de Google Gemini.
     De lo contrario o ante fallos de conectividad, conmuta transparentemente al motor local autónomo.
     """
+    prompt_limpio = prompt_usuario.strip()
+    if not prompt_limpio:
+        return ""
+
+    mtime_csv = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
+    doc_count = len(doc_store)
+    q_norm = normalizar_texto(prompt_limpio)
+    api_key_gemini = obtener_secreto("GEMINI_API_KEY", "")
+    has_api_key = bool(api_key_gemini and api_key_gemini.strip())
+
+    # Llave determinista de cache (consulta + presencia api key + mtime cmdb + cantidad docs)
+    cache_key = f"{q_norm}::{has_api_key}::{mtime_csv}::{doc_count}"
+    if cache_key in _QUERY_RESPONSE_CACHE:
+        return _QUERY_RESPONSE_CACHE[cache_key]
+
     df_srv = buscar_servidores_duckdb(prompt_usuario)
     doc_matches = buscar_en_documentos(prompt_usuario, doc_store)
 
-    api_key_gemini = obtener_secreto("GEMINI_API_KEY", "")
-
-    if api_key_gemini and api_key_gemini.strip():
+    resultado_final = ""
+    if has_api_key:
         contexto_rag = construir_contexto_rag(prompt_usuario, df_srv, doc_matches)
         exito_gemini, respuesta_texto, modelo_usado = consultar_gemini_rag(prompt_usuario, contexto_rag, api_key_gemini)
 
         if exito_gemini:
-            card_html = f"""<div class="search-result-card" style="border-left: 3.5px solid #10B981;">
+            resultado_final = f"""<div class="search-result-card" style="border-left: 3.5px solid #10B981;">
     <div class="search-header-row">
         <div>
             <span class="badge-ok">[OK]</span>
@@ -446,15 +500,19 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
     <span>Evidencia: {len(df_srv)} registro(s) CMDB + {len(doc_matches)} documento(s)</span>
 </div>
 </div>"""
-            return card_html
-
-        # Fallback si fallo la llamada
-        resp_local = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
-        banner_fallback = f"""<div style="font-size:0.75rem; background-color: rgba(217, 119, 6, 0.08); border: 1px solid #D97706; border-radius: 4px; padding: 6px 10px; margin-bottom: 8px;">
+        else:
+            resp_local = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
+            banner_fallback = f"""<div style="font-size:0.75rem; background-color: rgba(217, 119, 6, 0.08); border: 1px solid #D97706; border-radius: 4px; padding: 6px 10px; margin-bottom: 8px;">
     <span class="badge-warn">[FALLBACK LOCAL]</span> Servicio Gemini no disponible ({respuesta_texto}). Conmutando a motor local autónomo.
 </div>"""
-        return banner_fallback + resp_local
+            resultado_final = banner_fallback + resp_local
+    else:
+        resultado_final = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
 
-    # Motor local autónomo por omisión
-    return generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
+    # Almacenar en cache en memoria para acelerar consultas identicas
+    if len(_QUERY_RESPONSE_CACHE) >= _MAX_CACHE_ENTRIES:
+        _QUERY_RESPONSE_CACHE.pop(next(iter(_QUERY_RESPONSE_CACHE)))
+    _QUERY_RESPONSE_CACHE[cache_key] = resultado_final
+
+    return resultado_final
 

@@ -27,6 +27,7 @@ from core.procesador import (
 from core.motor import (
     ejecutar_consulta_sql,
     generar_respuesta_asistente,
+    limpiar_cache_consultas,
 )
 try:
     from core.auditoria import (
@@ -361,26 +362,18 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Acciones Rapidas
+    # Acciones de Consola
     st.markdown("#### Acciones de Consola")
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        if st.button(">_ Reindexar", help="Recarga todos los documentos desde data/docs/ y data/docs/assets/", use_container_width=True):
-            cargar_documentos_locales(st.session_state.doc_store, force=True)
-            st.toast("[OK] Base documental y assets reindexados con éxito")
-            st.rerun()
-    with col_btn2:
-        if st.button(">_ Limpiar Chat", help="Reinicia el historial de búsquedas y chat", use_container_width=True):
-            st.session_state.historial_busquedas = []
-            st.session_state.messages = []
-            st.toast("[INFO] Historial de consultas reiniciado")
-            st.rerun()
+    if st.button(">_ Reindexar", help="Recarga todos los documentos desde data/docs/ y data/docs/assets/", use_container_width=True, key="btn_sidebar_reindexar"):
+        cargar_documentos_locales(st.session_state.doc_store, force=True)
+        limpiar_cache_consultas()
+        st.toast("[OK] Base documental y assets reindexados con éxito")
+        st.rerun()
 
     st.markdown("---")
 
     # Bóveda de Seguridad y Credenciales (Vault)
-    st.markdown("#### Bóveda de Credenciales <span class='badge-info' style='font-size:0.68rem;padding:1px 6px;'>[VAULT]</span>", unsafe_allow_html=True)
-    with st.expander("Gestionar Secretos y API Keys", expanded=False):
+    with st.expander("Bóveda de Credenciales [VAULT]", expanded=False):
         secretos_lista = listar_secretos_disponibles()
         cfg_count = sum(1 for s in secretos_lista if s["estado"] == "[CONFIGURADO]")
         st.markdown(f"<div style='font-size:0.75rem; margin-bottom:8px; opacity:0.8;'>Estado de llaves: <b>{cfg_count} configurada(s)</b> bajo cifrado AES-256.</div>", unsafe_allow_html=True)
@@ -435,30 +428,7 @@ with st.sidebar:
                         st.toast(f"[INFO] Credencial '{nombre_clave_final}' revocada.")
                         st.rerun()
 
-    st.markdown("---")
 
-    # Estado del Sistema
-    st.markdown("#### Telemetría de Motores")
-    st.markdown(f"""
-<div class="sidebar-telemetry-box">
-    <div class="sidebar-telemetry-row">
-        <span class="sidebar-telemetry-engine">DuckDB SQL:</span>
-        <span class="sidebar-status-dot-ok">ONLINE</span>
-    </div>
-    <div class="sidebar-telemetry-row">
-        <span class="sidebar-telemetry-engine">MarkItDown Parser:</span>
-        <span class="sidebar-status-dot-ok">ACTIVO</span>
-    </div>
-    <div class="sidebar-telemetry-row">
-        <span class="sidebar-telemetry-engine">Visor Lado a Lado:</span>
-        <span class="sidebar-status-dot-ok">HABILITADO</span>
-    </div>
-    <div class="sidebar-telemetry-row">
-        <span class="sidebar-telemetry-engine">Docs en Memoria:</span>
-        <span class="badge-ok" style="font-size:0.68rem;padding:1px 6px;">{cant_docs_side} docs</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
 
     # Footer del Sidebar
     session_ts = datetime.datetime.now().strftime("%Y-%m-%d  %H:%M")
@@ -618,10 +588,12 @@ with tab_chat:
         col_res_t, col_res_btn = st.columns([4, 1])
         with col_res_t:
             st.markdown(
-                f"<div style='font-size: 0.95rem; font-weight: 600;'>Historial de Resultados ({len(st.session_state.historial_busquedas)} consultas):</div>", unsafe_allow_html=True)
+                f"<div style='font-size: 0.95rem; font-weight: 600;'>Historial de Consultas ({len(st.session_state.historial_busquedas)}):</div>", unsafe_allow_html=True)
         with col_res_btn:
-            if st.button("Limpiar Resultados", use_container_width=True, key="btn_clear_search_history_top"):
+            if st.button(">_ Limpiar Chat", use_container_width=True, key="btn_clear_search_history_top"):
                 st.session_state.historial_busquedas = []
+                st.session_state.messages = []
+                st.toast("[INFO] Historial de consultas reiniciado")
                 st.rerun()
 
         for idx, item in enumerate(st.session_state.historial_busquedas):

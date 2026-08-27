@@ -66,6 +66,24 @@ button[aria-label*="password" i] * {
     pointer-events: none !important;
 }
 
+/* 0a. Estilos de Expanders Corporativos */
+[data-testid="stExpander"] {
+    border: 1px solid rgba(99, 102, 241, 0.25) !important;
+    border-radius: 8px !important;
+    background: rgba(128, 128, 128, 0.03) !important;
+    margin-bottom: 8px !important;
+}
+[data-testid="stExpander"] summary {
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    padding: 6px 10px !important;
+    transition: color 0.15s ease, background 0.15s ease !important;
+}
+[data-testid="stExpander"] summary:hover {
+    color: #6366F1 !important;
+    background: rgba(99, 102, 241, 0.05) !important;
+}
+
 
 /* 0b. Animaciones Globales */
 @keyframes slideInDown {

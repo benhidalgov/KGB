@@ -34,6 +34,7 @@ from core.motor import (
     buscar_servidores_duckdb,
     buscar_en_documentos,
     generar_respuesta_asistente,
+    limpiar_cache_consultas,
 )
 from core.procesador import (
     IMAGE_EXTENSIONS,
