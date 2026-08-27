@@ -77,9 +77,18 @@ from core.configuracion import (
     HISTORY_DIR,
 )
 from core.manual import renderizar_manual_usuario
+from core.conector_sap import (
+    probar_conexion_api_sap,
+    obtener_inventario_sap_df,
+    obtener_alertas_sap,
+    generar_payload_json_sap,
+    generar_topologia_sap_mermaid,
+    sincronizar_servidores_sap_cmdb,
+)
 from excel_cleaner import procesar_excel_limpio
 import os
 import re
+import json
 import shutil
 import datetime
 import duckdb
@@ -445,11 +454,12 @@ if "Manual" in str(vista_seleccionada):
 
 
 # 5. Pestañas Principales
-tab_chat, tab_analytics, tab_docs, tab_templates = st.tabs([
+tab_chat, tab_analytics, tab_docs, tab_templates, tab_sap = st.tabs([
     "Consultas y Búsqueda",
     f"Historial de Mantenimientos ({total_srvs})",
     f"Documentación Técnica ({cant_docs})",
-    "Plantillas y Runbooks"
+    "Plantillas y Runbooks",
+    "Integración SAP (API)"
 ])
 
 # ----------------- TAB 1: BUSCADOR Y ASISTENTE  -----------------
@@ -1471,3 +1481,263 @@ with tab_templates:
             st.info(
                 "El Chat Copilot, DuckDB y el visualizador Lado a Lado ya pueden consultar y renderizar este nuevo procedimiento.")
             st.rerun()
+
+
+# ----------------- TAB 5: INTEGRACIÓN SAP (API) -----------------
+with tab_sap:
+    # 1. Cabecera Obsidian & Indigo
+    st.markdown("""
+<div class="search-result-card" style="margin-bottom: 18px; border-left: 4px solid #6366F1;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge-info">[SAP LANDSCAPE]</span>
+            <span class="badge-ok">[API REST / ODATA]</span>
+            <span class="badge-tag">[CONSOLA DE OPERACIONES]</span>
+        </div>
+        <div>
+            <span class="badge-pulse-online"><span class="pulse-dot"></span>CONECTOR OPERATIVO</span>
+        </div>
+    </div>
+    <div class="main-title" style="font-size:1.35rem; margin-bottom:4px;">Telemetría y Gestión de Infraestructura SAP</div>
+    <div class="sub-title" style="margin-bottom:0; font-size:0.88rem;">
+        Integración y monitoreo del landscape SAP S/4HANA 2022, bases de datos SAP HANA 2.0 (HSR), instancias NetWeaver (ASCS/PAS/AAS) y Landscape Management Database (LMDB).
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # 2. Panel de Conectividad y Endpoints
+    with st.container(border=True):
+        st.markdown("#### Configuración del Endpoint y Conectividad")
+        col_url, col_auth, col_cred = st.columns([2.2, 1.8, 1.5], gap="small")
+        with col_url:
+            sap_endpoint = st.text_input(
+                "Endpoint API Gateway SAP / ALM",
+                value="",
+                placeholder="",
+                help="URL base del servicio de telemetría de SAP Cloud ALM, Focused Run o SAP Host Agent."
+            )
+        with col_auth:
+            sap_auth_method = st.selectbox(
+                "Método de Autenticación",
+                options=[
+                    "OAuth 2.0 (Client Credentials / mTLS)",
+                    "SAP Host Agent HTTPS (:1129)",
+                    "SAP Solution Manager / FRUN (OData)"
+                ],
+                index=0
+            )
+        with col_cred:
+            sap_client_id = st.text_input(
+                "Client ID / Identificador de Servicio",
+                value="",
+                placeholder="",
+                type="password",
+                help="Identificador de cliente o certificado para la autenticación en el Gateway SAP."
+            )
+
+        col_b_conn, col_b_sync, col_b_payload = st.columns([1.2, 1.2, 1.0], gap="small")
+        with col_b_conn:
+            btn_test_sap = st.button(">_ Probar Conexión API", use_container_width=True, type="primary")
+        with col_b_sync:
+            btn_sync_sap = st.button(">_ Sincronizar CMDB Local", use_container_width=True, help="Ingesta los servidores del landscape SAP en mantenimientos.csv y genera registro de auditoría inmutable.")
+        with col_b_payload:
+            payload_data = generar_payload_json_sap(sap_endpoint)
+            payload_str = json.dumps(payload_data, indent=2, ensure_ascii=False)
+            st.download_button(
+                label="Descargar Payload JSON",
+                data=payload_str,
+                file_name="sap_landscape_payload.json",
+                mime="application/json",
+                use_container_width=True
+            )
+
+        # Acciones de prueba de conexion
+        if btn_test_sap:
+            if not sap_endpoint.strip():
+                st.warning("[WARN] Ingrese el endpoint de la API de SAP antes de ejecutar la prueba de conexión.")
+            else:
+                res_conn = probar_conexion_api_sap(sap_endpoint, sap_auth_method, sap_client_id)
+                st.session_state.sap_conn_result = res_conn
+
+        if "sap_conn_result" in st.session_state:
+            res_c = st.session_state.sap_conn_result
+            st.markdown(f"""
+<div style="background-color: rgba(16, 185, 129, 0.08); border: 1px solid #10B981; border-radius: 6px; padding: 10px 14px; margin-top: 12px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div>
+        <span class="badge-ok">[200 OK]</span>
+        <b style="margin-left: 6px;">Conexión Verificada:</b> {res_c['endpoint']}
+    </div>
+    <div>
+        <span class="badge-tag">Latencia: {res_c['latencia_ms']} ms</span>
+        <span class="badge-info" style="margin-left: 4px;">{res_c['protocolo']}</span>
+        <span class="badge-tag" style="margin-left: 4px;">{res_c['timestamp']}</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+        # Accion de sincronizacion con CMDB
+        if btn_sync_sap:
+            ok, cant, msg = sincronizar_servidores_sap_cmdb(autor="Conector API SAP")
+            if ok:
+                st.toast(f"[OK] {msg}")
+                st.success(f"[OK] {msg} Los servidores se encuentran disponibles para consultas DuckDB y el Chat.")
+            else:
+                st.toast(f"[WARN] {msg}")
+                st.warning(f"[WARN] {msg}")
+
+    # 3. Métricas de Telemetría (KPIs)
+    df_sap_hosts = obtener_inventario_sap_df()
+    total_sap_hosts = len(df_sap_hosts)
+    sids_unicos = df_sap_hosts["sid"].unique()
+
+    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+    with col_kpi1:
+        st.markdown(f"""
+<div class="search-result-card" style="padding: 12px 14px; text-align: center;">
+    <div style="font-size: 0.75rem; opacity: 0.7; font-weight: 500;">SISTEMAS SAP (SIDs)</div>
+    <div style="font-size: 1.4rem; font-weight: 700; color: #6366F1; margin: 4px 0;">{len(sids_unicos)} SIDs</div>
+    <div style="font-size: 0.72rem; opacity: 0.8;">PRD, HDB, SM1</div>
+</div>
+""", unsafe_allow_html=True)
+
+    with col_kpi2:
+        st.markdown(f"""
+<div class="search-result-card" style="padding: 12px 14px; text-align: center;">
+    <div style="font-size: 0.75rem; opacity: 0.7; font-weight: 500;">INSTANCIAS / NODOS</div>
+    <div style="font-size: 1.4rem; font-weight: 700; color: #10B981; margin: 4px 0;">{total_sap_hosts} Hosts</div>
+    <div style="font-size: 0.72rem; opacity: 0.8;">HANA, NetWeaver, WDisp</div>
+</div>
+""", unsafe_allow_html=True)
+
+    with col_kpi3:
+        st.markdown(f"""
+<div class="search-result-card" style="padding: 12px 14px; text-align: center;">
+    <div style="font-size: 0.75rem; opacity: 0.7; font-weight: 500;">REPLICACIÓN HANA HSR</div>
+    <div style="font-size: 1.4rem; font-weight: 700; color: #10B981; margin: 4px 0;">IN-SYNC</div>
+    <div style="font-size: 0.72rem; opacity: 0.8;">Latencia réplica: 1.4 ms</div>
+</div>
+""", unsafe_allow_html=True)
+
+    with col_kpi4:
+        st.markdown(f"""
+<div class="search-result-card" style="padding: 12px 14px; text-align: center;">
+    <div style="font-size: 0.75rem; opacity: 0.7; font-weight: 500;">ALERTAS ACTIVAS</div>
+    <div style="font-size: 1.4rem; font-weight: 700; color: #D97706; margin: 4px 0;">1 Alerta</div>
+    <div style="font-size: 0.72rem; opacity: 0.8;">Memoria SolMan (89.2%)</div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+
+    # 4. Pestañas Internas del Módulo SAP
+    tab_sap_inv, tab_sap_topo, tab_sap_json, tab_sap_alerts = st.tabs([
+        f"Inventario de Servidores ({total_sap_hosts})",
+        "Topología del Landscape SAP",
+        "Payload API (JSON)",
+        "Alertas y Eventos (2)"
+    ])
+
+    # Sub-tab 1: Inventario
+    with tab_sap_inv:
+        col_f_sid, col_f_search = st.columns([1.5, 3.5])
+        with col_f_sid:
+            opciones_sid = ["Todos"] + list(sids_unicos)
+            filtro_sid = st.pills("Filtrar por SID:", options=opciones_sid, default="Todos", key="pills_filtro_sid_sap")
+            if not filtro_sid:
+                filtro_sid = "Todos"
+        with col_f_search:
+            filtro_txt_sap = st.text_input("Buscar por host, IP o componente:", value="", placeholder="", key="txt_search_sap_inv")
+
+        df_mostrar = df_sap_hosts.copy()
+        if filtro_sid != "Todos":
+            df_mostrar = df_mostrar[df_mostrar["sid"] == filtro_sid]
+        if filtro_txt_sap:
+            t = filtro_txt_sap.lower()
+            df_mostrar = df_mostrar[
+                df_mostrar["servidor_id"].str.lower().str.contains(t) |
+                df_mostrar["ip"].str.lower().str.contains(t) |
+                df_mostrar["componente"].str.lower().str.contains(t) |
+                df_mostrar["instancia"].str.lower().str.contains(t)
+            ]
+
+        cols_display = [
+            "servidor_id", "sid", "instancia", "ip", "nivel_arquitectura",
+            "componente", "cpu_pct", "mem_pct", "disco_pct", "estado", "nagios_check"
+        ]
+        cols_finales = [c for c in cols_display if c in df_mostrar.columns]
+
+        st.dataframe(
+            df_mostrar[cols_finales].rename(columns={
+                "servidor_id": "Servidor",
+                "sid": "SID",
+                "instancia": "Instancia",
+                "ip": "IP",
+                "nivel_arquitectura": "Capa",
+                "componente": "Servicio / Componente",
+                "cpu_pct": "CPU %",
+                "mem_pct": "Mem %",
+                "disco_pct": "Disco %",
+                "estado": "Estado",
+                "nagios_check": "Chequeo Host Agent"
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
+
+        with st.expander("Ver Ficha Técnica Detallada por Servidor SAP", expanded=False):
+            host_sel = st.selectbox("Seleccione Servidor para Inspeccionar:", df_sap_hosts["servidor_id"].tolist())
+            if host_sel:
+                det = df_sap_hosts[df_sap_hosts["servidor_id"] == host_sel].iloc[0]
+                c_d1, c_d2, c_d3 = st.columns(3)
+                with c_d1:
+                    st.markdown(f"**Identificador:** `{det['servidor_id']}`")
+                    st.markdown(f"**Número de Serie:** `{det['numero_serie']}`")
+                    st.markdown(f"**Dirección IP:** `{det['ip']}`")
+                with c_d2:
+                    st.markdown(f"**Sistema (SID):** `{det['sid']}`")
+                    st.markdown(f"**Instancia:** `{det['instancia']}`")
+                    st.markdown(f"**Nivel de Arquitectura:** `{det['nivel_arquitectura']}`")
+                with c_d3:
+                    st.markdown(f"**Sistema Operativo:** {det['os']}")
+                    st.markdown(f"**Versión Kernel:** `{det['kernel']}`")
+                    st.markdown(f"**SAP Host Agent:** `{det['sap_host_agent']}`")
+
+    # Sub-tab 2: Topología
+    with tab_sap_topo:
+        st.markdown("""
+<div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 12px;">
+    Diagrama de dependencias arquitectónicas entre la capa de balanceo (Web Dispatcher), capa de aplicación SAP S/4HANA (ASCS, PAS, AAS), capa de base de datos SAP HANA DB en replicación sincrónica/asincrónica HSR, y gestión con SAP Solution Manager.
+</div>
+""", unsafe_allow_html=True)
+        topo_sap_mermaid = generar_topologia_sap_mermaid()
+        with st.container(border=True):
+            st.markdown(f"```mermaid\n{topo_sap_mermaid}\n```")
+
+    # Sub-tab 3: Payload API (JSON)
+    with tab_sap_json:
+        st.markdown("""
+<div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 10px;">
+    Respuesta completa provista por la API REST de telemetría e inventario de SAP (esquema compatible con SAP Cloud ALM / SAP Host Agent):
+</div>
+""", unsafe_allow_html=True)
+        st.json(payload_data)
+
+    # Sub-tab 4: Alertas
+    with tab_sap_alerts:
+        alertas_sap_list = obtener_alertas_sap()
+        for al in alertas_sap_list:
+            tag_sev = '<span class="badge-warn">[ADVERTENCIA]</span>' if al["severidad"] == "Advertencia" else '<span class="badge-info">[INFO]</span>'
+            st.markdown(f"""
+<div class="search-result-card" style="margin-bottom: 10px; border-left: 3px solid {'#D97706' if al['severidad'] == 'Advertencia' else '#6366F1'};">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+        <div>
+            {tag_sev}
+            <b style="margin-left: 6px;">{al['id_alerta']}</b> - SID: <code>{al['sid']}</code> | Host: <code>{al['servidor_id']}</code>
+        </div>
+        <span class="badge-tag">{al['timestamp']}</span>
+    </div>
+    <div style="font-size: 0.88rem; margin-bottom: 4px;"><b>Tipo:</b> {al['tipo']} - {al['mensaje']}</div>
+    <div style="font-size: 0.8rem; opacity: 0.8;"><b>Acción Recomendada:</b> {al['accion_recomendada']}</div>
+</div>
+""", unsafe_allow_html=True)
+

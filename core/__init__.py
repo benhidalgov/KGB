@@ -63,3 +63,12 @@ from core.visor import (
     renderizar_diagrama_limpio,
 )
 from core.manual import renderizar_manual_usuario
+from core.conector_sap import (
+    probar_conexion_api_sap,
+    obtener_inventario_sap_df,
+    obtener_alertas_sap,
+    generar_payload_json_sap,
+    generar_topologia_sap_mermaid,
+    sincronizar_servidores_sap_cmdb,
+)
+
