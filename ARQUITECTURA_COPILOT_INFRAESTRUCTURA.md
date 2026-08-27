@@ -83,7 +83,7 @@ graph TD
 
 ### Componentes de Ingesta
 * **Procesador Excel Limpio (`excel_cleaner.py`):** Parser y extractor que preserva encabezados, omite ruido estructural y segmenta libros complejos por hojas individuales (`## Hoja: ...`).
-* **MarkItDown (Microsoft):** Motor multiformato para conversión de Word (`mammoth`), Excel (`openpyxl`), PDF (`pypdf`), PowerPoint (`python-pptx`) y Markdown. Configurado con `keep_data_uris=True` para preservar imágenes incrustadas.
+* **MarkItDown (Microsoft):** Motor multiformato para conversión de Word (`mammoth`), Excel (`openpyxl`), PDF (`pypdf`), PowerPoint (`python-pptx`) y Markdown. Configurado con `keep_data_uris=False` para prevenir inyecciones masivas de Base64 en el DOM del navegador, complementado con extracción selectiva de imágenes binarias (< 400 KB) en `core/procesador.py`.
 * **Worker de Ingesta Masiva (`batch_ingest.py`):** Script para conversión por lotes en paralelo con detección automática de cambios mediante firmas SHA-256 registradas en `data/ingestion_manifest.json`.
 * **Fichas Técnicas Complejas de Servidores:** Estandarización de matrices de celdas combinadas con datos de monitoreo PRTG (sensores de CPU, Memoria, PING, Disco, HTTP), umbrales (Warning/Critical), criticidad de ambiente y matrices de escalamiento (ej. `BALANCER001`).
 * **Normalizador Integral de Nombres (`core/procesador.py`):**
@@ -284,3 +284,65 @@ Para proteger credenciales sensibles (`GEMINI_API_KEY`, `SAP_ENDPOINT`, `SAP_CLI
 * **Topología Dinámica Mermaid:** Diagramas de arquitectura generados dinámicamente con estado de sincronización HANA HSR (Sync Memory / Real-Time).
 * **Payload JSON:** Visor interactivo del esquema REST/OData para auditoría de interfaces.
 * **Sincronización CMDB:** Botón para consolidar automáticamente servidores del landscape SAP en la base de inventario local.
+
+---
+
+## 13. Autenticación Corporativa y Control de Acceso (RBAC)
+
+Para evitar la exposición pública de activos de infraestructura y proteger la cuota de la API Key en despliegues en la nube:
+
+### 13.1 Compuerta Perimetral (`core/auth.py`)
+* Si la sesión no está autenticada, la aplicación ejecuta inmediatamente `st.stop()`. Ningún componente de la interfaz, documento o registro de la CMDB se procesa ni renderiza.
+* **Algoritmo de Hashing:** PBKDF2-HMAC-SHA256 con 100,000 iteraciones y sal criptográfica fija por instalación (`core/auth.py`).
+* **Soporte de Variables Maestras:** Permite inyectar `ADMIN_PASSWORD` y `OPERADOR_PASSWORD` desde `st.secrets` para entornos en la nube como Streamlit Community Cloud.
+
+### 13.2 Matriz de Roles y Permisos
+
+| Rol | Permisos Principales | Bóveda `[VAULT]` | Ingesta de Archivos | Edición y Rollback |
+| :--- | :--- | :--- | :--- | :--- |
+| **Administrador** | Control total de la plataforma | Acceso lectura / escritura | Habilitada | Habilitado |
+| **Operador** | Consultas Copilot, Búsqueda DuckDB, Visor Lado a Lado | Oculta / Bloqueada | Habilitada | Edición (sin rollback) |
+| **Auditor** | Inspección y auditoría de sólo lectura | Oculta / Bloqueada | Bloqueada | Bloqueado |
+
+---
+
+## 14. Arquitectura de Búsqueda Dual en Consola
+
+Para optimizar el uso de cómputo y brindar latencia sub-milisegundo, la Pestaña 1 se estructuró en dos subpestañas especializadas:
+
+1. **Subpestaña 1: Búsqueda Textual (DuckDB & Docs):**
+   * **Objetivo:** Localización exacta e instantánea de servidores, IPs, componentes, seriales y manuales.
+   * **Mecanismo:** Consultas SQL parametrizadas sobre DuckDB en RAM + escaneo léxico pre-normalizado.
+   * **Latencia:** **`< 2 ms`**, 100% local, cero llamadas remotas y cero consumo de cuota de IA.
+   * **Visualización:** Tabla dinámica de servidores con estados Nagios, extractos de documentación con `<mark>` y botón de escalamiento al Copilot.
+2. **Subpestaña 2: Copilot de Infraestructura (Gemini RAG):**
+   * **Objetivo:** Consultas complejas de diagnóstico, análisis de incidentes, explicación de topologías y redacción de runbooks.
+   * **Mecanismo:** Inyección RAG contextual con `gemini-2.5-flash`, LRU Query Cache y fallback a motor local autónomo.
+
+---
+
+## 15. Pipeline de Ingesta Batch Web y Soporte de Paquetes ZIP
+
+* **Carga Masiva en Interfaz:** El componente `st.file_uploader` soporta selección simultánea de múltiples archivos y paquetes comprimidos `.zip`.
+* **Descompresión en Memoria:** Mediante `io.BytesIO` y `zipfile`, los paquetes se procesan en la memoria RAM del servidor sin requerir almacenamiento temporal en disco.
+* **Pipeline de Ingesta Automatizado:** Preservación de binario original en `data/originals/`, sanitización de nombres, extracción limpia con MarkItDown, generación de versión inmutable `v1` e indexación inmediata en `doc_store` y DuckDB.
+
+---
+
+## 16. Blindaje de Rendimiento y Prevención de Bloqueos en Visores
+
+Para evitar el agotamiento de memoria del navegador (*Out of Memory*) en documentos técnicos densos:
+
+1. **Supresión de Cadenas Base64 Masivas:** MarkItDown configurado con `keep_data_uris=False`. Documentos Word extensos se redujeron de más de 4 MB de cadenas binarias a menos de 25 KB de Markdown limpio.
+2. **Visor de Código Protegido (`renderizar_codigo_seguro`):** Límite de 50 KB para el resaltador sintáctico Prism.js en la vista de código fuente.
+3. **Visor PDF Inteligente (`mostrar_pdf_embebido`):** Archivos mayores a 2.5 MB se presentan mediante tarjeta ejecutiva y botón de descarga directa en lugar de iframes Base64 de 10 MB.
+4. **Comparador Diff Controlado:** Truncado a 400 líneas en `generar_diff_lado_a_lado_html` para asegurar un renderizado fluido del árbol DOM.
+5. **Auto-Saneamiento de Sesión:** Detección en caliente en `app.py` que purga automáticamente la caché en RAM si se detectan residuos binarios mayores a 150 KB.
+
+---
+
+## 17. Arquitectura Desacoplada y Despliegue en la Nube
+
+1. **Inicializador de Paquete Desacoplado (`core/__init__.py`):** Eliminación de dependencias circulares cruzadas en el paquete raíz, garantizando compatibilidad absoluta con entornos Linux y contenedores cloud.
+2. **Fijación de Runtime Estable (`.python-version`):** Fijación estricta de **Python 3.12 LTS** para prevenir la selección automática de versiones experimentales (Python 3.14) en plataformas de despliegue como Streamlit Community Cloud.
+3. **Inyección Segura de Secretos:** Integración nativa con `st.secrets` para custodia transparente de `GEMINI_API_KEY` y contraseñas maestras sin exposición en el repositorio ni en la interfaz pública.

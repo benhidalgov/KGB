@@ -94,16 +94,41 @@ Este documento contiene el registro de avances completados y la planificación t
   - Conexión persistente DuckDB en RAM (`_obtener_conexion_duckdb`) con Zero Disk I/O.
   - Reubicación ergonómica del botón `>_ Limpiar Chat` en la cabecera de resultados y purga de secciones superfluas en el sidebar.
 
+- [x] **Paso 15: Arquitectura de Búsqueda Dual en Consola (DuckDB < 2 ms + Gemini RAG)** *(COMPLETADO)*
+  - Separación de la Pestaña 1 en dos subpestañas dedicadas con roles perfectamente diferenciados.
+  - Subpestaña 1 `Búsqueda Textual (DuckDB & Docs)`: Consultas indexadas instantáneas (< 2 ms) en memoria RAM, cuadrícula estructurada de servidores en CMDB, extractos documentales con `<mark>` y botón puente hacia el Copilot.
+  - Subpestaña 2 `Copilot de Infraestructura (Gemini RAG)`: Razonamiento técnico con Gemini 2.5 Flash, diagnósticos RCA, runbooks asistidos y bitácora de diálogo.
+
+- [x] **Paso 16: Control de Acceso y Autenticación Corporativa Basada en Roles (RBAC)** *(COMPLETADO)*
+  - Compuerta de autenticación perimetral (`core/auth.py`) con pantalla de login empresarial Obsidian & Indigo.
+  - Bloqueo total de la ejecución (`st.stop()`) ante usuarios no autenticados para proteger la privacidad de la CMDB y la cuota de la API Key.
+  - Roles granulares (`Administrador`, `Operador`, `Auditor`), contraseñas con PBKDF2-HMAC-SHA256, soporte de variables maestras vía `st.secrets` y bitácora de inicios de sesión en `audit_log.json`.
+  - Tarjeta de usuario activo en el sidebar con botón `>_ Cerrar Sesión` y restricción de la Bóveda `[VAULT]` exclusiva para administradores.
+
+- [x] **Paso 17: Ingesta Batch Web con Soporte Nativo de Paquetes ZIP** *(COMPLETADO)*
+  - Cargador web ampliado en el panel lateral que acepta selección masiva de archivos y paquetes comprimidos `.zip`.
+  - Descompresión en memoria (`io.BytesIO` y `zipfile`), sanitización de nombres, preservación de binarios en `data/originals/`, generación de versión inmutable `v1` e indexación en caliente en `doc_store` y DuckDB.
+
+- [x] **Paso 18: Blindaje de Rendimiento y Prevención de Bloqueos en Visores** *(COMPLETADO)*
+  - Configuración de MarkItDown con `keep_data_uris=False` para evitar inyecciones masivas de Base64 (reducción de 4 MB a 23 KB en documentos Word densos).
+  - Visor de código fuente limitado a 50 KB para salvaguardar el hilo JavaScript (Prism.js), editor textarea truncado a 100 KB, umbral de 2.5 MB para PDFs embebidos (con tarjeta de descarga directa) y comparador Diff limitado a 400 líneas.
+  - Rutina de auto-saneamiento en caliente en `app.py` ante residuos binarios obsoletos en memoria de sesión.
+
+- [x] **Paso 19: Desacoplamiento de Arquitectura y Despliegue en Streamlit Cloud (Python 3.12 LTS)** *(COMPLETADO)*
+  - Saneamiento de `core/__init__.py` eliminando dependencias circulares cruzadas en el paquete raíz para compatibilidad absoluta en entornos Linux/Cloud.
+  - Archivo `.python-version` fijando Python 3.12 LTS oficial, evitando builds automáticos inestables de Python 3.14.
+  - Integración transparente con `st.secrets` para inyección segura de `GEMINI_API_KEY` y `ADMIN_PASSWORD`.
+
 ---
 
 ## 2. Próximos Pasos y Roadmap de Desarrollo
 
-### Paso 15: Extracción de Contenido Gráfico (OCR y Visión Multimodal con IA)
+### Paso 20: Extracción de Contenido Gráfico (OCR y Visión Multimodal con IA)
 **Objetivo:** Hacer que los diagramas sean buscables por el Copilot mediante su contenido textual interno (nombres de servidores, puertos, flujos, direcciones IP dentro de la imagen).
 
 1. **Estrategia A — OCR Local (Offline / Sin costo de API):**
    * Integración de `easyocr` o `pytesseract` para extraer cajas de texto y etiquetas de topología.
-2. **Estrategia B — Visión Multimodal con Google GenAI SDK (`gemini-3.6-flash`):**
+2. **Estrategia B — Visión Multimodal con Google GenAI SDK (`gemini-2.5-flash`):**
    * Análisis automático de la arquitectura visual para generar un resumen técnico estructurado:
      * *Propósito de la topología.*
      * *Componentes e interfaces involucradas.*
