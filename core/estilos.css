@@ -41,6 +41,31 @@ code, pre, .stCode, kbd,
     display: none !important;
 }
 
+/* Seguridad Estricta: Ocultar boton revelador (ojo) en inputs de contrasena / credenciales */
+[data-testid="stTextInputRootElement"] button,
+[data-testid="stTextInputRootElement"] button *,
+div[data-testid="stTextInput"]:has(input[type="password"]) button,
+div[data-testid="stTextInput"]:has(input[type="password"]) button *,
+div[data-testid="stTextInput"] button[aria-label*="password" i],
+div[data-testid="stTextInput"] button[aria-label*="contraseña" i],
+div[data-testid="stTextInput"] button[title*="password" i],
+button[aria-label="Show password"],
+button[aria-label="Hide password"],
+button[aria-label*="password" i],
+button[aria-label*="password" i] * {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 
 /* 0b. Animaciones Globales */
 @keyframes slideInDown {

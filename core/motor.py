@@ -5,6 +5,7 @@ import duckdb
 import pandas as pd
 from core.configuracion import CSV_PATH
 from core.procesador import normalizar_titulo_display
+from core.vault import obtener_secreto
 
 
 def normalizar_texto(texto: str) -> str:
@@ -186,13 +187,112 @@ def extraer_fragmento_relevante(content: str, query: str, max_chars: int = 900) 
     return fragmento
 
 
-def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
-    """Genera la respuesta técnica del Copilot en formato de tarjeta estructurada con resaltado visual."""
-    df_srv = buscar_servidores_duckdb(prompt_usuario)
-    doc_matches = buscar_en_documentos(prompt_usuario, doc_store)
+def construir_contexto_rag(prompt_usuario: str, df_srv: pd.DataFrame, doc_matches: list) -> str:
+    """Compila la evidencia técnica recuperada de DuckDB y de la base documental para inyección en Gemini."""
+    secciones = []
+
+    # 1. Evidencia de CMDB / DuckDB
+    if df_srv is not None and not df_srv.empty:
+        lineas_cmdb = ["### EVIDENCIA DE INVENTARIO Y MANTENIMIENTOS (DuckDB CMDB):"]
+        for _, row in df_srv.head(4).iterrows():
+            lineas_cmdb.append(
+                f"- Servidor: {row.get('servidor_id', '-')} | IP: {row.get('ip', '-')} | VM: {row.get('vcloud_vm', '-')} | "
+                f"Capa: {row.get('nivel_arquitectura', '-')} | Componente: {row.get('componente', '-')} | "
+                f"Estado: {row.get('estado', '-')} | Mantenimiento: {row.get('tipo_mantenimiento', '-')} ({row.get('fecha', '-')}) | "
+                f"Técnico: {row.get('tecnico', '-')} | Nagios: {row.get('nagios_check', '-')} | "
+                f"Detalle: {row.get('descripcion', '-')}"
+            )
+        secciones.append("\n".join(lineas_cmdb))
+
+    # 2. Evidencia Documental
+    if doc_matches:
+        lineas_docs = ["### EVIDENCIA DE BASE DE CONOCIMIENTO TÉCNICA:"]
+        for doc_name, content, score in doc_matches[:3]:
+            fragmento = extraer_fragmento_relevante(content, prompt_usuario, max_chars=600)
+            lineas_docs.append(f"**Documento [{doc_name}] (Score {score} pts):**\n{fragmento}\n")
+        secciones.append("\n".join(lineas_docs))
+
+    if not secciones:
+        return "No se encontraron coincidencias directas en la CMDB ni en los documentos técnicos locales."
+
+    return "\n\n".join(secciones)
+
+
+def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -> tuple[bool, str, str]:
+    """
+    Ejecuta la inferencia RAG sobre el modelo oficial de Google Gemini.
+    Retorna (exito, texto_o_error, modelo_utilizado).
+    """
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
+
+        instruccion_sistema = (
+            "Eres el Copilot de Infraestructura y Operaciones, un Ingeniero Principal de Infraestructura senior de grado corporativo.\n"
+            "Tu funcion es responder con maxima precision tecnica a las consultas operativas del equipo.\n\n"
+            "DIRECTRICES ESTRICTAS Y OBLIGATORIAS:\n"
+            "1. PROHIBICION TOTAL DE EMOJIS: Esta estrictamente prohibido incluir cualquier emoji o icono visual Unicode en tu respuesta.\n"
+            "2. PROHIBICION TOTAL DE LA PALABRA 'AIOps': Queda estrictamente prohibido el uso del termino 'AIOps' o 'aiops'. Utiliza terminos como 'Operaciones', 'Infraestructura' o 'Consola de Operaciones'.\n"
+            "3. FUNDAMENTACION ESTRICTA (ZERO HALLUCINATIONS): Basa tus respuestas unicamente en la evidencia tecnica provista en el contexto. No inventes datos que no consten en la CMDB o en los documentos.\n"
+            "4. ESTILO CORPORATIVO: Estilo formal, sobrio y tecnico. Utiliza tablas Markdown y bloques de codigo o configuraciones cuando sea pertinente.\n"
+            "5. Si la informacion es parcial o no esta disponible en el contexto, indicalo de forma clara y formal."
+        )
+
+        prompt_completo = f"""CONSULTA DEL OPERADOR:
+{prompt_usuario}
+
+CONTEXTO TÉCNICO RECUPERADO (CMDB Y DOCUMENTACIÓN):
+{contexto_rag}
+
+Instrucción: Proporciona una respuesta técnica completa, estructurada y formal respondiendo a la consulta basándote en el contexto anterior."""
+
+        # Modelos candidatos actualizados segun disponibilidad de Google API
+        modelos_candidatos = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-flash-latest"]
+        ultimo_error = ""
+
+        for nombre_modelo in modelos_candidatos:
+            try:
+                response = client.models.generate_content(
+                    model=nombre_modelo,
+                    contents=prompt_completo,
+                    config=types.GenerateContentConfig(
+                        system_instruction=instruccion_sistema,
+                        temperature=0.2,
+                    )
+                )
+                if response and response.text:
+                    return True, response.text.strip(), nombre_modelo
+            except Exception as e:
+                err_str = str(e)
+                if "403" in err_str and "PERMISSION_DENIED" in err_str:
+                    return False, "403 PERMISSION_DENIED: El proyecto asociado a su API Key tiene el acceso denegado en Google Cloud / Google AI Studio ('Your project has been denied access')", ""
+                elif "429" in err_str:
+                    return False, "429 Cuota agotada en la API de Google", ""
+                else:
+                    ultimo_error = f"{nombre_modelo}: {err_str[:90]}"
+                continue
+
+        return False, f"{ultimo_error}", ""
+    except Exception as e:
+        return False, str(e)[:120], ""
+
+
+def generar_respuesta_asistente_local(
+    prompt_usuario: str,
+    doc_store: dict,
+    df_srv: pd.DataFrame = None,
+    doc_matches: list = None
+) -> str:
+    """Genera la respuesta técnica determinista del motor local autónomo (DuckDB + Text Search)."""
+    if df_srv is None:
+        df_srv = buscar_servidores_duckdb(prompt_usuario)
+    if doc_matches is None:
+        doc_matches = buscar_en_documentos(prompt_usuario, doc_store)
 
     # Caso 1: Coincidencia en Inventario DuckDB
-    if not df_srv.empty:
+    if df_srv is not None and not df_srv.empty:
         total_coincidencias = len(df_srv)
         row = df_srv.iloc[0]
         estado_badge = "badge-ok" if row['estado'].lower() == "operativo" else "badge-warn" if "revision" in row['estado'].lower() else "badge-crit"
@@ -228,7 +328,7 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
 </div>
 
 <div class="search-meta-footer">
-    <span>Origen: DuckDB SQL Engine (data/mantenimientos.csv)</span>
+    <span>Motor: Local Autónomo | DuckDB + MarkItDown</span>
     <span>{total_coincidencias} registro(s) encontrado(s)</span>
 </div>
 </div>"""
@@ -265,12 +365,11 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
     <div class="search-snippet-content">{fragmento_resaltado}</div>
 
     <div class="search-meta-footer">
-        <span>Origen: Repositorio Documental Indexado</span>
+        <span>Motor: Local Autónomo | DuckDB + MarkItDown</span>
         <span>Consulte el archivo completo en la pestaña <b>Documentación Técnica</b></span>
     </div>
 </div>"""
 
-        # Si hay más documentos coincidentes, agregamos tarjetas secundarias compactas
         total_docs = len(doc_matches)
         if total_docs > 1:
             resultado_html += f"\n\n**Otros documentos coincidentes ({total_docs - 1}):**\n"
@@ -305,4 +404,57 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
             <li><b>Tecnologías y Procedimientos:</b> <code>JWT</code>, <code>WSO2</code>, <code>Redis</code>, <code>Failover</code>, <code>Rollback</code></li>
         </ul>
     </div>
+    <div class="search-meta-footer">
+        <span>Motor: Local Autónomo | DuckDB + MarkItDown</span>
+        <span>0 registros encontrados</span>
+    </div>
 </div>"""
+
+
+def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
+    """
+    Genera la respuesta técnica del Copilot.
+    Si GEMINI_API_KEY está configurada en la bóveda, ejecuta el flujo RAG de Google Gemini.
+    De lo contrario o ante fallos de conectividad, conmuta transparentemente al motor local autónomo.
+    """
+    df_srv = buscar_servidores_duckdb(prompt_usuario)
+    doc_matches = buscar_en_documentos(prompt_usuario, doc_store)
+
+    api_key_gemini = obtener_secreto("GEMINI_API_KEY", "")
+
+    if api_key_gemini and api_key_gemini.strip():
+        contexto_rag = construir_contexto_rag(prompt_usuario, df_srv, doc_matches)
+        exito_gemini, respuesta_texto, modelo_usado = consultar_gemini_rag(prompt_usuario, contexto_rag, api_key_gemini)
+
+        if exito_gemini:
+            card_html = f"""<div class="search-result-card" style="border-left: 3.5px solid #10B981;">
+    <div class="search-header-row">
+        <div>
+            <span class="badge-ok">[OK]</span>
+            <span class="badge-info" style="margin-left: 6px;">[RAG CONTEXTUAL]</span>
+            <span class="search-doc-title" style="margin-left: 8px;">Análisis de Infraestructura</span>
+        </div>
+        <div>
+            <span class="badge-tag">Gemini Inferencia</span>
+        </div>
+    </div>
+
+{respuesta_texto}
+
+<div class="search-meta-footer">
+    <span>Motor: Google {modelo_usado} | RAG Contextual</span>
+    <span>Evidencia: {len(df_srv)} registro(s) CMDB + {len(doc_matches)} documento(s)</span>
+</div>
+</div>"""
+            return card_html
+
+        # Fallback si fallo la llamada
+        resp_local = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
+        banner_fallback = f"""<div style="font-size:0.75rem; background-color: rgba(217, 119, 6, 0.08); border: 1px solid #D97706; border-radius: 4px; padding: 6px 10px; margin-bottom: 8px;">
+    <span class="badge-warn">[FALLBACK LOCAL]</span> Servicio Gemini no disponible ({respuesta_texto}). Conmutando a motor local autónomo.
+</div>"""
+        return banner_fallback + resp_local
+
+    # Motor local autónomo por omisión
+    return generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
+

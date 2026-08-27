@@ -85,6 +85,12 @@ from core.conector_sap import (
     generar_topologia_sap_mermaid,
     sincronizar_servidores_sap_cmdb,
 )
+from core.vault import (
+    obtener_secreto,
+    guardar_secreto,
+    eliminar_secreto,
+    listar_secretos_disponibles,
+)
 from excel_cleaner import procesar_excel_limpio
 import os
 import re
@@ -369,6 +375,65 @@ with st.sidebar:
             st.session_state.messages = []
             st.toast("[INFO] Historial de consultas reiniciado")
             st.rerun()
+
+    st.markdown("---")
+
+    # Bóveda de Seguridad y Credenciales (Vault)
+    st.markdown("#### Bóveda de Credenciales <span class='badge-info' style='font-size:0.68rem;padding:1px 6px;'>[VAULT]</span>", unsafe_allow_html=True)
+    with st.expander("Gestionar Secretos y API Keys", expanded=False):
+        secretos_lista = listar_secretos_disponibles()
+        cfg_count = sum(1 for s in secretos_lista if s["estado"] == "[CONFIGURADO]")
+        st.markdown(f"<div style='font-size:0.75rem; margin-bottom:8px; opacity:0.8;'>Estado de llaves: <b>{cfg_count} configurada(s)</b> bajo cifrado AES-256.</div>", unsafe_allow_html=True)
+
+        for s in secretos_lista:
+            tag_st = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[CONFIGURADO]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[NO CONFIGURADO]</span>'
+            st.markdown(f"""
+<div style="font-size:0.72rem; padding:3px 0; display:flex; justify-content:space-between; align-items:center;">
+    <span style="font-family:monospace; font-weight:600;">{s['clave']}</span>
+    {tag_st}
+</div>
+<div style="font-size:0.64rem; opacity:0.6; margin-bottom:4px;">Origen: {s['origen']} {f'({s["vista_previa"]})' if s['vista_previa'] != '-' else ''}</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
+        st.markdown("<b style='font-size:0.75rem;'>Guardar o Actualizar Clave:</b>", unsafe_allow_html=True)
+        claves_predefinidas = [s["clave"] for s in secretos_lista] + ["OTRA_CLAVE_PERSONALIZADA"]
+        sel_clave = st.selectbox("Seleccionar Llave:", claves_predefinidas, key="sb_vault_sel_key", label_visibility="collapsed")
+
+        if sel_clave == "OTRA_CLAVE_PERSONALIZADA":
+            nombre_clave_final = st.text_input("Nombre de la Clave:", value="", placeholder="EJ: MI_API_KEY", key="sb_vault_custom_key")
+        else:
+            nombre_clave_final = sel_clave
+
+        if "vault_input_version" not in st.session_state:
+            st.session_state.vault_input_version = 0
+
+        valor_secreto = st.text_input(
+            "Valor del Secreto:",
+            value="",
+            type="password",
+            key=f"sb_vault_secret_val_{st.session_state.vault_input_version}",
+            label_visibility="collapsed",
+            placeholder="Pegar token / API key..."
+        )
+
+        col_v_guardar, col_v_del = st.columns(2)
+        with col_v_guardar:
+            if st.button(">_ Guardar", use_container_width=True, key="btn_vault_guardar"):
+                if nombre_clave_final and valor_secreto:
+                    if guardar_secreto(nombre_clave_final, valor_secreto, autor="Operador / Consola"):
+                        st.session_state.vault_input_version += 1
+                        st.toast(f"[OK] Credencial '{nombre_clave_final}' cifrada en bóveda.")
+                        st.rerun()
+                else:
+                    st.toast("[WARN] Ingrese nombre y valor de secreto.")
+        with col_v_del:
+            if st.button(">_ Revocar", use_container_width=True, key="btn_vault_eliminar"):
+                if nombre_clave_final:
+                    if eliminar_secreto(nombre_clave_final, autor="Operador / Consola"):
+                        st.session_state.vault_input_version += 1
+                        st.toast(f"[INFO] Credencial '{nombre_clave_final}' revocada.")
+                        st.rerun()
 
     st.markdown("---")
 
@@ -1510,9 +1575,10 @@ with tab_sap:
         st.markdown("#### Configuración del Endpoint y Conectividad")
         col_url, col_auth, col_cred = st.columns([2.2, 1.8, 1.5], gap="small")
         with col_url:
+            val_endpoint_vault = obtener_secreto("SAP_ENDPOINT", "")
             sap_endpoint = st.text_input(
                 "Endpoint API Gateway SAP / ALM",
-                value="",
+                value=val_endpoint_vault,
                 placeholder="",
                 help="URL base del servicio de telemetría de SAP Cloud ALM, Focused Run o SAP Host Agent."
             )
@@ -1527,9 +1593,10 @@ with tab_sap:
                 index=0
             )
         with col_cred:
+            val_client_id_vault = obtener_secreto("SAP_CLIENT_ID", "")
             sap_client_id = st.text_input(
                 "Client ID / Identificador de Servicio",
-                value="",
+                value=val_client_id_vault,
                 placeholder="",
                 type="password",
                 help="Identificador de cliente o certificado para la autenticación en el Gateway SAP."

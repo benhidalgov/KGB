@@ -1,4 +1,4 @@
-﻿# Entornos virtuales de Python
+# Entornos virtuales de Python
 .venv/
 venv/
 env/
@@ -23,11 +23,15 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Variables de entorno y llaves
+# Variables de entorno, boveda y llaves
 .env
 *.env
 *.key
 *.pem
+*.enc
+.vault*
+data/.vault*
+.streamlit/secrets.toml
 
 # Archivos temporales de sistema e IDEs
 .vscode/

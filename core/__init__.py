@@ -71,4 +71,12 @@ from core.conector_sap import (
     generar_topologia_sap_mermaid,
     sincronizar_servidores_sap_cmdb,
 )
+from core.vault import (
+    obtener_secreto,
+    guardar_secreto,
+    eliminar_secreto,
+    listar_secretos_disponibles,
+    obtener_clave_maestra,
+)
+
 
