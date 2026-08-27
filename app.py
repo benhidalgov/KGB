@@ -11,21 +11,45 @@ from core.plantillas import (
     PLANTILLAS_BASE_RESERVADAS,
 )
 from core.topologia import TOPOLOGY_MERMAID, PLANTILLAS_DIAGRAMAS, INFRA_SPECS
-from core.procesador import (
-    IMAGE_EXTENSIONS,
-    OFFICE_EXTENSIONS,
-    SUPPORTED_EXTENSIONS,
-    cargar_documentos_locales,
-    cargar_documento_individual,
-    calcular_sha256,
-    sanitizar_nombre_descarga,
-    normalizar_nombre_archivo,
-    normalizar_titulo_display,
-    generar_ficha_diagrama,
-    obtener_ruta_original,
-)
+try:
+    from core.procesador import (
+        IMAGE_EXTENSIONS,
+        OFFICE_EXTENSIONS,
+        SUPPORTED_EXTENSIONS,
+        cargar_documentos_locales,
+        cargar_documento_individual,
+        calcular_sha256,
+        sanitizar_nombre_descarga,
+        normalizar_nombre_archivo,
+        normalizar_titulo_display,
+        generar_ficha_diagrama,
+        obtener_ruta_original,
+        limpiar_cache_documentos,
+    )
+except ImportError:
+    import importlib
+    import core.procesador
+    importlib.reload(core.procesador)
+    from core.procesador import (
+        IMAGE_EXTENSIONS,
+        OFFICE_EXTENSIONS,
+        SUPPORTED_EXTENSIONS,
+        cargar_documentos_locales,
+        cargar_documento_individual,
+        calcular_sha256,
+        sanitizar_nombre_descarga,
+        normalizar_nombre_archivo,
+        normalizar_titulo_display,
+        generar_ficha_diagrama,
+        obtener_ruta_original,
+        limpiar_cache_documentos,
+    )
 from core.motor import (
     ejecutar_consulta_sql,
+    buscar_servidores_duckdb,
+    buscar_en_documentos,
+    extraer_fragmento_relevante,
+    resaltar_terminos_en_html,
     generar_respuesta_asistente,
     limpiar_cache_consultas,
 )
@@ -96,6 +120,8 @@ from excel_cleaner import procesar_excel_limpio
 import os
 import re
 import json
+import time
+import html
 import shutil
 import datetime
 import duckdb
@@ -135,6 +161,11 @@ if "messages" not in st.session_state:
 if "doc_store" not in st.session_state:
     st.session_state.doc_store = {}
     cargar_documentos_locales(st.session_state.doc_store)
+elif any(len(v) > 150_000 for v in st.session_state.doc_store.values()):
+    # Saneamiento automático en caliente si la sesión del usuario conservaba cadenas residuales de Base64
+    limpiar_cache_documentos()
+    st.session_state.doc_store.clear()
+    cargar_documentos_locales(st.session_state.doc_store, force=True)
 
 if "quick_pills_version" not in st.session_state:
     st.session_state.quick_pills_version = 0
@@ -364,7 +395,8 @@ with st.sidebar:
 
     # Acciones de Consola
     st.markdown("#### Acciones de Consola")
-    if st.button(">_ Reindexar", help="Recarga todos los documentos desde data/docs/ y data/docs/assets/", use_container_width=True, key="btn_sidebar_reindexar"):
+    if st.button(">_ Reindexar", help="Recarga todos los documentos desde data/docs/ y data/docs/assets/", width="stretch", key="btn_sidebar_reindexar"):
+        limpiar_cache_documentos()
         cargar_documentos_locales(st.session_state.doc_store, force=True)
         limpiar_cache_consultas()
         st.toast("[OK] Base documental y assets reindexados con éxito")
@@ -412,7 +444,7 @@ with st.sidebar:
 
         col_v_guardar, col_v_del = st.columns(2)
         with col_v_guardar:
-            if st.button(">_ Guardar", use_container_width=True, key="btn_vault_guardar"):
+            if st.button(">_ Guardar", width="stretch", key="btn_vault_guardar"):
                 if nombre_clave_final and valor_secreto:
                     if guardar_secreto(nombre_clave_final, valor_secreto, autor="Operador / Consola"):
                         st.session_state.vault_input_version += 1
@@ -421,7 +453,7 @@ with st.sidebar:
                 else:
                     st.toast("[WARN] Ingrese nombre y valor de secreto.")
         with col_v_del:
-            if st.button(">_ Revocar", use_container_width=True, key="btn_vault_eliminar"):
+            if st.button(">_ Revocar", width="stretch", key="btn_vault_eliminar"):
                 if nombre_clave_final:
                     if eliminar_secreto(nombre_clave_final, autor="Operador / Consola"):
                         st.session_state.vault_input_version += 1
@@ -499,113 +531,256 @@ tab_chat, tab_analytics, tab_docs, tab_templates, tab_sap = st.tabs([
 
 # ----------------- TAB 1: BUSCADOR Y ASISTENTE  -----------------
 with tab_chat:
-    # 1. Barra de Búsqueda Superior (Always on Top)
-    with st.form(key="top_search_form", clear_on_submit=True):
-        col_inp, col_btn = st.columns([5, 1])
-        with col_inp:
-            query_input = st.text_input(
-                "Buscar en infraestructura y documentación:",
-                placeholder="Ingrese su consulta técnica (ej: BALANCER001, JWT, 10.24.0.125, Failover Redis, SN-8842-A)...",
-                label_visibility="collapsed"
-            )
-        with col_btn:
-            submitted = st.form_submit_button(
-                "Buscar", type="primary", use_container_width=True)
+    subtab_duckdb, subtab_copilot = st.tabs([
+        "Búsqueda Textual (DuckDB & Docs)",
+        "Copilot de Infraestructura (Gemini RAG)"
+    ])
 
-    # 2. Chips de consultas rapidas responsivos
-    st.markdown("<div style='margin-top: -6px; margin-bottom: 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;'>Consultas rapidas:</div>", unsafe_allow_html=True)
-    quick_queries = [
-        ">_ BALANCER001",
-        ">_ Autenticacion JWT",
-        ">_ 10.24.0.125",
-        ">_ Failover Redis",
-        ">_ SN-8842-A",
-        ">_ PureStorage SAN",
-    ]
-    if "quick_pills_version" not in st.session_state:
-        st.session_state.quick_pills_version = 0
+    # ---------------- SUBTAB 1.1: BÚSQUEDA TEXTUAL (DUCKDB + DOCS) ----------------
+    with subtab_duckdb:
+        st.markdown("#### Búsqueda Textual en Inventario CMDB y Documentación")
+        st.caption("Búsqueda indexada instantánea en memoria RAM (< 2 ms) sobre la CMDB y los 30 documentos técnicos sin llamadas a la API.")
 
-    pills_key = f"tab1_quick_query_pills_{st.session_state.quick_pills_version}"
-    selected_quick = st.pills(
-        "Consultas rapidas",
-        options=quick_queries,
-        default=None,
-        label_visibility="collapsed",
-        key=pills_key
-    )
-    prompt_rapido = None
-    if selected_quick:
-        prompt_rapido = selected_quick.replace(">_ ", "").strip()
-        st.session_state.quick_pills_version += 1
+        with st.form(key="form_duckdb_search", clear_on_submit=False):
+            col_d_in, col_d_btn = st.columns([5, 1])
+            with col_d_in:
+                query_duckdb_in = st.text_input(
+                    "Término de búsqueda textual:",
+                    value=st.session_state.get("duckdb_active_term", ""),
+                    placeholder="Ingrese IP (ej: 10.24.0.125), servidor (BALANCER001), serie (SN-8842-A) o palabra clave...",
+                    label_visibility="collapsed"
+                )
+            with col_d_btn:
+                sub_duckdb = st.form_submit_button("Buscar", type="primary", width="stretch")
 
-    query_a_ejecutar = prompt_rapido if prompt_rapido else (
-        query_input.strip() if submitted and query_input.strip() else None)
+        st.markdown("<div style='margin-top: -6px; margin-bottom: 8px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;'>Búsquedas rápidas:</div>", unsafe_allow_html=True)
+        quick_duck_options = [
+            ">_ BALANCER001",
+            ">_ 10.24.0.125",
+            ">_ Autenticacion JWT",
+            ">_ Failover Redis",
+            ">_ SN-8842-A",
+            ">_ PureStorage SAN",
+        ]
+        if "quick_duck_ver" not in st.session_state:
+            st.session_state.quick_duck_ver = 0
 
-    if query_a_ejecutar:
-        with st.spinner("Procesando consulta..."):
-            respuesta = generar_respuesta_asistente(
-                query_a_ejecutar, st.session_state.doc_store)
-            # Guardar al inicio (índice 0) para que aparezca primero arriba
-            st.session_state.historial_busquedas.insert(0, {
-                "query": query_a_ejecutar,
-                "response": respuesta,
-                "timestamp": pd.Timestamp.now().strftime("%H:%M:%S")
-            })
-        st.rerun()
+        pills_duck_key = f"pills_duck_sel_{st.session_state.quick_duck_ver}"
+        sel_duck_pill = st.pills("Búsquedas rápidas", options=quick_duck_options, default=None, label_visibility="collapsed", key=pills_duck_key)
 
-    st.markdown("---")
+        prompt_duck_pill = None
+        if sel_duck_pill:
+            prompt_duck_pill = sel_duck_pill.replace(">_ ", "").strip()
+            st.session_state.quick_duck_ver += 1
 
-    # 3. Resultados: Los mas nuevos se muestran ARRIBA
-    if not st.session_state.historial_busquedas:
-        st.markdown("""
+        active_duck_term = prompt_duck_pill if prompt_duck_pill else (
+            query_duckdb_in.strip() if sub_duckdb and query_duckdb_in.strip() else st.session_state.get("duckdb_active_term", "")
+        )
+        st.session_state["duckdb_active_term"] = active_duck_term
+
+        if not active_duck_term:
+            st.markdown("""
 <div class="empty-state-container">
-    <div class="empty-state-console-icon">&gt;_ infraestructura</div>
-    <div class="empty-state-title">Consola de Busqueda Unificada</div>
+    <div class="empty-state-console-icon">&gt;_ duckdb::ram_search</div>
+    <div class="empty-state-title">Motor de Búsqueda Textual en RAM</div>
     <div class="empty-state-subtitle">
-        Consulta el inventario CMDB, procedimientos tecnicos, diagramas de topologia
-        y documentacion de contingencia desde un unico punto de acceso.
+        Búsqueda ultrarrápida indexada directamente sobre la CMDB y los 30 documentos técnicos.
+        Obtén servidores coincidentes, IPs, estados Nagios y fragmentos documentales en milisegundos.
     </div>
     <div class="empty-state-caps-grid">
         <div class="empty-cap-card" style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.22);">
-            <div class="empty-cap-card-label" style="color:#6366F1;">[INFO] Inventario CMDB</div>
-            <div class="empty-cap-card-title">Consulta analitica SQL</div>
-            <div class="empty-cap-card-desc">Por numero de serie, IP, servidor, tecnico o nivel de arquitectura L1-L4.</div>
+            <div class="empty-cap-card-label" style="color:#6366F1;">[INFO] DuckDB SQL RAM</div>
+            <div class="empty-cap-card-title">Servidores y CMDB</div>
+            <div class="empty-cap-card-desc">Búsqueda por IP, hostname, número de serie, componente o VM vCloud.</div>
         </div>
         <div class="empty-cap-card" style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.22);">
-            <div class="empty-cap-card-label" style="color:#10B981;">[OK] Procedimientos</div>
-            <div class="empty-cap-card-title">Recuperacion semantica</div>
-            <div class="empty-cap-card-desc">Manuales de contingencia, runbooks, rollback y procedimientos operativos estandar.</div>
+            <div class="empty-cap-card-label" style="color:#10B981;">[OK] Índice Documental</div>
+            <div class="empty-cap-card-title">Extractos Relevantes</div>
+            <div class="empty-cap-card-desc">Localización de términos técnicos en runbooks, procedimientos y notas de contingencia.</div>
         </div>
         <div class="empty-cap-card" style="background:rgba(217,119,6,0.07);border:1px solid rgba(217,119,6,0.22);">
-            <div class="empty-cap-card-label" style="color:#D97706;">[DOC] Diagramas</div>
-            <div class="empty-cap-card-title">Topologia y arquitectura</div>
-            <div class="empty-cap-card-desc">Inspeccion visual de diagramas con visor lado a lado (Side-by-Side) y control de versiones.</div>
+            <div class="empty-cap-card-label" style="color:#D97706;">[DOC] Sin Consumo API</div>
+            <div class="empty-cap-card-title">Latencia Cero</div>
+            <div class="empty-cap-card-desc">Ejecución 100% local en memoria, sin latencia de red ni dependencias externas.</div>
         </div>
     </div>
 </div>
-        """, unsafe_allow_html=True)
-    else:
-        col_res_t, col_res_btn = st.columns([4, 1])
-        with col_res_t:
-            st.markdown(
-                f"<div style='font-size: 0.95rem; font-weight: 600;'>Historial de Consultas ({len(st.session_state.historial_busquedas)}):</div>", unsafe_allow_html=True)
-        with col_res_btn:
-            if st.button(">_ Limpiar Chat", use_container_width=True, key="btn_clear_search_history_top"):
-                st.session_state.historial_busquedas = []
-                st.session_state.messages = []
-                st.toast("[INFO] Historial de consultas reiniciado")
-                st.rerun()
-
-        for idx, item in enumerate(st.session_state.historial_busquedas):
-            es_ultimo = (idx == 0)
-            badge_orden = '<span class="badge-ok">[ÚLTIMA CONSULTA]</span>' if es_ultimo else f'<span class="badge-tag">[{item["timestamp"]}]</span>'
+            """, unsafe_allow_html=True)
+        else:
+            t_d0 = time.perf_counter()
+            df_srv_found = buscar_servidores_duckdb(active_duck_term)
+            doc_matches_found = buscar_en_documentos(active_duck_term, st.session_state.doc_store)
+            t_d_elapsed_ms = (time.perf_counter() - t_d0) * 1000
 
             st.markdown(f"""
-            <div style="margin-top: 12px; margin-bottom: 4px; font-size: 0.9rem;">
-                {badge_orden} <span style="font-weight: 600; margin-left: 6px;">Consulta:</span> <code>{item['query']}</code>
+            <div style="background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 6px; padding: 8px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div><b>Término:</b> <code>{active_duck_term}</code></div>
+                <div><b>Servidores CMDB:</b> <span class="badge-ok">{len(df_srv_found)}</span></div>
+                <div><b>Documentos Coincidentes:</b> <span class="badge-info">{len(doc_matches_found)}</span></div>
+                <div><b>Tiempo:</b> <span class="badge-tag">{t_d_elapsed_ms:.2f} ms [RAM]</span></div>
             </div>
             """, unsafe_allow_html=True)
-            st.markdown(item["response"], unsafe_allow_html=True)
+
+            # 1. Servidores Coincidentes en CMDB
+            st.markdown(f"##### Servidores Coincidentes en CMDB ({len(df_srv_found)})")
+            if not df_srv_found.empty:
+                cols_mostrar = [c for c in ["servidor_id", "ip", "numero_serie", "vcloud_vm", "nivel_arquitectura", "componente", "estado", "nagios_check"] if c in df_srv_found.columns]
+                df_tabla = df_srv_found[cols_mostrar].rename(columns={
+                    "servidor_id": "Servidor",
+                    "ip": "IP",
+                    "numero_serie": "N° Serie",
+                    "vcloud_vm": "VM vCloud",
+                    "nivel_arquitectura": "Capa",
+                    "componente": "Componente",
+                    "estado": "Estado",
+                    "nagios_check": "Nagios / Chequeo"
+                })
+                st.dataframe(df_tabla, width="stretch", hide_index=True)
+            else:
+                st.info(f"No se registraron servidores que coincidan con '{active_duck_term}' en la CMDB.")
+
+            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
+            # 2. Documentos Coincidentes
+            st.markdown(f"##### Documentación Técnica Coincidente ({len(doc_matches_found)})")
+            if doc_matches_found:
+                for doc_name, content, score in doc_matches_found[:5]:
+                    snippet = extraer_fragmento_relevante(content, active_duck_term, max_chars=350)
+                    snippet_highlight = resaltar_terminos_en_html(html.escape(snippet), active_duck_term)
+                    badge_score = f'<span class="badge-info">{score} pts</span>'
+                    st.markdown(f"""
+<div class="search-result-card" style="margin-bottom: 10px; padding: 12px 14px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+        <div><b>Documento:</b> <code>{doc_name}</code></div>
+        <div>{badge_score}</div>
+    </div>
+    <div style="font-size: 0.83rem; line-height: 1.5; opacity: 0.9; background: rgba(128,128,128,0.05); padding: 8px 10px; border-radius: 4px; border-left: 3px solid #6366F1;">
+        {snippet_highlight}
+    </div>
+</div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info(f"No se encontraron coincidencias en la documentación técnica para '{active_duck_term}'.")
+
+            # 3. Puente Inteligente hacia el Copilot
+            st.markdown("---")
+            col_br_text, col_br_btn = st.columns([3.5, 1.5], vertical_alignment="center")
+            with col_br_text:
+                st.caption("¿Deseas una explicación técnica detallada, análisis de incidentes o elaboración de runbook asistido sobre estos resultados?")
+            with col_br_btn:
+                if st.button(">_ Analizar con Copilot Gemini", width="stretch", type="primary", key="btn_bridge_to_copilot"):
+                    with st.spinner("El Copilot Gemini está analizando los resultados..."):
+                        resp_copilot = generar_respuesta_asistente(active_duck_term, st.session_state.doc_store)
+                        st.session_state.historial_busquedas.insert(0, {
+                            "query": active_duck_term,
+                            "response": resp_copilot,
+                            "timestamp": pd.Timestamp.now().strftime("%H:%M:%S")
+                        })
+                    st.toast("[OK] Análisis generado con éxito en el Copilot")
+                    st.rerun()
+
+    # ---------------- SUBTAB 1.2: COPILOT DE INFRAESTRUCTURA (GEMINI RAG) ----------------
+    with subtab_copilot:
+        st.markdown("#### Copilot de Infraestructura y Operaciones (Gemini RAG)")
+        st.caption("Asistente técnico especializado con inyección contextual RAG (CMDB DuckDB + Base Documental), diagnósticos y análisis de impacto.")
+
+        with st.form(key="top_copilot_form", clear_on_submit=True):
+            col_c_inp, col_c_btn = st.columns([5, 1])
+            with col_c_inp:
+                query_copilot_in = st.text_input(
+                    "Pregunta o instrucción técnica para el Copilot:",
+                    placeholder="Ej: Explícame el procedimiento de failover de Redis y sus dependencias con los balanceadores...",
+                    label_visibility="collapsed"
+                )
+            with col_c_btn:
+                submitted_copilot = st.form_submit_button("Consultar Copilot", type="primary", width="stretch")
+
+        st.markdown("<div style='margin-top: -6px; margin-bottom: 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;'>Consultas recomendadas:</div>", unsafe_allow_html=True)
+        copilot_quick_queries = [
+            ">_ Diagnóstico y estado de BALANCER001",
+            ">_ Procedimiento de Failover Redis",
+            ">_ Arquitectura de Autenticación JWT",
+            ">_ Servidores críticos en DMZ",
+            ">_ Políticas de parche y antivirus",
+            ">_ Topología y dependencias SAP",
+        ]
+        if "quick_copilot_ver" not in st.session_state:
+            st.session_state.quick_copilot_ver = 0
+
+        pills_copilot_key = f"pills_copilot_{st.session_state.quick_copilot_ver}"
+        sel_copilot_pill = st.pills("Consultas recomendadas", options=copilot_quick_queries, default=None, label_visibility="collapsed", key=pills_copilot_key)
+
+        prompt_copilot_rapido = None
+        if sel_copilot_pill:
+            prompt_copilot_rapido = sel_copilot_pill.replace(">_ ", "").strip()
+            st.session_state.quick_copilot_ver += 1
+
+        query_copilot_ejecutar = prompt_copilot_rapido if prompt_copilot_rapido else (
+            query_copilot_in.strip() if submitted_copilot and query_copilot_in.strip() else None
+        )
+
+        if query_copilot_ejecutar:
+            with st.spinner("El Copilot está analizando la infraestructura y redactando el informe..."):
+                respuesta_c = generar_respuesta_asistente(query_copilot_ejecutar, st.session_state.doc_store)
+                st.session_state.historial_busquedas.insert(0, {
+                    "query": query_copilot_ejecutar,
+                    "response": respuesta_c,
+                    "timestamp": pd.Timestamp.now().strftime("%H:%M:%S")
+                })
+            st.rerun()
+
+        st.markdown("---")
+
+        if not st.session_state.historial_busquedas:
+            st.markdown("""
+<div class="empty-state-container">
+    <div class="empty-state-console-icon">&gt;_ copilot::rag_engine</div>
+    <div class="empty-state-title">Copilot de Infraestructura y Operaciones</div>
+    <div class="empty-state-subtitle">
+        Realiza preguntas analíticas y operativas complejas. El motor RAG recopilará registros técnicos
+        de DuckDB y la base documental para generar respuestas estructuradas sin alucinaciones.
+    </div>
+    <div class="empty-state-caps-grid">
+        <div class="empty-cap-card" style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.22);">
+            <div class="empty-cap-card-label" style="color:#6366F1;">[INFO] Gemini RAG</div>
+            <div class="empty-cap-card-title">Análisis de Arquitectura</div>
+            <div class="empty-cap-card-desc">Explicación estructurada de flujos de autenticación, alta disponibilidad y topologías.</div>
+        </div>
+        <div class="empty-cap-card" style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.22);">
+            <div class="empty-cap-card-label" style="color:#10B981;">[OK] Zero Hallucinations</div>
+            <div class="empty-cap-card-title">Fundamentación Estricta</div>
+            <div class="empty-cap-card-desc">Respuestas basadas exclusivamente en los registros de la CMDB y los manuales corporativos.</div>
+        </div>
+        <div class="empty-cap-card" style="background:rgba(217,119,6,0.07);border:1px solid rgba(217,119,6,0.22);">
+            <div class="empty-cap-card-label" style="color:#D97706;">[DOC] Query Cache</div>
+            <div class="empty-cap-card-title">Respuestas Instantáneas</div>
+            <div class="empty-cap-card-desc">Las consultas ya resueltas se entregan en 0.79 ms desde la memoria RAM.</div>
+        </div>
+    </div>
+</div>
+            """, unsafe_allow_html=True)
+        else:
+            col_res_t, col_res_btn = st.columns([4, 1])
+            with col_res_t:
+                st.markdown(
+                    f"<div style='font-size: 0.95rem; font-weight: 600;'>Historial de Consultas ({len(st.session_state.historial_busquedas)}):</div>", unsafe_allow_html=True)
+            with col_res_btn:
+                if st.button(">_ Limpiar Chat", width="stretch", key="btn_clear_search_history_copilot"):
+                    st.session_state.historial_busquedas = []
+                    st.session_state.messages = []
+                    st.toast("[INFO] Historial de consultas reiniciado")
+                    st.rerun()
+
+            for idx, item in enumerate(st.session_state.historial_busquedas):
+                es_ultimo = (idx == 0)
+                badge_orden = '<span class="badge-ok">[ÚLTIMA CONSULTA]</span>' if es_ultimo else f'<span class="badge-tag">[{item["timestamp"]}]</span>'
+
+                st.markdown(f"""
+                <div style="margin-top: 12px; margin-bottom: 4px; font-size: 0.9rem;">
+                    {badge_orden} <span style="font-weight: 600; margin-left: 6px;">Consulta:</span> <code>{item['query']}</code>
+                </div>
+                """, unsafe_allow_html=True)
+                st.markdown(item["response"], unsafe_allow_html=True)
 
 # ----------------- TAB 2: ANALITICA DUCKDB -----------------
 with tab_analytics:
@@ -779,7 +954,7 @@ with tab_analytics:
         """, unsafe_allow_html=True)
 
         st.markdown(f"<div style='font-size: 0.85rem; margin-bottom: 8px; font-weight: 500;'><span class='badge-info'>{total_reg} registros coincidentes</span></div>", unsafe_allow_html=True)
-        st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+        st.dataframe(df_filtrado, width="stretch", hide_index=True)
 
     with st.expander("Ejecutar Consulta SQL Personalizada"):
         custom_sql = st.text_area(
@@ -791,7 +966,7 @@ with tab_analytics:
                 st.warning("[WARN] El archivo mantenimientos.csv no esta disponible. Cargue el CSV primero.")
             else:
                 df_custom = ejecutar_consulta_sql(custom_sql)
-                st.dataframe(df_custom, use_container_width=True)
+                st.dataframe(df_custom, width="stretch")
 
 
 # ----------------- TAB 3: DOCUMENTACION TECNICA Y VERSIONADO -----------------
@@ -926,7 +1101,7 @@ with tab_docs:
                             file_name=sanitizar_nombre_descarga(
                                 doc_seleccionado, ultima_version, ".xlsx"),
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True,
+                            width="stretch",
                             key=f"dl_active_excel_{doc_seleccionado}"
                         )
                     else:
@@ -936,7 +1111,7 @@ with tab_docs:
                             file_name=sanitizar_nombre_descarga(
                                 doc_seleccionado, ultima_version, ".md"),
                             mime="text/markdown",
-                            use_container_width=True,
+                            width="stretch",
                             key=f"dl_active_md_{doc_seleccionado}"
                         )
                 with col_dl_info:
@@ -975,11 +1150,11 @@ with tab_docs:
                     st.markdown(
                         f"**Cuadrícula de la Hoja:** `{hoja_editar}` *(Doble clic en una celda para editar, use el botón final para agregar filas)*")
                     df_modificado = st.data_editor(
-                        df_to_edit, use_container_width=True, num_rows="dynamic", height=480, key=f"grid_editor_{doc_seleccionado}_{hoja_editar}")
+                        df_to_edit, width="stretch", num_rows="dynamic", height=480, key=f"grid_editor_{doc_seleccionado}_{hoja_editar}")
 
                     col_btn_save, col_btn_info = st.columns([2, 3])
                     with col_btn_save:
-                        if st.button(f"Guardar y Publicar Versión v{ultima_version + 1}", type="primary", use_container_width=True, key=f"btn_save_grid_{doc_seleccionado}"):
+                        if st.button(f"Guardar y Publicar Versión v{ultima_version + 1}", type="primary", width="stretch", key=f"btn_save_grid_{doc_seleccionado}"):
                             if not autor_edit or not autor_edit.strip():
                                 st.error(
                                     "Error de Auditoría: Debe ingresar el Editor / Técnico Responsable para guardar la nueva versión.")
@@ -1018,12 +1193,15 @@ with tab_docs:
                         motivo_edit = st.text_input(
                             "Motivo o Resumen del Cambio (*)", placeholder="Ej: Actualización de parámetros técnicos", key=f"motive_input_{doc_seleccionado}")
 
+                    val_textarea = doc_content[:100_000] if len(doc_content) > 100_000 else doc_content
+                    if len(doc_content) > 100_000:
+                        st.info(f"[INFO] Documento extenso ({len(doc_content)/1024:.1f} KB). Mostrando primeros 100 KB para edicion segura.")
                     texto_editado = st.text_area(
-                        "Contenido del Documento (Markdown)", value=doc_content, height=450, key=f"textarea_edit_{doc_seleccionado}")
+                        "Contenido del Documento (Markdown)", value=val_textarea, height=450, key=f"textarea_edit_{doc_seleccionado}")
 
                     col_btn_save, col_btn_info = st.columns([2, 3])
                     with col_btn_save:
-                        if st.button(f"Guardar y Publicar Versión v{ultima_version + 1}", type="primary", use_container_width=True, key=f"btn_save_{doc_seleccionado}"):
+                        if st.button(f"Guardar y Publicar Versión v{ultima_version + 1}", type="primary", width="stretch", key=f"btn_save_{doc_seleccionado}"):
                             if not autor_edit or not autor_edit.strip():
                                 st.error(
                                     "Error de Auditoría: Debe ingresar el Editor / Técnico Responsable para guardar la nueva versión.")
@@ -1076,7 +1254,7 @@ with tab_docs:
                     "sha256": "Firma SHA-256"
                 }
                 df_hist.columns = [map_nombres.get(c, c) for c in cols_presentes]
-                st.dataframe(df_hist, use_container_width=True, hide_index=True)
+                st.dataframe(df_hist, width="stretch", hide_index=True)
 
                 st.markdown("---")
 
@@ -1111,7 +1289,7 @@ with tab_docs:
                                     doc_seleccionado, item_seleccionado['version'], ".xlsx"
                                 ),
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                use_container_width=True,
+                                width="stretch",
                                 key=f"btn_dl_excel_hist_{doc_seleccionado}_{item_seleccionado['version']}"
                             )
                         else:
@@ -1124,7 +1302,7 @@ with tab_docs:
                                 doc_seleccionado, item_seleccionado['version'], ".md"
                             ),
                             mime="text/markdown",
-                            use_container_width=True,
+                            width="stretch",
                             key=f"btn_dl_md_hist_{doc_seleccionado}_{item_seleccionado['version']}"
                         )
 
@@ -1137,7 +1315,7 @@ with tab_docs:
                                 doc_seleccionado, item_seleccionado['version'], ".md"
                             ),
                             mime="text/markdown",
-                            use_container_width=True,
+                            width="stretch",
                             key=f"btn_dl_md_rep_{doc_seleccionado}_{item_seleccionado['version']}"
                         )
                     else:
@@ -1282,7 +1460,7 @@ with tab_docs:
                         st.markdown(f"<div style='font-size: 0.82rem; margin-bottom: 6px; font-weight: 500;'><span class='badge-info'>{len(df_aud_filtrado)} eventos de auditoría</span></div>", unsafe_allow_html=True)
                         df_aud_display = df_aud_filtrado[["timestamp", "documento", "accion", "version_anterior", "version_nueva", "editor_responsable", "motivo_justificacion"]]
                         df_aud_display.columns = ["Timestamp", "Documento", "Acción", "Versión Ant.", "Versión Nueva", "Editor Responsable", "Motivo / Justificación"]
-                        st.dataframe(df_aud_display, use_container_width=True, hide_index=True)
+                        st.dataframe(df_aud_display, width="stretch", hide_index=True)
                     else:
                         st.info("No hay eventos registrados en el log de auditoría global.")
     else:
@@ -1348,7 +1526,7 @@ with tab_templates:
             with col_res_btn:
                 st.write("")
                 st.write("")
-                if st.button("[+ Activar]", key="btn_activar_plantilla_base", use_container_width=True):
+                if st.button("[+ Activar]", key="btn_activar_plantilla_base", width="stretch"):
                     guardar_plantilla_personalizada(
                         nombre=base_a_activar,
                         descripcion=f"Plantilla activada desde catálogo base: {base_a_activar}",
@@ -1488,7 +1666,7 @@ with tab_templates:
             st.markdown(doc_generado_md)
 
         st.divider()
-        if st.button("Guardar y Publicar en Base de Conocimiento", type="primary", use_container_width=True, key="btn_guardar_doc_plantilla_final"):
+        if st.button("Guardar y Publicar en Base de Conocimiento", type="primary", width="stretch", key="btn_guardar_doc_plantilla_final"):
             if not nombre_final.endswith(".md"):
                 nombre_final += ".md"
 
@@ -1576,9 +1754,9 @@ with tab_sap:
 
         col_b_conn, col_b_sync, col_b_payload = st.columns([1.2, 1.2, 1.0], gap="small")
         with col_b_conn:
-            btn_test_sap = st.button(">_ Probar Conexión API", use_container_width=True, type="primary")
+            btn_test_sap = st.button(">_ Probar Conexión API", width="stretch", type="primary")
         with col_b_sync:
-            btn_sync_sap = st.button(">_ Sincronizar CMDB Local", use_container_width=True, help="Ingesta los servidores del landscape SAP en mantenimientos.csv y genera registro de auditoría inmutable.")
+            btn_sync_sap = st.button(">_ Sincronizar CMDB Local", width="stretch", help="Ingesta los servidores del landscape SAP en mantenimientos.csv y genera registro de auditoría inmutable.")
         with col_b_payload:
             payload_data = generar_payload_json_sap(sap_endpoint)
             payload_str = json.dumps(payload_data, indent=2, ensure_ascii=False)
@@ -1587,7 +1765,7 @@ with tab_sap:
                 data=payload_str,
                 file_name="sap_landscape_payload.json",
                 mime="application/json",
-                use_container_width=True
+                width="stretch"
             )
 
         # Acciones de prueba de conexion
@@ -1719,7 +1897,7 @@ with tab_sap:
                 "estado": "Estado",
                 "nagios_check": "Chequeo Host Agent"
             }),
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 

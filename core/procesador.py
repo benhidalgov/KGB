@@ -281,14 +281,15 @@ def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
         try:
             from markitdown import MarkItDown
             md_engine = MarkItDown()
-            res = md_engine.convert(filepath, keep_data_uris=True)
+            # keep_data_uris=False evita inyectar megabytes de cadenas Base64 en memoria protegiendo el navegador
+            res = md_engine.convert(filepath, keep_data_uris=False)
             return res.text_content
         except Exception:
             return leer_texto_resiliente(filepath)
 
 
 def extraer_imagenes_de_docx(docx_path: str) -> list[str]:
-    """Extrae las imágenes binarias de un archivo .docx empaquetado y las devuelve como lista de Data URIs base64."""
+    """Extrae las imágenes binarias de un archivo .docx empaquetado (limitadas en tamaño para no saturar memoria)."""
     imgs = []
     if not (docx_path and os.path.exists(docx_path) and docx_path.lower().endswith(".docx")):
         return imgs
@@ -301,7 +302,11 @@ def extraer_imagenes_de_docx(docx_path: str) -> list[str]:
             media_files.sort(key=sort_key)
             for mf in media_files:
                 ext = os.path.splitext(mf)[1].lower().replace(".", "")
-                if ext in ("png", "jpg", "jpeg", "svg", "webp", "gif"):
+                if ext in ("png", "jpg", "jpeg", "svg", "webp"):
+                    info = z.getinfo(mf)
+                    # Omitir imagenes gigantes (>400 KB) para evitar bloqueos del DOM en Streamlit
+                    if info.file_size > 400 * 1024:
+                        continue
                     mime = "jpeg" if ext in ("jpg", "jpeg") else ext
                     data = z.read(mf)
                     b64 = base64.b64encode(data).decode("utf-8")
@@ -312,7 +317,7 @@ def extraer_imagenes_de_docx(docx_path: str) -> list[str]:
 
 
 def resolver_ruta_imagen_a_base64(src_path: str, ruta_original: str | None = None) -> str:
-    """Resuelve rutas de imagen locales o relativas a un Data URI base64 seguro para renderizado en navegador."""
+    """Resuelve rutas de imagen locales a Data URI base64 seguro limitando el tamaño a 400 KB para proteger el navegador."""
     if not src_path:
         return ""
     if src_path.startswith("data:image/") and not src_path.endswith("..."):
@@ -334,6 +339,9 @@ def resolver_ruta_imagen_a_base64(src_path: str, ruta_original: str | None = Non
 
     for cand in candidatos:
         if os.path.exists(cand) and os.path.isfile(cand):
+            # Proteger rendimiento: si la imagen supera los 400 KB no inyectarla como base64 en el DOM
+            if os.path.getsize(cand) > 400 * 1024:
+                return ""
             ext = os.path.splitext(cand)[1].lower().replace('.', '')
             mime = 'jpeg' if ext in ('jpg', 'jpeg') else 'svg+xml' if ext == 'svg' else ext
             try:
@@ -346,25 +354,19 @@ def resolver_ruta_imagen_a_base64(src_path: str, ruta_original: str | None = Non
 
 
 def preparar_markdown_con_imagenes(md_content: str, doc_name: str = "", ruta_original: str | None = None) -> str:
-    """Prepara el contenido Markdown para la pestaña de Vista Formateada incrustando imágenes en Data URIs base64.
-    Resuelve diagramas gráficos, imágenes locales relativas y repara imágenes truncadas de archivos DOCX.
+    """Prepara el contenido Markdown para la pestaña de Vista Formateada sin sobrecargar la memoria del navegador.
+    Mantiene el texto ágil e inyecta únicamente diagramas o esquemas de tamaño óptimo.
     """
     if not md_content:
         return ""
     res = md_content
 
-    # 1. Recuperar imágenes truncadas de DOCX (data:image/...;base64...)
-    if "base64..." in res and ruta_original and ruta_original.lower().endswith(".docx") and os.path.exists(ruta_original):
-        imgs_docx = extraer_imagenes_de_docx(ruta_original)
-        if imgs_docx:
-            img_idx = [0]
-            def _sub_truncated(m):
-                idx = img_idx[0]
-                img_idx[0] += 1
-                if idx < len(imgs_docx):
-                    return f"![{m.group(1)}]({imgs_docx[idx]})"
-                return m.group(0)
-            res = re.sub(r'!\[([^\]]*)\]\((data:image/[^;]+;base64\.\.\.)\)', _sub_truncated, res)
+    # 1. Reemplazar referencias truncadas de base64 por insignias informativas ligeras
+    res = re.sub(
+        r'!\[([^\]]*)\]\((?:data:image/[^;]+;base64\.\.\.)\)',
+        r'<span class="badge-tag" style="margin: 4px 0; display: inline-block;">[Gráfico / Diagrama en Documento Original]</span>',
+        res
+    )
 
     # 2. Si es ficha técnica de diagrama y no posee tag de imagen visible, inyectar el esquema destacado
     tiene_tag_img = bool(re.search(r'!\[.*?\]\(.*?\)|<img\s+[^>]*src=', res))
@@ -426,10 +428,16 @@ def cargar_documento_individual(filepath: str) -> str:
     return _cargar_documento_individual_cached(filepath, mtime)
 
 
+def limpiar_cache_documentos():
+    """Limpia la caché en memoria de Streamlit para asegurar la recarga fresca de documentos."""
+    _cargar_documento_individual_cached.clear()
+
+
 def cargar_documentos_locales(doc_store: dict, force: bool = False) -> dict:
     """Carga y sincroniza todos los documentos de data/docs/ en el almacén de memoria."""
     if os.path.exists(DOCS_DIR):
         if force:
+            _cargar_documento_individual_cached.clear()
             doc_store.clear()
 
         # 1. Cargar todos los archivos directos de data/docs/

@@ -50,6 +50,7 @@ from core.procesador import (
     resolver_ruta_imagen_a_base64,
     generar_ficha_diagrama,
     obtener_ruta_original,
+    limpiar_cache_documentos,
 )
 from core.plantillas import (
     generar_doc_plantilla,

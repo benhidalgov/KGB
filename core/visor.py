@@ -38,10 +38,35 @@ def actualizar_caption_en_markdown(md_content: str, nuevo_caption: str) -> str:
 
 
 def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
-    """Renderiza un visor nativo de PDF embebido mediante un iframe Base64 seguro."""
+    """Renderiza un visor nativo de PDF embebido mediante un iframe Base64 seguro o tarjeta de descarga para archivos pesados."""
     try:
+        size_bytes = os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0
+        size_mb = size_bytes / (1024 * 1024)
+        fname = os.path.basename(pdf_path)
+
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
+
+        # Si el PDF supera los 2.5 MB, no embeberlo en un iframe base64 en el DOM para evitar saturar memoria
+        if size_mb > 2.5:
+            st.markdown(f"""
+            <div style="padding: 16px 18px; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; margin-bottom: 12px;">
+                <div style="font-weight: 700; font-size: 0.88rem; color: #6366F1; margin-bottom: 4px;">Documento PDF de Gran Tamaño ({size_mb:.1f} MB)</div>
+                <div style="font-size: 0.78rem; opacity: 0.85; margin-bottom: 12px; line-height: 1.4;">
+                    Para proteger la fluidez del navegador y evitar saturación del DOM de Streamlit, los archivos PDF de más de 2.5 MB se visualizan mediante descarga directa o visor del sistema.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.download_button(
+                label=f"Descargar PDF Original ({fname})",
+                data=pdf_bytes,
+                file_name=fname,
+                mime="application/pdf",
+                width="stretch",
+                key=f"dl_heavy_pdf_{fname}"
+            )
+            return
+
         base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
         pdf_html = f"""
         <iframe
@@ -85,7 +110,7 @@ def renderizar_diagrama_limpio(
 
     # 2. Renderizado de la Imagen en contenedor centrado
     with st.container(border=True):
-        st.image(ruta_original, caption=caption_actual, use_container_width=True)
+        st.image(ruta_original, caption=caption_actual, width="stretch")
 
     # 3. Editor auditado del Pie de Imagen (Caption)
     st.markdown("---")
@@ -99,25 +124,23 @@ def renderizar_diagrama_limpio(
             placeholder="Ej: Juan Pérez / DevOps",
             key=f"input_author_caption_{doc_name}_{key_suffix}"
         )
-    with col_e2:
         motivo_caption = st.text_input(
-            "Motivo o Resumen del Cambio (*)",
-            placeholder="Ej: Ajuste de descripción de nodos en topología DMZ",
-            value=f"Actualización de pie de imagen en v{ultima_version + 1}",
+            "Motivo de Edición",
+            placeholder="Ej: Actualización de arquitectura de red",
             key=f"input_motive_caption_{doc_name}_{key_suffix}"
         )
-
-    nuevo_caption_input = st.text_area(
-        "Texto del Pie de Imagen (Caption) (*):",
-        value=caption_actual,
-        height=80,
-        key=f"input_caption_diag_{doc_name}_{key_suffix}",
-        placeholder="Ej: Diagrama de conectividad DMZ con balanceadores F5 y enlaces redundantes..."
-    )
+    with col_e2:
+        nuevo_caption_input = st.text_area(
+            "Descripción Técnica del Diagrama (Pie de Imagen / Caption) (*)",
+            value=caption_actual,
+            height=108,
+            key=f"textarea_caption_{doc_name}_{key_suffix}",
+            placeholder="Ej: Diagrama de conectividad DMZ con balanceadores F5 y enlaces redundantes..."
+        )
 
     col_btn_save, col_btn_info = st.columns([2, 3])
     with col_btn_save:
-        if st.button(f"Guardar Caption y Publicar Versión v{ultima_version + 1}", type="primary", use_container_width=True, key=f"btn_save_caption_{doc_name}_{key_suffix}"):
+        if st.button(f"Guardar Caption y Publicar Versión v{ultima_version + 1}", type="primary", width="stretch", key=f"btn_save_caption_{doc_name}_{key_suffix}"):
             if not autor_caption or not autor_caption.strip():
                 st.error("Error de Auditoría: Debe ingresar el Editor / Técnico Responsable para guardar la nueva versión.")
             elif not nuevo_caption_input or not nuevo_caption_input.strip():
@@ -157,7 +180,7 @@ def renderizar_diagrama_limpio(
             data=bytes_img,
             file_name=fname,
             mime=mime_type,
-            use_container_width=True,
+            width="stretch",
             key=f"dl_btn_diag_direct_{fname}_{key_suffix}"
         )
     with col_dl_d2:
@@ -191,7 +214,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
     # 1. Imágenes y Diagramas
     if ext in IMAGE_EXTENSIONS:
         caption_text = extraer_caption_diagrama(md_content, fname)
-        st.image(ruta_original, caption=caption_text, use_container_width=True)
+        st.image(ruta_original, caption=caption_text, width="stretch")
 
     # 2. Libros Excel
     elif ext in (".xlsx", ".xls"):
@@ -209,7 +232,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
             st.caption(f"Libro con {len(sheet_names)} hoja(s)")
 
         df_hoja = cargar_hoja_excel_dataframe(ruta_original, hoja_sel, mtime_orig)
-        st.dataframe(df_hoja, use_container_width=True, height=420)
+        st.dataframe(df_hoja, width="stretch", height=420)
 
     # 3. Documentos PDF
     elif ext == ".pdf":
@@ -259,9 +282,18 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
         data=bytes_orig,
         file_name=fname,
         mime=mime_type,
-        use_container_width=True,
+        width="stretch",
         key=f"dl_btn_orig_{fname}_{key_suffix}"
     )
+
+
+def renderizar_codigo_seguro(md_content: str):
+    """Renderiza código Markdown protegiendo el DOM si el texto es muy extenso (> 50 KB)."""
+    if len(md_content) > 50_000:
+        st.info(f"[INFO] Documento extenso ({len(md_content)/1024:.1f} KB). Mostrando primeros 50 KB en el visor de código para proteger el navegador.")
+        st.code(md_content[:50_000] + "\n\n... [Contenido truncado en la vista de código para proteger el navegador]", language="markdown")
+    else:
+        st.code(md_content, language="markdown")
 
 
 def renderizar_lado_a_lado(
@@ -323,7 +355,7 @@ def renderizar_lado_a_lado(
                     md_con_imgs = preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original)
                     st.markdown(md_con_imgs, unsafe_allow_html=True)
             with tab_md_source:
-                st.code(md_content, language="markdown")
+                renderizar_codigo_seguro(md_content)
 
         with col_orig:
             st.markdown("##### [Documento Fuente Original]")
@@ -340,7 +372,7 @@ def renderizar_lado_a_lado(
                 md_con_imgs = preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original)
                 st.markdown(md_con_imgs, unsafe_allow_html=True)
         with tab_md_source:
-            st.code(md_content, language="markdown")
+            renderizar_codigo_seguro(md_content)
 
     elif modo_vista == "[Solo Formato Original]":
         with st.container(border=True):

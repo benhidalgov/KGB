@@ -267,7 +267,11 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=api_key)
+        # Configurar cliente con timeout de 25 segundos para permitir inferencia RAG completa
+        client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=25000)
+        )
 
         instruccion_sistema = (
             "Eres el Copilot de Infraestructura y Operaciones, un Ingeniero Principal de Infraestructura senior de grado corporativo.\n"
@@ -288,8 +292,8 @@ CONTEXTO TÉCNICO RECUPERADO (CMDB Y DOCUMENTACIÓN):
 
 Instrucción: Proporciona una respuesta técnica completa, estructurada y formal respondiendo a la consulta basándote en el contexto anterior."""
 
-        # Modelos candidatos actualizados segun disponibilidad de Google API
-        modelos_candidatos = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-flash-latest"]
+        # Modelos estables y rápidos de producción
+        modelos_candidatos = ["gemini-2.5-flash", "gemini-3.5-flash"]
         ultimo_error = ""
 
         for nombre_modelo in modelos_candidatos:
@@ -307,9 +311,15 @@ Instrucción: Proporciona una respuesta técnica completa, estructurada y formal
             except Exception as e:
                 err_str = str(e)
                 if "403" in err_str and "PERMISSION_DENIED" in err_str:
-                    return False, "403 PERMISSION_DENIED: El proyecto asociado a su API Key tiene el acceso denegado en Google Cloud / Google AI Studio ('Your project has been denied access')", ""
+                    return False, "403 PERMISSION_DENIED: Proyecto sin permisos en Google Cloud / AI Studio", ""
                 elif "429" in err_str:
                     return False, "429 Cuota agotada en la API de Google", ""
+                elif "503" in err_str or "UNAVAILABLE" in err_str:
+                    # Sobrecarga temporal en Google: conmutar de inmediato al motor local sin demoras
+                    return False, f"503 Servicio temporalmente saturado en Google ({nombre_modelo})", ""
+                elif "504" in err_str or "DEADLINE_EXCEEDED" in err_str:
+                    # Tiempo límite de red excedido en Google: conmutar sin reintentos lentos
+                    return False, f"504 Tiempo de respuesta excedido en Google ({nombre_modelo})", ""
                 else:
                     ultimo_error = f"{nombre_modelo}: {err_str[:90]}"
                 continue

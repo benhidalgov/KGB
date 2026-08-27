@@ -386,9 +386,15 @@ def obtener_bytes_snapshot(doc_name: str, filename_snapshot: str) -> bytes | Non
 
 
 def generar_diff_lado_a_lado_html(texto_ant: str, texto_nuevo: str, label_ant: str = "Versión A", label_nuevo: str = "Versión B") -> dict:
-    """Genera una vista visual diff lado a lado (Split Diff) en HTML Theme-Safe con conteo de cambios."""
-    lineas_ant = texto_ant.splitlines()
-    lineas_nuevo = texto_nuevo.splitlines()
+    """Genera una vista visual diff lado a lado (Split Diff) en HTML Theme-Safe con conteo de cambios protegiendo el DOM."""
+    todas_ant = texto_ant.splitlines()
+    todas_nuevo = texto_nuevo.splitlines()
+
+    # Limitar lineas a procesar para evitar congelamiento de la interfaz con documentos masivos
+    MAX_DIFF = 400
+    lineas_ant = todas_ant[:MAX_DIFF]
+    lineas_nuevo = todas_nuevo[:MAX_DIFF]
+    es_truncado = len(todas_ant) > MAX_DIFF or len(todas_nuevo) > MAX_DIFF
 
     matcher = difflib.SequenceMatcher(None, lineas_ant, lineas_nuevo)
     filas_html = []
@@ -461,6 +467,7 @@ def generar_diff_lado_a_lado_html(texto_ant: str, texto_nuevo: str, label_ant: s
     if not filas_html:
         diff_html = '<div class="diff-container"><div style="padding: 16px; opacity: 0.8;">No hay contenido que comparar.</div></div>'
     else:
+        tag_truncado = '<span class="badge-warn">[Muestra: 400 líneas]</span>' if es_truncado else ''
         diff_html = f"""<div class="diff-container">
     <div class="diff-stats-bar">
         <div class="diff-stat-group">
@@ -468,6 +475,7 @@ def generar_diff_lado_a_lado_html(texto_ant: str, texto_nuevo: str, label_ant: s
             <span class="badge-crit">-{eliminaciones} eliminaciones</span>
             <span class="badge-warn">~{modificaciones} modificaciones</span>
             <span class="badge-tag">{sin_cambio} líneas iguales</span>
+            {tag_truncado}
         </div>
         <div>
             <span class="badge-info">Comparación Lado a Lado</span>
