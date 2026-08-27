@@ -101,7 +101,9 @@ def procesar_un_archivo(fpath: str, rel_path: str, md_engine: MarkItDown) -> tup
                 md_content = f.read()
         else:
             resultado = md_engine.convert(fpath, keep_data_uris=True)
-            md_content = resultado.text_content
+            md_content = resultado.text_content or ""
+            if not md_content.strip() and ext == '.pdf':
+                md_content = "*Nota: Documento PDF compuesto por páginas escaneadas o imágenes sin capa de texto incrustada. Visualice el archivo original en alta resolución mediante el Visor Lado a Lado.*"
 
         out_name = os.path.splitext(orig_target_name)[0] + '.md'
         out_path = os.path.join(OUTPUT_DIR, out_name)
@@ -134,6 +136,9 @@ def ejecutar_conversion_masiva(directorio_origen: str = INPUT_DIR, max_workers: 
     archivos_a_procesar = []
     for root, _, files in os.walk(directorio_origen):
         for f in files:
+            # Omitir archivos temporales de bloqueo de Office (~$) y ocultos/sistema
+            if f.startswith("~$") or f.startswith(".") or f.lower() in ("thumbs.db", "desktop.ini"):
+                continue
             ext = os.path.splitext(f)[1].lower()
             if ext in SUPPORTED_EXTENSIONS:
                 fpath = os.path.join(root, f)
