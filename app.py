@@ -116,18 +116,129 @@ from core.vault import (
     eliminar_secreto,
     listar_secretos_disponibles,
 )
+from core.auth import (
+    verificar_credenciales,
+    es_usuario_autenticado,
+    obtener_usuario_actual,
+    es_administrador,
+    tiene_permiso,
+    cerrar_sesion,
+    renderizar_pantalla_login,
+)
 from excel_cleaner import procesar_excel_limpio
 import os
 import re
 import json
+import io
 import time
 import html
 import shutil
+import zipfile
 import datetime
 import duckdb
 import pandas as pd
 import streamlit as st
 import streamlit_antd_components as sac
+
+
+def procesar_e_ingestar_binario(
+    clean_name: str,
+    buf: bytes,
+    doc_store: dict,
+    autor: str = "Técnico / Panel Lateral",
+    origen_detalle: str = "Carga en panel lateral"
+) -> tuple[str, str]:
+    """Procesa e ingesta un archivo binario (ofimático, imagen o markdown), versionándolo y actualizando doc_store.
+    Retorna (tipo_resultado, mensaje) donde tipo_resultado es 'nuevo', 'actualizado', 'sin_cambios' o 'ignorado'.
+    """
+    ext = os.path.splitext(clean_name)[1].lower()
+    nuevo_hash = calcular_sha256(buf)
+
+    # 1. Preservar siempre el binario en data/originals/
+    orig_save_path = os.path.join(ORIGINALS_DIR, clean_name)
+    with open(orig_save_path, "wb") as f_orig:
+        f_orig.write(buf)
+
+    # 2. Caso: Imágenes y Diagramas
+    if ext in IMAGE_EXTENSIONS:
+        asset_save_path = os.path.join(ASSETS_DIR, clean_name)
+        with open(asset_save_path, "wb") as f_asset:
+            f_asset.write(buf)
+
+        doc_md_name = f"DIAGRAMA__{clean_name}.md"
+        md_save_path = os.path.join(DOCS_DIR, doc_md_name)
+
+        ficha_content = generar_ficha_diagrama(
+            image_filename=clean_name,
+            orig_rel_path=f"assets/{clean_name}",
+            sha256_hash=nuevo_hash,
+            categoria=origen_detalle
+        )
+
+        if os.path.exists(md_save_path):
+            with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
+                ex_content = f_ex.read()
+            if calcular_sha256(ex_content.encode("utf-8")) == calcular_sha256(ficha_content.encode("utf-8")):
+                return "sin_cambios", f"Diagrama '{clean_name}' ya registrado sin cambios."
+            else:
+                with open(md_save_path, "w", encoding="utf-8") as f_out:
+                    f_out.write(ficha_content)
+                doc_store[doc_md_name] = ficha_content
+                nueva_v = guardar_nueva_version(
+                    doc_name=doc_md_name,
+                    nuevo_contenido=ficha_content,
+                    autor=autor,
+                    comentario=f"Actualización de activo gráfico '{clean_name}'",
+                    doc_store=doc_store
+                )
+                return "actualizado", f"Diagrama '{clean_name}' actualizado [Version v{nueva_v}]"
+        else:
+            with open(md_save_path, "w", encoding="utf-8") as f_out:
+                f_out.write(ficha_content)
+            doc_store[doc_md_name] = ficha_content
+            inicializar_version_inicial_si_no_existe(
+                doc_name=doc_md_name,
+                contenido_actual=ficha_content,
+                autor=autor,
+                comentario=f"Carga inicial de activo gráfico '{clean_name}'"
+            )
+            return "nuevo", f"Diagrama '{clean_name}' indexado como Version v1"
+
+    # 3. Caso: Documentos Ofimáticos, Excel, PDF, Texto y Markdown
+    else:
+        save_path = os.path.join(DOCS_DIR, clean_name)
+        if os.path.exists(save_path):
+            with open(save_path, "rb") as f:
+                existente_bytes = f.read()
+            existente_hash = calcular_sha256(existente_bytes)
+
+            if nuevo_hash == existente_hash:
+                return "sin_cambios", f"Archivo '{clean_name}' ya indexado sin cambios."
+            else:
+                with open(save_path, "wb") as f:
+                    f.write(buf)
+                content = cargar_documento_individual(save_path)
+                doc_store[clean_name] = content
+                nueva_v = guardar_nueva_version(
+                    doc_name=clean_name,
+                    nuevo_contenido=content,
+                    autor=autor,
+                    comentario=f"Actualización de archivo '{clean_name}' ({origen_detalle})",
+                    doc_store=doc_store
+                )
+                return "actualizado", f"Archivo '{clean_name}' actualizado [Version v{nueva_v}]"
+        else:
+            with open(save_path, "wb") as f:
+                f.write(buf)
+            content = cargar_documento_individual(save_path)
+            doc_store[clean_name] = content
+            inicializar_version_inicial_si_no_existe(
+                doc_name=clean_name,
+                contenido_actual=content,
+                autor=autor,
+                comentario=f"Carga inicial de archivo ({origen_detalle})"
+            )
+            return "nuevo", f"Documento '{clean_name}' indexado como Version v1"
 
 
 @st.cache_data(show_spinner=False)
@@ -151,6 +262,11 @@ st.markdown(cargar_estilos_css(), unsafe_allow_html=True)
 # Eje 1: Linea de acento superior (gradiente indigo -> verde)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
 
+# Verificación de Autenticación Corporativa y Control de Acceso (RBAC)
+if not es_usuario_autenticado():
+    renderizar_pantalla_login()
+    st.stop()
+
 # 2. Inicializacion de Estado y Documentos
 if "historial_busquedas" not in st.session_state:
     st.session_state.historial_busquedas = []
@@ -173,6 +289,22 @@ if "quick_pills_version" not in st.session_state:
 
 # 3. Sidebar (Panel de Control e Ingesta)
 with st.sidebar:
+    user_act = obtener_usuario_actual()
+    st.markdown(f"""
+<div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span style="font-size: 0.68rem; font-weight: 700; color: #6366F1; text-transform: uppercase;">Sesión Activa</span>
+        <span class="badge-ok" style="font-size: 0.65rem;">{user_act.get('rol', 'Usuario')}</span>
+    </div>
+    <div style="font-size: 0.9rem; font-weight: 600;">{user_act.get('nombre', user_act.get('username'))}</div>
+    <div style="font-size: 0.68rem; opacity: 0.6; font-family: monospace;">@{user_act.get('username')}</div>
+</div>
+""", unsafe_allow_html=True)
+    if st.button(">_ Cerrar Sesión", width="stretch", key="btn_logout_sidebar"):
+        cerrar_sesion()
+
+    st.markdown("---")
+
     st.markdown("""
 <div class="sidebar-header-card">
     <div class="sidebar-header-title-row">
@@ -183,121 +315,92 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
 
-    # Ingesta de Archivos
-    st.markdown("#### Ingesta de Archivos")
+    # Ingesta de Archivos y Paquetes en Lote
+    st.markdown("#### Ingesta de Archivos (Batch & Lotes)")
     st.markdown("""
 <div class="sidebar-format-tags">
+    <span class="sidebar-format-tag">[ZIP BATCH]</span>
     <span class="sidebar-format-tag">[PDF]</span>
     <span class="sidebar-format-tag">[DOCX]</span>
     <span class="sidebar-format-tag">[XLSX]</span>
     <span class="sidebar-format-tag">[DIAGRAMAS]</span>
     <span class="sidebar-format-tag">[MD]</span>
-    <span class="sidebar-format-tag">[CSV]</span>
 </div>
 """, unsafe_allow_html=True)
 
     uploaded_files = st.file_uploader(
-        "Arrastra o selecciona tus archivos:",
+        "Arrastra archivos o paquetes ZIP en lote:",
         type=["pdf", "docx", "xlsx", "xls", "csv", "txt",
-              "md", "pptx", "png", "jpg", "jpeg", "svg", "webp"],
+              "md", "pptx", "png", "jpg", "jpeg", "svg", "webp", "zip"],
         accept_multiple_files=True,
         label_visibility="collapsed",
-        help="Formatos soportados: PDF, Word (.docx), Excel (.xlsx/.xls), Markdown (.md), Diagramas e Imágenes (.png, .jpg, .svg), CSV, TXT, PPTX."
+        help="Formatos soportados: Paquetes ZIP (lotes completos), PDF, Word (.docx), Excel (.xlsx/.xls), Markdown (.md), Diagramas e Imágenes (.png, .jpg, .svg), CSV, TXT, PPTX."
     )
 
     if uploaded_files:
+        archivos_procesados = 0
+        archivos_nuevos = 0
+        archivos_actualizados = 0
+
         for uf in uploaded_files:
             clean_name = normalizar_nombre_archivo(uf.name)
             ext_uf = os.path.splitext(clean_name)[1].lower()
-
             buf = uf.getbuffer().tobytes()
-            nuevo_hash = calcular_sha256(buf)
 
-            # Preservar siempre una copia del binario original en data/originals/
-            orig_save_path = os.path.join(ORIGINALS_DIR, clean_name)
-            with open(orig_save_path, "wb") as f_orig:
-                f_orig.write(buf)
+            # Caso A: Descompresión e Ingesta Batch de Paquete ZIP
+            if ext_uf == ".zip":
+                try:
+                    with zipfile.ZipFile(io.BytesIO(buf)) as z:
+                        zip_items = [zi for zi in z.infolist() if not zi.is_dir()]
+                        zip_ingestados = 0
 
-            # Caso 1: Imágenes y Diagramas
-            if ext_uf in IMAGE_EXTENSIONS:
-                asset_save_path = os.path.join(ASSETS_DIR, clean_name)
-                with open(asset_save_path, "wb") as f_asset:
-                    f_asset.write(buf)
+                        for zinfo in zip_items:
+                            inner_fname = os.path.basename(zinfo.filename)
+                            if not inner_fname or inner_fname.startswith(".") or "__MACOSX" in zinfo.filename:
+                                continue
+                            inner_clean = normalizar_nombre_archivo(inner_fname)
+                            ext_inner = os.path.splitext(inner_clean)[1].lower()
+                            if ext_inner in SUPPORTED_EXTENSIONS or ext_inner in IMAGE_EXTENSIONS:
+                                inner_buf = z.read(zinfo)
+                                estado, msg = procesar_e_ingestar_binario(
+                                    clean_name=inner_clean,
+                                    buf=inner_buf,
+                                    doc_store=st.session_state.doc_store,
+                                    autor="Técnico / Paquete ZIP",
+                                    origen_detalle=f"Lote ZIP: {clean_name}"
+                                )
+                                zip_ingestados += 1
+                                archivos_procesados += 1
+                                if estado == "nuevo":
+                                    archivos_nuevos += 1
+                                elif estado == "actualizado":
+                                    archivos_actualizados += 1
 
-                doc_md_name = f"DIAGRAMA__{clean_name}.md"
-                md_save_path = os.path.join(DOCS_DIR, doc_md_name)
+                        st.toast(f"[OK] Paquete ZIP '{clean_name}': {zip_ingestados} archivos procesados e indexados.")
+                except Exception as e_zip:
+                    st.error(f"[ERROR] No se pudo procesar el archivo ZIP '{clean_name}': {str(e_zip)}")
 
-                ficha_content = generar_ficha_diagrama(
-                    image_filename=clean_name,
-                    orig_rel_path=f"assets/{clean_name}",
-                    sha256_hash=nuevo_hash,
-                    categoria="Subida desde Panel Lateral"
-                )
-
-                if os.path.exists(md_save_path):
-                    with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
-                        ex_content = f_ex.read()
-                    if calcular_sha256(ex_content.encode("utf-8")) == calcular_sha256(ficha_content.encode("utf-8")):
-                        st.toast(f"[INFO] Diagrama '{clean_name}' ya registrado sin cambios.")
-                    else:
-                        with open(md_save_path, "w", encoding="utf-8") as f_out:
-                            f_out.write(ficha_content)
-                        st.session_state.doc_store[doc_md_name] = ficha_content
-                        nueva_v = guardar_nueva_version(
-                            doc_name=doc_md_name,
-                            nuevo_contenido=ficha_content,
-                            autor="Técnico / Panel Lateral",
-                            comentario=f"Actualización de activo gráfico '{clean_name}'",
-                            doc_store=st.session_state.doc_store
-                        )
-                        st.toast(f"[OK] Diagrama '{clean_name}' actualizado [Version v{nueva_v}]")
-                else:
-                    with open(md_save_path, "w", encoding="utf-8") as f_out:
-                        f_out.write(ficha_content)
-                    st.session_state.doc_store[doc_md_name] = ficha_content
-                    inicializar_version_inicial_si_no_existe(
-                        doc_name=doc_md_name,
-                        contenido_actual=ficha_content,
-                        autor="Técnico / Panel Lateral",
-                        comentario=f"Carga inicial de activo gráfico '{clean_name}'"
-                    )
-                    st.toast(f"[OK] Diagrama '{clean_name}' indexado como Version v1")
-
-            # Caso 2: Documentos Ofimáticos, Excel, PDF, Texto y Markdown
+            # Caso B: Archivo Individual o Múltiple Directo
             else:
-                save_path = os.path.join(DOCS_DIR, clean_name)
-                if os.path.exists(save_path):
-                    with open(save_path, "rb") as f:
-                        existente_bytes = f.read()
-                    existente_hash = calcular_sha256(existente_bytes)
+                estado, msg = procesar_e_ingestar_binario(
+                    clean_name=clean_name,
+                    buf=buf,
+                    doc_store=st.session_state.doc_store,
+                    autor="Técnico / Panel Lateral",
+                    origen_detalle="Carga en panel lateral"
+                )
+                archivos_procesados += 1
+                if estado == "nuevo":
+                    archivos_nuevos += 1
+                    st.toast(f"[OK] {msg}")
+                elif estado == "actualizado":
+                    archivos_actualizados += 1
+                    st.toast(f"[OK] {msg}")
+                elif estado == "sin_cambios":
+                    st.toast(f"[INFO] {msg}")
 
-                    if nuevo_hash == existente_hash:
-                        st.toast(f"[INFO] Archivo '{clean_name}' ya indexado sin cambios.")
-                    else:
-                        with open(save_path, "wb") as f:
-                            f.write(buf)
-                        content = cargar_documento_individual(save_path)
-                        st.session_state.doc_store[clean_name] = content
-                        nueva_v = guardar_nueva_version(
-                            doc_name=clean_name,
-                            nuevo_contenido=content,
-                            autor="Técnico / Panel Lateral",
-                            comentario=f"Actualización de archivo '{clean_name}' mediante carga en panel lateral",
-                            doc_store=st.session_state.doc_store
-                        )
-                        st.toast(f"[OK] Archivo '{clean_name}' actualizado [Version v{nueva_v}]")
-                else:
-                    with open(save_path, "wb") as f:
-                        f.write(buf)
-                    content = cargar_documento_individual(save_path)
-                    st.session_state.doc_store[clean_name] = content
-                    inicializar_version_inicial_si_no_existe(
-                        doc_name=clean_name,
-                        contenido_actual=content,
-                        autor="Técnico / Panel Lateral",
-                        comentario="Carga inicial de archivo en panel lateral"
-                    )
-                    st.toast(f"[OK] Documento '{clean_name}' indexado como Version v1")
+        if archivos_procesados > 1:
+            st.success(f"[OK] Lote completado: {archivos_procesados} archivos evaluados ({archivos_nuevos} nuevos, {archivos_actualizados} actualizados).")
 
     st.markdown("---")
 
@@ -404,15 +507,16 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Bóveda de Seguridad y Credenciales (Vault)
-    with st.expander("Bóveda de Credenciales [VAULT]", expanded=False):
-        secretos_lista = listar_secretos_disponibles()
-        cfg_count = sum(1 for s in secretos_lista if s["estado"] == "[CONFIGURADO]")
-        st.markdown(f"<div style='font-size:0.75rem; margin-bottom:8px; opacity:0.8;'>Estado de llaves: <b>{cfg_count} configurada(s)</b> bajo cifrado AES-256.</div>", unsafe_allow_html=True)
+    # Bóveda de Seguridad y Credenciales (Vault) - Exclusiva para Administradores
+    if tiene_permiso("puede_ver_vault"):
+        with st.expander("Bóveda de Credenciales [VAULT]", expanded=False):
+            secretos_lista = listar_secretos_disponibles()
+            cfg_count = sum(1 for s in secretos_lista if s["estado"] == "[CONFIGURADO]")
+            st.markdown(f"<div style='font-size:0.75rem; margin-bottom:8px; opacity:0.8;'>Estado de llaves: <b>{cfg_count} configurada(s)</b> bajo cifrado AES-256.</div>", unsafe_allow_html=True)
 
-        for s in secretos_lista:
-            tag_st = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[CONFIGURADO]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[NO CONFIGURADO]</span>'
-            st.markdown(f"""
+            for s in secretos_lista:
+                tag_st = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[CONFIGURADO]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[NO CONFIGURADO]</span>'
+                st.markdown(f"""
 <div style="font-size:0.72rem; padding:3px 0; display:flex; justify-content:space-between; align-items:center;">
     <span style="font-family:monospace; font-weight:600;">{s['clave']}</span>
     {tag_st}
@@ -420,45 +524,45 @@ with st.sidebar:
 <div style="font-size:0.64rem; opacity:0.6; margin-bottom:4px;">Origen: {s['origen']} {f'({s["vista_previa"]})' if s['vista_previa'] != '-' else ''}</div>
 """, unsafe_allow_html=True)
 
-        st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-        st.markdown("<b style='font-size:0.75rem;'>Guardar o Actualizar Clave:</b>", unsafe_allow_html=True)
-        claves_predefinidas = [s["clave"] for s in secretos_lista] + ["OTRA_CLAVE_PERSONALIZADA"]
-        sel_clave = st.selectbox("Seleccionar Llave:", claves_predefinidas, key="sb_vault_sel_key", label_visibility="collapsed")
+            st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
+            st.markdown("<b style='font-size:0.75rem;'>Guardar o Actualizar Clave:</b>", unsafe_allow_html=True)
+            claves_predefinidas = [s["clave"] for s in secretos_lista] + ["OTRA_CLAVE_PERSONALIZADA"]
+            sel_clave = st.selectbox("Seleccionar Llave:", claves_predefinidas, key="sb_vault_sel_key", label_visibility="collapsed")
 
-        if sel_clave == "OTRA_CLAVE_PERSONALIZADA":
-            nombre_clave_final = st.text_input("Nombre de la Clave:", value="", placeholder="EJ: MI_API_KEY", key="sb_vault_custom_key")
-        else:
-            nombre_clave_final = sel_clave
+            if sel_clave == "OTRA_CLAVE_PERSONALIZADA":
+                nombre_clave_final = st.text_input("Nombre de la Clave:", value="", placeholder="EJ: MI_API_KEY", key="sb_vault_custom_key")
+            else:
+                nombre_clave_final = sel_clave
 
-        if "vault_input_version" not in st.session_state:
-            st.session_state.vault_input_version = 0
+            if "vault_input_version" not in st.session_state:
+                st.session_state.vault_input_version = 0
 
-        valor_secreto = st.text_input(
-            "Valor del Secreto:",
-            value="",
-            type="password",
-            key=f"sb_vault_secret_val_{st.session_state.vault_input_version}",
-            label_visibility="collapsed",
-            placeholder="Pegar token / API key..."
-        )
+            valor_secreto = st.text_input(
+                "Valor del Secreto:",
+                value="",
+                type="password",
+                key=f"sb_vault_secret_val_{st.session_state.vault_input_version}",
+                label_visibility="collapsed",
+                placeholder="Pegar token / API key..."
+            )
 
-        col_v_guardar, col_v_del = st.columns(2)
-        with col_v_guardar:
-            if st.button(">_ Guardar", width="stretch", key="btn_vault_guardar"):
-                if nombre_clave_final and valor_secreto:
-                    if guardar_secreto(nombre_clave_final, valor_secreto, autor="Operador / Consola"):
-                        st.session_state.vault_input_version += 1
-                        st.toast(f"[OK] Credencial '{nombre_clave_final}' cifrada en bóveda.")
-                        st.rerun()
-                else:
-                    st.toast("[WARN] Ingrese nombre y valor de secreto.")
-        with col_v_del:
-            if st.button(">_ Revocar", width="stretch", key="btn_vault_eliminar"):
-                if nombre_clave_final:
-                    if eliminar_secreto(nombre_clave_final, autor="Operador / Consola"):
-                        st.session_state.vault_input_version += 1
-                        st.toast(f"[INFO] Credencial '{nombre_clave_final}' revocada.")
-                        st.rerun()
+            col_v_guardar, col_v_del = st.columns(2)
+            with col_v_guardar:
+                if st.button(">_ Guardar", width="stretch", key="btn_vault_guardar"):
+                    if nombre_clave_final and valor_secreto:
+                        if guardar_secreto(nombre_clave_final, valor_secreto, autor=f"{user_act.get('username', 'admin')} ({user_act.get('rol', 'Admin')})"):
+                            st.session_state.vault_input_version += 1
+                            st.toast(f"[OK] Credencial '{nombre_clave_final}' cifrada en bóveda.")
+                            st.rerun()
+                    else:
+                        st.toast("[WARN] Ingrese nombre y valor de secreto.")
+            with col_v_del:
+                if st.button(">_ Revocar", width="stretch", key="btn_vault_eliminar"):
+                    if nombre_clave_final:
+                        if eliminar_secreto(nombre_clave_final, autor=f"{user_act.get('username', 'admin')} ({user_act.get('rol', 'Admin')})"):
+                            st.session_state.vault_input_version += 1
+                            st.toast(f"[INFO] Credencial '{nombre_clave_final}' revocada.")
+                            st.rerun()
 
 
 

@@ -100,7 +100,7 @@ def procesar_un_archivo(fpath: str, rel_path: str, md_engine: MarkItDown) -> tup
             with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
                 md_content = f.read()
         else:
-            resultado = md_engine.convert(fpath, keep_data_uris=True)
+            resultado = md_engine.convert(fpath, keep_data_uris=False)
             md_content = resultado.text_content or ""
             if not md_content.strip() and ext == '.pdf':
                 md_content = "*Nota: Documento PDF compuesto por páginas escaneadas o imágenes sin capa de texto incrustada. Visualice el archivo original en alta resolución mediante el Visor Lado a Lado.*"

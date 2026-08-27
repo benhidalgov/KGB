@@ -80,5 +80,14 @@ from core.vault import (
     listar_secretos_disponibles,
     obtener_clave_maestra,
 )
+from core.auth import (
+    verificar_credenciales,
+    es_usuario_autenticado,
+    obtener_usuario_actual,
+    es_administrador,
+    tiene_permiso,
+    cerrar_sesion,
+    renderizar_pantalla_login,
+)
 
 
