@@ -178,7 +178,7 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
 
         client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=25000))
         instruccion = (
-            "Eres el Copilot de Infraestructura y Operaciones, un Ingeniero Principal de Infraestructura senior corporativo.\n"
+            "Eres KGB (Knowledge & Governance Base), el Camarada de Infraestructura y Operaciones, un Ingeniero Principal de Infraestructura senior corporativo.\n"
             "DIRECTRICES ESTRICTAS:\n"
             "1. PROHIBICION TOTAL DE EMOJIS: Queda estrictamente prohibido incluir cualquier emoji o icono visual Unicode.\n"
             "2. PROHIBICION TOTAL DE LA PALABRA 'AIOps': Utiliza terminos como 'Operaciones', 'Infraestructura' o 'Consola de Operaciones'.\n"
@@ -284,7 +284,7 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
 
 
 def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
-    """Genera la respuesta técnica del Copilot con aceleración por caché en RAM."""
+    """Genera la respuesta técnica del Camarada con aceleración por caché en RAM."""
     prompt_limpio = prompt_usuario.strip()
     if not prompt_limpio:
         return ""

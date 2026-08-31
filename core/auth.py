@@ -11,11 +11,11 @@ DEFAULT_SALT = "infra_copilot_security_salt_2026"
 
 ROLES_PERMISOS = {
     "Administrador": {
-        "descripcion": "Acceso total: Consultas Copilot, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
+        "descripcion": "Acceso total: Consultas al Camarada, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
         "puede_ver_vault": True, "puede_editar_vault": True, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": True,
     },
     "Operador": {
-        "descripcion": "Acceso técnico: Consultas Copilot, Búsqueda DuckDB, Visor Lado a Lado y Registro de Incidencias.",
+        "descripcion": "Acceso técnico: Consultas al Camarada, Búsqueda DuckDB, Visor Lado a Lado y Registro de Incidencias.",
         "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": False,
     },
     "Auditor": {
@@ -107,8 +107,8 @@ def renderizar_pantalla_login():
         with st.container(border=True):
             st.markdown("""
             <div style="text-align: center; margin-bottom: 20px;">
-                <span class="navbar-brand-badge" style="font-size: 0.85rem; padding: 3px 10px;">[SEGURIDAD]</span>
-                <h3 style="margin-top: 10px; margin-bottom: 4px; font-weight: 700; color: #6366F1;">Copilot de Infraestructura y Operaciones</h3>
+                <span class="navbar-brand-badge" style="font-size: 0.85rem; padding: 3px 10px;">[KGB]</span>
+                <h3 style="margin-top: 10px; margin-bottom: 4px; font-weight: 700; color: #6366F1;">KGB - Camarada de Infraestructura</h3>
                 <div style="font-size: 0.82rem; opacity: 0.8;">Acceso Restringido a Consola de Operaciones e Inventario CMDB</div>
             </div>
             """, unsafe_allow_html=True)
@@ -137,6 +137,6 @@ def renderizar_pantalla_login():
                 | Usuario | Rol Asignado | Clave Inicial | Nivel de Acceso |
                 | :--- | :--- | :--- | :--- |
                 | `admin` | Administrador | `admin2026` | Acceso total (Bóveda, Ingesta, Edición, Rollback) |
-                | `operador` | Operador | `operador2026` | Consultas Copilot, Búsqueda DuckDB, Ingesta |
+                | `operador` | Operador | `operador2026` | Consultas al Camarada, Búsqueda DuckDB, Ingesta |
                 | `auditor` | Auditor | `auditor2026` | Solo lectura (Búsqueda y Visor) |
                 """)

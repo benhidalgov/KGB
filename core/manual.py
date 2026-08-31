@@ -1,5 +1,5 @@
 """
-Módulo de documentación interactiva y Guía Práctica del Copilot de Infraestructura y Operaciones.
+Módulo de documentación interactiva y Guía Práctica del Camarada de Infraestructura y Operaciones.
 """
 import streamlit as st
 import streamlit_antd_components as sac
@@ -7,7 +7,7 @@ import streamlit_antd_components as sac
 
 def renderizar_manual_usuario():
     """Renderiza una guía práctica, directa y sin rodeos sobre el funcionamiento del sistema."""
-    st.markdown('<p class="main-title">Guía Rápida: Cómo funciona esto y qué hace</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">Guía Rápida: Cómo funciona KGB y qué hace</p>', unsafe_allow_html=True)
     st.caption("Un resumen práctico y al grano para entender cómo sacarle provecho a la plataforma sin enredarse.")
 
     tab_m1, tab_m2, tab_m3, tab_m4, tab_m5, tab_m6 = st.tabs([

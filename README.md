@@ -1,4 +1,4 @@
-# Copilot de Infraestructura y Operaciones
+# KGB - Camarada de Infraestructura y Operaciones
 
 Plataforma corporativa de asistencia técnica, gestión documental de infraestructura, inventario CMDB en memoria (DuckDB), inferencia generativa con Google Gemini RAG, autenticación y control de acceso basado en roles (RBAC), bóveda de seguridad cifrada (AES-256), telemetría de sistemas SAP y control de versiones inmutable.
 
@@ -8,8 +8,8 @@ Plataforma corporativa de asistencia técnica, gestión documental de infraestru
 
 * **Control de Acceso y Autenticación Corporativa (RBAC):** Compuerta de acceso perimetral (`core/auth.py`) que bloquea la ejecución de la consola ante usuarios no autenticados. Control de roles granular (`Administrador`, `Operador`, `Auditor`), contraseñas protegidas con **PBKDF2-HMAC-SHA256**, soporte de variables maestras vía `st.secrets` y bitácora inmutable de inicios de sesión.
 * **Búsqueda Dual en Consola:**
-  * **Subpestaña 1: Búsqueda Textual (DuckDB & Docs):** Recuperación indexada ultrarrápida en memoria RAM (**latencia < 2 ms**, Zero API calls) sobre la CMDB y los 30 documentos técnicos, con resaltado de términos (`<mark>`) y botón puente hacia el Copilot.
-  * **Subpestaña 2: Copilot de Infraestructura (Gemini RAG):** Asistencia técnica en lenguaje natural con el SDK oficial `google-genai` (`gemini-2.5-flash`), inyección de contexto RAG estricta, *Fast-Fail* y fallback autónomo al motor local si no hay conexión externa.
+  * **Subpestaña 1: Búsqueda Textual (DuckDB & Docs):** Recuperación indexada ultrarrápida en memoria RAM (**latencia < 2 ms**, Zero API calls) sobre la CMDB y los 30 documentos técnicos, con resaltado de términos (`<mark>`) y botón puente hacia el Camarada.
+  * **Subpestaña 2: Camarada KGB (Gemini RAG):** Asistencia técnica en lenguaje natural con el SDK oficial `google-genai` (`gemini-2.5-flash`), inyección de contexto RAG estricta, *Fast-Fail* y fallback autónomo al motor local si no hay conexión externa.
 * **Caché en Memoria y Alto Rendimiento:** Almacén de respuestas frecuentes en memoria RAM (`Query Response Cache`) que entrega consultas resueltas en **0.79 milisegundos**. Pre-normalización léxica en memoria y DuckDB en RAM con cero I/O de disco.
 * **Ingesta Batch y Soporte para Paquetes ZIP:** El panel lateral soporta selección múltiple de archivos y arrastrar paquetes comprimidos **`.zip`**. La aplicación descomprime en memoria (`io.BytesIO`), normaliza nombres, sanitiza formatos, genera versiones `v1` e indexa todo en tiempo real.
 * **Bóveda de Seguridad Local (Vault AES-256):** Custodia de credenciales y API Keys (`GEMINI_API_KEY`, `SAP_ENDPOINT`, `SAP_CLIENT_ID`, etc.) mediante cifrado simétrico Fernet. Jerarquía en cascada (OS Environment -> Streamlit Secrets -> Bóveda Cifrada), con acceso exclusivo restringido al rol de Administrador.
