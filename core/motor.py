@@ -292,8 +292,8 @@ CONTEXTO TÉCNICO RECUPERADO (CMDB Y DOCUMENTACIÓN):
 
 Instrucción: Proporciona una respuesta técnica completa, estructurada y formal respondiendo a la consulta basándote en el contexto anterior."""
 
-        # Modelos estables y rápidos de producción
-        modelos_candidatos = ["gemini-2.5-flash", "gemini-3.5-flash"]
+        # Modelos estables y rápidos de producción en orden de preferencia
+        modelos_candidatos = ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-flash-latest"]
         ultimo_error = ""
 
         for nombre_modelo in modelos_candidatos:
@@ -315,11 +315,13 @@ Instrucción: Proporciona una respuesta técnica completa, estructurada y formal
                 elif "429" in err_str:
                     return False, "429 Cuota agotada en la API de Google", ""
                 elif "503" in err_str or "UNAVAILABLE" in err_str:
-                    # Sobrecarga temporal en Google: conmutar de inmediato al motor local sin demoras
-                    return False, f"503 Servicio temporalmente saturado en Google ({nombre_modelo})", ""
+                    # Sobrecarga temporal en el modelo actual: registrar y probar el siguiente modelo candidato
+                    ultimo_error = f"503 Servicio temporalmente saturado en Google ({nombre_modelo})"
+                    continue
                 elif "504" in err_str or "DEADLINE_EXCEEDED" in err_str:
-                    # Tiempo límite de red excedido en Google: conmutar sin reintentos lentos
-                    return False, f"504 Tiempo de respuesta excedido en Google ({nombre_modelo})", ""
+                    # Tiempo de respuesta excedido en el modelo actual: registrar y probar el siguiente modelo candidato
+                    ultimo_error = f"504 Tiempo de respuesta excedido en Google ({nombre_modelo})"
+                    continue
                 else:
                     ultimo_error = f"{nombre_modelo}: {err_str[:90]}"
                 continue
