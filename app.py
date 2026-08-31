@@ -685,7 +685,7 @@ with tab_chat:
         if not active_duck_term:
             st.markdown("""
 <div class="empty-state-container">
-    <div class="empty-state-console-icon">&gt;_ duckdb::ram_search</div>
+    <div class="empty-state-console-icon">&gt;_ Buscador :1</div>
     <div class="empty-state-title">Motor de Búsqueda Textual en RAM</div>
     <div class="empty-state-subtitle">
         Búsqueda ultrarrápida indexada directamente sobre la CMDB y los 30 documentos técnicos.
