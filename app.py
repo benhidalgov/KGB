@@ -411,17 +411,24 @@ df_mantenimientos_cache = obtener_dataframe_mantenimientos(mtime_csv)
 total_srvs = len(df_mantenimientos_cache)
 
 with st.container(border=True):
-    col_brand, col_nav_mode, col_stats = st.columns([1.8, 1.3, 1.0], gap="small", vertical_alignment="center")
+    col_brand, col_nav_mode, col_stats = st.columns([1.6, 1.6, 0.9], gap="small", vertical_alignment="center")
     with col_brand:
         st.markdown('<div class="navbar-brand-container"><span class="navbar-brand-badge">[CLI]</span><span class="navbar-brand-title">Consola de Infraestructura y Operaciones</span><div class="navbar-brand-badges"><span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span></div></div>', unsafe_allow_html=True)
     with col_nav_mode:
-        vista_seleccionada = st.segmented_control("Vista", ["Consola", "Manual de Uso"], default="Consola", label_visibility="collapsed", key="top_navbar_view_selector") or "Consola"
+        vista_seleccionada = st.segmented_control("Vista", ["Consola", "Zen Studio", "Manual de Uso"], default="Consola", label_visibility="collapsed", key="top_navbar_view_selector") or "Consola"
     with col_stats:
         st.markdown(f'<div class="navbar-stats-container"><div class="navbar-stat-chip"><span class="navbar-stat-label">Documentos:</span><span class="navbar-stat-value-ok">{cant_docs}</span></div></div>', unsafe_allow_html=True)
 
 if "Manual" in str(vista_seleccionada):
     renderizar_manual_usuario()
     st.stop()
+
+if "Zen" in str(vista_seleccionada):
+    doc_zen_def = st.session_state.get("zen_doc_sel") or (sorted(st.session_state.doc_store.keys())[0] if st.session_state.doc_store else None)
+    if doc_zen_def and doc_zen_def in st.session_state.doc_store:
+        st.session_state["zen_studio_activo"] = True
+        st.session_state["zen_doc_sel"] = doc_zen_def
+        st.rerun()
 
 # 6. Pestañas Principales
 tab_chat, tab_analytics, tab_docs, tab_templates = st.tabs([

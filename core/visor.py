@@ -366,6 +366,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_zt_exit:
         if st.button(">_ Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
             st.session_state["zen_studio_activo"] = False
+            st.session_state["top_navbar_view_selector"] = "Consola"
             st.rerun()
 
     font_size_val = "17px" if "Grande" in tam_fuente else ("13px" if "Compacto" in tam_fuente else "15px")
