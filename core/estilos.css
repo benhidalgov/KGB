@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Estilos Visuales Corporativos - Copilot de Infraestructura y Operaciones
+   Estilos Visuales Corporativos - Consola de Infraestructura y Operaciones
    Paleta: Obsidian & Indigo (Observabilidad Moderna)
    Compatibilidad: Tema Claro (Light) y Tema Oscuro (Dark) - Theme-Safe
    ========================================================================== */
@@ -864,9 +864,9 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor):hover {
     z-index: 9999;
 }
 
-/* ========================================================================
-   17. SEARCH BAR ENTERPRISE - Foco Animado y Presencia Visual
-   ======================================================================== */
+/* ==========================================================================
+   Estilos Visuales Corporativos - Consola de Infraestructura y Operaciones
+   ========================================================================== */
 
 /* Contenedor del form de busqueda */
 [data-testid="stForm"] {

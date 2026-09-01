@@ -1,1 +1,1 @@
-"""Modulo core del Copilot de Infraestructura y Operaciones."""
+"""Modulo core de la Consola de Infraestructura y Operaciones."""

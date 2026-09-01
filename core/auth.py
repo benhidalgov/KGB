@@ -7,31 +7,31 @@ import streamlit as st
 from core.auditoria import registrar_evento_auditoria
 
 AUTH_USERS_PATH = os.path.join("data", "users.json")
-DEFAULT_SALT = "infra_copilot_security_salt_2026"
+DEFAULT_SALT = "infra_console_security_salt_2026"
 
 ROLES_PERMISOS = {
     "Administrador": {
-        "descripcion": "Acceso total: Consultas al Camarada, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
+        "descripcion": "Acceso total: Consultas al Asistente, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
         "puede_ver_vault": True, "puede_editar_vault": True, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": True,
     },
     "Operador": {
-        "descripcion": "Acceso técnico: Consultas al Camarada, Búsqueda DuckDB, Visor Lado a Lado y Registro de Incidencias.",
+        "descripcion": "Acceso técnico: Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado y Registro de Incidencias.",
         "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": False,
     },
     "Auditor": {
-        "descripcion": "Acceso de solo lectura: Búsqueda DuckDB, Explorador Documental e Historial de Auditoría.",
+        "descripcion": "Acceso de auditoría: Búsqueda de documentos, visualización de CMDB y verificación de eventos.",
         "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": False, "puede_editar_docs": False, "puede_rollback": False,
     }
 }
 
 
-def generar_hash_password(password: str, salt: str = DEFAULT_SALT) -> str:
-    """Genera hash criptográfico PBKDF2-HMAC-SHA256."""
-    return hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100_000).hex()
+def generar_hash_password(password_plana: str, salt: str = DEFAULT_SALT) -> str:
+    """Genera hash seguro PBKDF2-HMAC-SHA256."""
+    return hashlib.pbkdf2_hmac("sha256", password_plana.strip().encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
 
 
 def inicializar_almacen_usuarios() -> Dict[str, Any]:
-    """Carga o inicializa el catalogo de usuarios en data/users.json con cuentas base."""
+    """Carga o inicializa data/users.json con cuentas base seguras."""
     if os.path.exists(AUTH_USERS_PATH):
         try:
             with open(AUTH_USERS_PATH, "r", encoding="utf-8") as f:
@@ -39,13 +39,10 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
         except Exception:
             pass
 
-    admin_pass = getattr(st, "secrets", {}).get("ADMIN_PASSWORD", "admin2026")
-    operador_pass = getattr(st, "secrets", {}).get("OPERADOR_PASSWORD", "operador2026")
-
     usuarios_base = {
-        "admin": {"nombre": "Administrador Principal", "rol": "Administrador", "hash": generar_hash_password(str(admin_pass).strip()), "activo": True},
-        "operador": {"nombre": "Técnico de Operaciones", "rol": "Operador", "hash": generar_hash_password(str(operador_pass).strip()), "activo": True},
-        "auditor": {"nombre": "Auditor de Cumplimiento", "rol": "Auditor", "hash": generar_hash_password("auditor2026"), "activo": True}
+        "admin": {"nombre": "Administrador Principal", "rol": "Administrador", "hash": generar_hash_password("admin2026"), "activo": True},
+        "operador": {"nombre": "Operador de Infraestructura", "rol": "Operador", "hash": generar_hash_password("operador2026"), "activo": True},
+        "auditor": {"nombre": "Auditor de Seguridad", "rol": "Auditor", "hash": generar_hash_password("auditor2026"), "activo": True}
     }
 
     try:
@@ -107,8 +104,8 @@ def renderizar_pantalla_login():
         with st.container(border=True):
             st.markdown("""
             <div style="text-align: center; margin-bottom: 20px;">
-                <span class="navbar-brand-badge" style="font-size: 0.85rem; padding: 3px 10px;">[KGB]</span>
-                <h3 style="margin-top: 10px; margin-bottom: 4px; font-weight: 700; color: #6366F1;">KGB - Camarada de Infraestructura</h3>
+                <span class="navbar-brand-badge" style="font-size: 0.85rem; padding: 3px 10px;">[CLI]</span>
+                <h3 style="margin-top: 10px; margin-bottom: 4px; font-weight: 700; color: #6366F1;">Consola de Infraestructura y Operaciones</h3>
                 <div style="font-size: 0.82rem; opacity: 0.8;">Acceso Restringido a Consola de Operaciones e Inventario CMDB</div>
             </div>
             """, unsafe_allow_html=True)
@@ -137,6 +134,6 @@ def renderizar_pantalla_login():
                 | Usuario | Rol Asignado | Clave Inicial | Nivel de Acceso |
                 | :--- | :--- | :--- | :--- |
                 | `admin` | Administrador | `admin2026` | Acceso total (Bóveda, Ingesta, Edición, Rollback) |
-                | `operador` | Operador | `operador2026` | Consultas al Camarada, Búsqueda DuckDB, Ingesta |
+                | `operador` | Operador | `operador2026` | Consultas al Asistente, Búsqueda DuckDB, Ingesta |
                 | `auditor` | Auditor | `auditor2026` | Solo lectura (Búsqueda y Visor) |
                 """)

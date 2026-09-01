@@ -176,9 +176,9 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=25000))
+        client = genai.Client(api_key=api_key.strip())
         instruccion = (
-            "Eres KGB (Knowledge & Governance Base), el Camarada de Infraestructura y Operaciones, un Ingeniero Principal de Infraestructura senior corporativo.\n"
+            "Eres el Asistente de Infraestructura y Operaciones, un Ingeniero Principal de Infraestructura senior corporativo.\n"
             "DIRECTRICES ESTRICTAS:\n"
             "1. PROHIBICION TOTAL DE EMOJIS: Queda estrictamente prohibido incluir cualquier emoji o icono visual Unicode.\n"
             "2. PROHIBICION TOTAL DE LA PALABRA 'AIOps': Utiliza terminos como 'Operaciones', 'Infraestructura' o 'Consola de Operaciones'.\n"
@@ -188,7 +188,8 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
 
         prompt_full = f"CONSULTA DEL OPERADOR:\n{prompt_usuario}\n\nCONTEXTO TÉCNICO RECUPERADO (CMDB Y DOCUMENTOS):\n{contexto_rag}\n\nInstrucción: Proporciona una respuesta técnica completa y estructurada basándote en el contexto."
 
-        for modelo in ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-flash-latest"]:
+        ultimo_error = ""
+        for modelo in ["gemini-2.5-flash", "gemini-flash-latest"]:
             try:
                 res = client.models.generate_content(
                     model=modelo,
@@ -199,13 +200,14 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
                     return True, res.text.strip(), modelo
             except Exception as e:
                 err_s = str(e)
+                ultimo_error = err_s
                 if "403" in err_s:
                     return False, "403 PERMISSION_DENIED: Sin permisos en Google Cloud / AI Studio", ""
                 if "429" in err_s:
                     return False, "429 Cuota agotada en la API de Google", ""
                 continue
 
-        return False, "Servicio Gemini temporalmente saturado", ""
+        return False, f"Servicio Gemini no disponible ({ultimo_error[:90]})", ""
     except Exception as e:
         return False, str(e)[:120], ""
 

@@ -1,6 +1,6 @@
-# KGB - Camarada de Infraestructura y Operaciones
+# Consola de Infraestructura y Operaciones
 
-Plataforma corporativa de asistencia técnica, gestión documental de infraestructura, inventario CMDB en memoria (DuckDB), inferencia generativa con Google Gemini RAG, autenticación y control de acceso basado en roles (RBAC), bóveda de seguridad cifrada (AES-256), telemetría de sistemas SAP y control de versiones inmutable.
+Plataforma corporativa de asistencia técnica, gestión documental de infraestructura, inventario CMDB en memoria (DuckDB), inferencia generativa con Google Gemini RAG, autenticación y control de acceso basado en roles (RBAC), bóveda de seguridad cifrada (AES-256) y control de versiones inmutable.
 
 ---
 
@@ -8,16 +8,15 @@ Plataforma corporativa de asistencia técnica, gestión documental de infraestru
 
 * **Control de Acceso y Autenticación Corporativa (RBAC):** Compuerta de acceso perimetral (`core/auth.py`) que bloquea la ejecución de la consola ante usuarios no autenticados. Control de roles granular (`Administrador`, `Operador`, `Auditor`), contraseñas protegidas con **PBKDF2-HMAC-SHA256**, soporte de variables maestras vía `st.secrets` y bitácora inmutable de inicios de sesión.
 * **Búsqueda Dual en Consola:**
-  * **Subpestaña 1: Búsqueda Textual (DuckDB & Docs):** Recuperación indexada ultrarrápida en memoria RAM (**latencia < 2 ms**, Zero API calls) sobre la CMDB y los 30 documentos técnicos, con resaltado de términos (`<mark>`) y botón puente hacia el Camarada.
-  * **Subpestaña 2: Camarada KGB (Gemini RAG):** Asistencia técnica en lenguaje natural con el SDK oficial `google-genai` (`gemini-2.5-flash`), inyección de contexto RAG estricta, *Fast-Fail* y fallback autónomo al motor local si no hay conexión externa.
+  * **Subpestaña 1: Búsqueda Textual (DuckDB & Docs):** Recuperación indexada ultrarrápida en memoria RAM (**latencia < 2 ms**, Zero API calls) sobre la CMDB y los 30 documentos técnicos, con resaltado de términos (`<mark>`) y botón puente hacia el Asistente Técnico.
+  * **Subpestaña 2: Asistente Técnico (Gemini RAG):** Asistencia técnica en lenguaje natural con el SDK oficial `google-genai` (`gemini-2.5-flash`), inyección de contexto RAG estricta, *Fast-Fail* y fallback autónomo al motor local si no hay conexión externa.
 * **Caché en Memoria y Alto Rendimiento:** Almacén de respuestas frecuentes en memoria RAM (`Query Response Cache`) que entrega consultas resueltas en **0.79 milisegundos**. Pre-normalización léxica en memoria y DuckDB en RAM con cero I/O de disco.
 * **Ingesta Batch y Soporte para Paquetes ZIP:** El panel lateral soporta selección múltiple de archivos y arrastrar paquetes comprimidos **`.zip`**. La aplicación descomprime en memoria (`io.BytesIO`), normaliza nombres, sanitiza formatos, genera versiones `v1` e indexa todo en tiempo real.
-* **Bóveda de Seguridad Local (Vault AES-256):** Custodia de credenciales y API Keys (`GEMINI_API_KEY`, `SAP_ENDPOINT`, `SAP_CLIENT_ID`, etc.) mediante cifrado simétrico Fernet. Jerarquía en cascada (OS Environment -> Streamlit Secrets -> Bóveda Cifrada), con acceso exclusivo restringido al rol de Administrador.
+* **Bóveda de Seguridad Local (Vault AES-256):** Custodia de credenciales y API Keys (`GEMINI_API_KEY`, etc.) mediante cifrado simétrico Fernet. Jerarquía en cascada (OS Environment -> Streamlit Secrets -> Bóveda Cifrada), con acceso exclusivo restringido al rol de Administrador.
 * **Blindaje de Rendimiento y Prevención de Bloqueos:**
   * Conversión documental con `keep_data_uris=False` para evitar inyección masiva de Base64 en el DOM.
   * Visores protegidos: visor de código truncado a 50 KB para salvaguardar el hilo JavaScript, textarea limitada a 100 KB, umbral de 2.5 MB para PDFs embebidos (con tarjeta de descarga directa para archivos grandes) y diff HTML limitado a 400 líneas.
   * Auto-saneamiento en caliente de la sesión ante residuos de caché obsoletos.
-* **Integración y Telemetría SAP (API):** Consola dedicada para el monitoreo del landscape SAP S/4HANA 2022, bases de datos SAP HANA 2.0 (HSR en alta disponibilidad), servidores NetWeaver (ASCS/PAS/AAS) y sincronización automatizada con la CMDB local.
 * **Visor Lado a Lado con Imágenes Activas:** Inspección sincronizada entre Markdown normalizado y el archivo original (PDF embebido, Excel interactivo, diagramas en alta resolución o Word).
 * **Control de Versiones y Auditoría:** Historial inmutable en `data/history/` (`v1`, `v2`...), comparador visual *Diff*, Rollback protegido y registro central de auditoría en `data/audit_log.json`.
 * **Diseño Corporativo Theme-Safe (Obsidian & Indigo):** Interfaz adaptativa 100% legible en Tema Claro y Oscuro, estrictamente libre de emojis y con terminología técnica formal de ingeniería.
@@ -28,7 +27,7 @@ Plataforma corporativa de asistencia técnica, gestión documental de infraestru
 
 ```text
 C:\Prototipo\
-├── app.py                             # Aplicación principal Streamlit (Navbar, Login y 5 Pestañas)
+├── app.py                             # Aplicación principal Streamlit (Navbar, Login y 4 Pestañas)
 ├── batch_ingest.py                    # Ingesta masiva multihilo con caché SHA-256
 ├── excel_cleaner.py                   # Extractor y normalizador de libros Excel
 ├── run_app.bat / run_app.ps1          # Lanzadores de ejecución en Windows
@@ -79,7 +78,7 @@ streamlit run app.py
 | Usuario | Rol Asignado | Contraseña Inicial | Nivel de Acceso |
 | :--- | :--- | :--- | :--- |
 | `admin` | Administrador | `admin2026` | Acceso total (Bóveda `[VAULT]`, Ingesta Batch, Edición, Rollback) |
-| `operador` | Operador | `operador2026` | Consultas Copilot, Búsqueda DuckDB, Visor Lado a Lado e Ingesta |
+| `operador` | Operador | `operador2026` | Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado e Ingesta |
 | `auditor` | Auditor | `auditor2026` | Solo lectura (Búsqueda DuckDB y Visor Documental) |
 
 ---
@@ -101,15 +100,14 @@ streamlit run app.py
 ## 5. Guía por Pestaña de la Consola
 
 * **Pantalla de Login:** Acceso corporativo con validación criptográfica PBKDF2. Bloquea la carga de la aplicación y CMDB a usuarios no autorizados.
-* **Navbar Superior:** Marca corporativa, usuario activo (`@admin [Administrador]`), estado `● ONLINE`, selector de vista (`[Consola]` | `[Manual de Uso]`) y contadores documentales.
+* **Navbar Superior:** Marca corporativa `[CLI] Consola de Infraestructura y Operaciones`, usuario activo (`@admin [Administrador]`), estado `● ONLINE`, selector de vista (`[Consola]` | `[Manual de Uso]`) y contadores documentales.
 * **Panel Lateral (Sidebar):** Tarjeta de sesión activa con botón **`>_ Cerrar Sesión`**, cargador de archivos individuales o paquetes **`[ZIP BATCH]`**, explorador de documentos filtrable, botón **`>_ Reindexar`** y **Bóveda de Credenciales `[VAULT]`** (exclusiva para administradores).
 * **Pestaña 1 (Consultas y Búsqueda):**
-  * *Subpestaña 1.1 (Búsqueda Textual):* Búsqueda en milisegundos (< 2 ms) en memoria RAM sobre DuckDB y documentación, con chips rápidos (`BALANCER001`, `10.24.0.125`, `JWT`, `Failover Redis`), visualización de servidores y fragmentos coincidentes, más botón puente para analizar con el Copilot.
-  * *Subpestaña 1.2 (Copilot de Infraestructura):* Diálogo analítico con Gemini 2.5 Flash RAG, aceleración por memoria caché, diagnósticos de causa raíz y botón **`>_ Limpiar Chat`**.
+  * *Subpestaña 1.1 (Búsqueda Textual):* Búsqueda en milisegundos (< 2 ms) en memoria RAM sobre DuckDB y documentación, visualización de servidores y fragmentos coincidentes, más botón puente para analizar con el Asistente Técnico.
+  * *Subpestaña 1.2 (Asistente Técnico):* Diálogo analítico con Gemini 2.5 Flash RAG, aceleración por memoria caché, diagnósticos de causa raíz y botón **`>_ Limpiar Chat`**.
 * **Pestaña 2 (Historial de Mantenimientos):** Tabla interactiva de servidores con filtros por Nivel de Arquitectura (L1-L4), Estado y Técnico, más consola SQL DuckDB en memoria RAM sobre `mantenimientos.csv`.
 * **Pestaña 3 (Documentación Técnica y Versionado):** Visor Lado a Lado protegido (Markdown vs Original), renderizado de diagramas, editor de libros Excel, editor de texto seguro, comparador Diff (límite 400 líneas) y Rollback auditado.
 * **Pestaña 4 (Plantillas y Runbooks):** Asistente paso a paso para la redacción, validación y publicación formal de procedimientos operativos (`v1`).
-* **Pestaña 5 (Integración SAP - API):** Monitoreo del landscape SAP, verificación de endpoints y latencia en milisegundos, visualizador de topología Mermaid para HANA HSR y NetWeaver, visor de payload JSON REST/OData y botón de sincronización hacia la CMDB local.
 
 ---
 
@@ -122,12 +120,11 @@ streamlit run app.py
 | **Motor de Inteligencia (IA)** | Google GenAI SDK (`google-genai`) | Inferencia generativa RAG con `gemini-2.5-flash` fundamentada en evidencia CMDB |
 | **Aceleración de Consultas** | LRU Query Cache + Pre-normalización | Caché en RAM para respuestas instantáneas (< 1 ms) y búsqueda léxica sub-milisegundo |
 | **Bóveda de Credenciales** | Python `cryptography` (Fernet / AES-256) | Custodia cifrada local de API Keys y tokens con jerarquía en cascada |
-| **Integración ERP / Core** | Conector REST / OData SAP | Telemetría e inventario de SAP S/4HANA y bases de datos SAP HANA HSR |
 | **Motor SQL en Memoria** | DuckDB + Pandas | Consultas ultrarrápidas en RAM con Zero Disk I/O sobre mantenimientos e inventario |
 | **Conversión Documental** | Microsoft MarkItDown + OpenPyXL | Extracción estructurada sin base64 masivo para protección de memoria en navegador |
 | **Ingesta Batch ZIP** | Python `zipfile` + `io.BytesIO` | Descompresión e ingesta masiva en memoria de paquetes `.zip` directamente desde la web |
 | **Auditoría e Integridad** | Python `hashlib` (SHA-256) + `difflib` | Versionado inmutable, Diff y bitácora de auditoría en `audit_log.json` |
-| **Diagramas de Topología** | Mermaid.js | Visualización interactiva de arquitectura en 4 niveles y landscapes SAP |
+| **Diagramas de Topología** | Mermaid.js | Visualización interactiva de arquitectura en 4 niveles |
 
 ---
 

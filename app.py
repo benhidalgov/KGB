@@ -202,7 +202,7 @@ def _render_kpi_grid(total_reg: int, cnt_op: int, cnt_rev: int, cnt_crit: int, t
 
 
 # 1. Configuración de Streamlit
-st.set_page_config(page_title="KGB - Camarada de Infraestructura", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Consola de Infraestructura y Operaciones", layout="wide", initial_sidebar_state="expanded")
 st.markdown(cargar_estilos_css(), unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
 
@@ -387,7 +387,7 @@ with st.sidebar:
                         st.toast(f"[INFO] Credencial '{k_final}' revocada.")
                         st.rerun()
 
-    st.markdown(f'<div class="sidebar-footer"><span class="sidebar-footer-version">[v1.0] KGB Camarada</span><span class="sidebar-footer-ts">Sesion: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="sidebar-footer"><span class="sidebar-footer-version">[v1.0] Consola Operaciones</span><span class="sidebar-footer-ts">Sesion: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}</span></div>', unsafe_allow_html=True)
 
 # 5. Navbar Hero Card
 cant_docs = len(st.session_state.doc_store)
@@ -398,7 +398,7 @@ total_srvs = len(df_mantenimientos_cache)
 with st.container(border=True):
     col_brand, col_nav_mode, col_stats = st.columns([1.8, 1.3, 1.0], gap="small", vertical_alignment="center")
     with col_brand:
-        st.markdown('<div class="navbar-brand-container"><span class="navbar-brand-badge">[KGB]</span><span class="navbar-brand-title">KGB - Camarada de Infraestructura</span><div class="navbar-brand-badges"><span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span></div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="navbar-brand-container"><span class="navbar-brand-badge">[CLI]</span><span class="navbar-brand-title">Consola de Infraestructura y Operaciones</span><div class="navbar-brand-badges"><span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span></div></div>', unsafe_allow_html=True)
     with col_nav_mode:
         vista_seleccionada = st.segmented_control("Vista", ["Consola", "Manual de Uso"], default="Consola", label_visibility="collapsed", key="top_navbar_view_selector") or "Consola"
     with col_stats:
@@ -409,17 +409,16 @@ if "Manual" in str(vista_seleccionada):
     st.stop()
 
 # 6. Pestañas Principales
-tab_chat, tab_analytics, tab_docs, tab_templates, tab_sap = st.tabs([
+tab_chat, tab_analytics, tab_docs, tab_templates = st.tabs([
     "Consultas y Búsqueda",
     f"Historial de Mantenimientos ({total_srvs})",
     f"Documentación Técnica ({cant_docs})",
-    "Plantillas y Runbooks",
-    "Integración SAP (API)"
+    "Plantillas y Runbooks"
 ])
 
 # ----------------- TAB 1: CONSULTAS Y BÚSQUEDA -----------------
 with tab_chat:
-    subtab_duckdb, subtab_camarada = st.tabs(["Búsqueda Textual (DuckDB & Docs)", "Camarada KGB (Gemini RAG)"])
+    subtab_duckdb, subtab_asistente = st.tabs(["Búsqueda Textual (DuckDB & Docs)", "Asistente Técnico (Gemini RAG)"])
 
     with subtab_duckdb:
         st.markdown("#### Búsqueda Textual en Inventario CMDB y Documentación")
@@ -432,15 +431,7 @@ with tab_chat:
             with col_dbtn:
                 sub_duckdb = st.form_submit_button("Buscar", type="primary", width="stretch")
 
-        st.markdown("<div style='margin-top:-6px;margin-bottom:8px;font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;opacity:0.7;'>Búsquedas rápidas:</div>", unsafe_allow_html=True)
-        if "quick_duck_ver" not in st.session_state:
-            st.session_state.quick_duck_ver = 0
-        sel_duck_pill = st.pills("Búsquedas rápidas", options=[">_ BALANCER001", ">_ 10.24.0.125", ">_ Autenticacion JWT", ">_ Failover Redis", ">_ SN-8842-A", ">_ PureStorage SAN"], default=None, label_visibility="collapsed", key=f"pills_duck_{st.session_state.quick_duck_ver}")
-        prompt_duck_pill = sel_duck_pill.replace(">_ ", "").strip() if sel_duck_pill else None
-        if sel_duck_pill:
-            st.session_state.quick_duck_ver += 1
-
-        active_duck_term = prompt_duck_pill or (query_duckdb_in.strip() if sub_duckdb and query_duckdb_in.strip() else st.session_state.get("duckdb_active_term", ""))
+        active_duck_term = query_duckdb_in.strip() if sub_duckdb and query_duckdb_in.strip() else st.session_state.get("duckdb_active_term", "")
         st.session_state["duckdb_active_term"] = active_duck_term
 
         if not active_duck_term:
@@ -486,34 +477,26 @@ with tab_chat:
             st.markdown("---")
             col_bt, col_bb = st.columns([3.5, 1.5], vertical_alignment="center")
             with col_bt:
-                st.caption("¿Deseas un análisis técnico y diagnóstico asistido con el Camarada?")
+                st.caption("¿Deseas un análisis técnico y diagnóstico asistido con IA?")
             with col_bb:
-                if st.button(">_ Analizar con Camarada KGB", width="stretch", type="primary", key="btn_bridge_to_copilot"):
+                if st.button(">_ Analizar con Asistente", width="stretch", type="primary", key="btn_bridge_to_asistente"):
                     with st.spinner("Generando análisis..."):
                         resp_c = generar_respuesta_asistente(active_duck_term, st.session_state.doc_store)
                         st.session_state.historial_busquedas.insert(0, {"query": active_duck_term, "response": resp_c, "timestamp": pd.Timestamp.now().strftime("%H:%M:%S")})
                     st.rerun()
 
-    with subtab_camarada:
-        st.markdown("#### Camarada KGB de Infraestructura y Operaciones (Gemini RAG)")
+    with subtab_asistente:
+        st.markdown("#### Asistente de Infraestructura y Operaciones (Gemini RAG)")
         st.caption("Asistente técnico especializado con inyección contextual RAG (CMDB + Documentación).")
 
-        with st.form(key="top_copilot_form", clear_on_submit=True):
+        with st.form(key="top_asistente_form", clear_on_submit=True):
             col_cin, col_cbtn = st.columns([5, 1])
             with col_cin:
-                query_copilot_in = st.text_input("Consulta:", placeholder="Ej: Explícame el procedimiento de failover de Redis y sus dependencias...", label_visibility="collapsed")
+                query_asistente_in = st.text_input("Consulta:", placeholder="Ej: Explícame el procedimiento de failover de Redis y sus dependencias...", label_visibility="collapsed")
             with col_cbtn:
-                sub_copilot = st.form_submit_button("Consultar al Camarada", type="primary", width="stretch")
+                sub_asistente = st.form_submit_button("Consultar Asistente", type="primary", width="stretch")
 
-        st.markdown("<div style='margin-top:-6px;margin-bottom:6px;font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;opacity:0.7;'>Consultas recomendadas:</div>", unsafe_allow_html=True)
-        if "quick_copilot_ver" not in st.session_state:
-            st.session_state.quick_copilot_ver = 0
-        sel_c_pill = st.pills("Consultas recomendadas", options=[">_ Diagnóstico y estado de BALANCER001", ">_ Procedimiento de Failover Redis", ">_ Arquitectura de Autenticación JWT", ">_ Servidores críticos en DMZ", ">_ Políticas de parche y antivirus", ">_ Topología y dependencias SAP"], default=None, label_visibility="collapsed", key=f"pills_copilot_{st.session_state.quick_copilot_ver}")
-        p_c_rapido = sel_c_pill.replace(">_ ", "").strip() if sel_c_pill else None
-        if sel_c_pill:
-            st.session_state.quick_copilot_ver += 1
-
-        query_c_exec = p_c_rapido or (query_copilot_in.strip() if sub_copilot and query_copilot_in.strip() else None)
+        query_c_exec = query_asistente_in.strip() if sub_asistente and query_asistente_in.strip() else None
         if query_c_exec:
             with st.spinner("Analizando infraestructura..."):
                 resp = generar_respuesta_asistente(query_c_exec, st.session_state.doc_store)
@@ -524,8 +507,8 @@ with tab_chat:
         if not st.session_state.historial_busquedas:
             st.markdown("""
             <div class="empty-state-container">
-                <div class="empty-state-console-icon">&gt;_ kgb::rag_engine</div>
-                <div class="empty-state-title">Camarada KGB de Infraestructura y Operaciones</div>
+                <div class="empty-state-console-icon">&gt;_ infra::rag_engine</div>
+                <div class="empty-state-title">Asistente de Infraestructura y Operaciones</div>
                 <div class="empty-state-subtitle">Realiza preguntas analíticas y operativas fundamentadas estrictamente en la evidencia técnica.</div>
             </div>""", unsafe_allow_html=True)
         else:
@@ -533,7 +516,7 @@ with tab_chat:
             with col_rt:
                 st.markdown(f"<div style='font-size:0.95rem;font-weight:600;'>Historial de Consultas ({len(st.session_state.historial_busquedas)}):</div>", unsafe_allow_html=True)
             with col_rb:
-                if st.button(">_ Limpiar Chat", width="stretch", key="btn_clear_search_history_copilot"):
+                if st.button(">_ Limpiar Chat", width="stretch", key="btn_clear_search_history"):
                     st.session_state.historial_busquedas = []
                     st.session_state.messages = []
                     st.toast("[INFO] Historial reiniciado")
@@ -916,8 +899,8 @@ with tab_templates:
             st.success(f"¡Procedimiento guardado e indexado como **{nom_f}** [Version v1]!")
             st.rerun()
 
-# ----------------- TAB 5: INTEGRACIÓN SAP (API) -----------------
-with tab_sap:
+# ----------------- TAB 5: INTEGRACIÓN SAP (API) (OCULTO TEMPORALMENTE) -----------------
+if False:
     st.markdown("""
     <div class="search-result-card" style="margin-bottom: 18px; border-left: 4px solid #6366F1;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
