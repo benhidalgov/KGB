@@ -4,7 +4,7 @@ import re
 import streamlit as st
 import pandas as pd
 from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, obtener_nombres_hojas_excel
-from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes
+from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes, normalizar_titulo_display
 from core.configuracion import DOCS_DIR
 
 MIME_MAP = {
@@ -133,7 +133,7 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
         st.code(md_content, language="markdown")
 
 
-def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content: str = "", key_suffix: str = ""):
+def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content: str = "", height: int = 480, key_suffix: str = ""):
     """Renderiza el documento fuente original de forma adaptativa según su tipo de formato binario."""
     if not ruta_original or not os.path.exists(ruta_original):
         st.info("[INFORMACIÓN] El documento no dispone de un archivo binario original adjunto en disco.")
@@ -160,9 +160,9 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
         sheets = obtener_nombres_hojas_excel(ruta_original, mtime)
         hoja_sel = st.selectbox("Seleccionar Hoja de Trabajo:", sheets, key=f"visor_orig_sheet_{fname}_{key_suffix}")
         df_hoja = cargar_hoja_excel_dataframe(ruta_original, hoja_sel, mtime)
-        st.dataframe(df_hoja, width="stretch", height=420)
+        st.dataframe(df_hoja, width="stretch", height=height)
     elif ext == ".pdf":
-        mostrar_pdf_embebido(ruta_original, height=480)
+        mostrar_pdf_embebido(ruta_original, height=height)
     elif ext in (".docx", ".doc", ".pptx", ".ppt"):
         st.markdown(f"""
         <div class="visor-office-notice-card">
@@ -174,7 +174,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
         try:
             with open(ruta_original, "r", encoding="utf-8", errors="ignore") as f:
                 raw_text = f.read()
-            st.code(raw_text[:5000] + ("\n... [Truncado]" if len(raw_text) > 5000 else ""), language=ext.replace(".", ""))
+            st.code(raw_text[:8000] + ("\n... [Truncado]" if len(raw_text) > 8000 else ""), language=ext.replace(".", ""))
         except Exception as e:
             st.error(f"Error al leer archivo: {str(e)}")
 
@@ -202,19 +202,25 @@ def _render_md_tabs(md_content: str, doc_name: str, ruta_original: str | None):
 
 
 def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | None, ultima_version: int = 1, ultimo_editor: str = "Técnico Responsable", ultimo_timestamp: str = "N/A", key_suffix: str = ""):
-    """Gestiona la visualización Lado a Lado de documentos técnicos y diagramas."""
+    """Gestiona la visualización Lado a Lado de documentos técnicos y diagramas con Modo Enfoque inmersivo."""
     es_diag = doc_name.startswith("DIAGRAMA__") or (ruta_original and any(ruta_original.lower().endswith(e) for e in IMAGE_EXTENSIONS))
     if es_diag and ruta_original and os.path.exists(ruta_original):
         renderizar_diagrama_limpio(ruta_original, doc_name, md_content, ultima_version, ultimo_editor, ultimo_timestamp, key_suffix)
         return
 
-    col_sel, col_stat = st.columns([2.5, 1.5], vertical_alignment="center")
+    col_sel, col_zen, col_stat = st.columns([2.0, 1.3, 1.2], vertical_alignment="center")
     with col_sel:
         modo_vista = st.segmented_control("Modo de Visualización", ["[Lado a Lado]", "[Solo Markdown]", "[Solo Formato Original]"], default="[Lado a Lado]", label_visibility="collapsed", key=f"seg_modo_vista_{doc_name}_{key_suffix}") or "[Lado a Lado]"
+    with col_zen:
+        if st.button(">_ Abrir Zen Studio", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el entorno inmersivo de lectura a pantalla completa con índice interactivo y buscador interno."):
+            st.session_state["zen_studio_activo"] = True
+            st.session_state["zen_doc_sel"] = doc_name
+            st.rerun()
     with col_stat:
         badge = '<span class="badge-ok">Fuente Disponible</span>' if (ruta_original and os.path.exists(ruta_original)) else '<span class="badge-warn">Nativo Markdown</span>'
-        st.markdown(f'<div style="text-align: right; padding-top: 18px;"><b>Estado Fuente:</b> {badge}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: right; padding-top: 14px;"><b>Estado:</b> {badge}</div>', unsafe_allow_html=True)
 
+    alt_visores = 550
     st.markdown("---")
 
     if modo_vista == "[Lado a Lado]":
@@ -225,9 +231,258 @@ def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | 
         with col_orig:
             st.markdown("##### [Documento Fuente Original]")
             with st.container(border=True):
-                renderizar_original_adaptativo(ruta_original, doc_name, md_content=md_content, key_suffix=f"side_{key_suffix}")
+                renderizar_original_adaptativo(ruta_original, doc_name, md_content=md_content, height=alt_visores, key_suffix=f"side_{key_suffix}")
     elif modo_vista == "[Solo Markdown]":
         _render_md_tabs(md_content, doc_name, ruta_original)
     else:
         with st.container(border=True):
-            renderizar_original_adaptativo(ruta_original, doc_name, md_content=md_content, key_suffix=f"full_{key_suffix}")
+            renderizar_original_adaptativo(ruta_original, doc_name, md_content=md_content, height=alt_visores, key_suffix=f"full_{key_suffix}")
+
+
+def extraer_tabla_de_contenidos(md_content: str) -> list[dict]:
+    """Analiza el documento Markdown y extrae la jerarquía de títulos (H1-H4)."""
+    toc = []
+    lineas = md_content.splitlines()
+    for idx, linea in enumerate(lineas):
+        m = re.match(r'^(#{1,4})\s+(.+)$', linea.strip())
+        if m:
+            nivel = len(m.group(1))
+            titulo = m.group(2).strip()
+            titulo_limpio = re.sub(r'[*_`]', '', titulo)
+            toc.append({
+                "nivel": nivel,
+                "titulo": titulo_limpio,
+                "linea": idx + 1,
+                "id": f"sec_{idx}"
+            })
+    return toc
+
+
+def resaltar_termino_en_html(html_o_md: str, termino: str) -> tuple[str, int]:
+    """Resalta con etiqueta mark las ocurrencias de una palabra clave."""
+    if not termino or not termino.strip():
+        return html_o_md, 0
+    t_clean = re.escape(termino.strip())
+    patron = re.compile(rf'(?i)({t_clean})')
+    coincidencias = len(patron.findall(html_o_md))
+    if coincidencias > 0:
+        res = patron.sub(r'<mark style="background-color: #fef08a; color: #713f12; padding: 2px 4px; border-radius: 3px; font-weight: 600;">\1</mark>', html_o_md)
+        return res, coincidencias
+    return html_o_md, 0
+
+
+def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | None, u_ver: int = 1, u_edit: str = "Técnico", u_time: str = "N/A"):
+    """Renderiza el entorno inmersivo Zen Studio con TOC interactivo, buscador interno, personalización de lectura y visor multimodal."""
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    [data-testid="stMainBlockContainer"] {
+        max-width: 98vw !important;
+        padding: 0.6rem 1.4rem !important;
+    }
+    .zen-top-bar {
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(99, 102, 241, 0.35);
+        border-radius: 8px;
+        padding: 10px 18px;
+        margin-bottom: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+    .zen-toc-card {
+        background: rgba(128, 128, 128, 0.04);
+        border: 1px solid rgba(128, 128, 128, 0.18);
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 12px;
+        max-height: 55vh;
+        overflow-y: auto;
+    }
+    .zen-toc-item {
+        padding: 4px 6px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: background 0.15s;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .zen-toc-item:hover {
+        background: rgba(99, 102, 241, 0.15);
+        color: #6366F1;
+    }
+    .zen-stats-card {
+        background: rgba(99, 102, 241, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.78rem;
+        margin-top: 10px;
+    }
+    .zen-reader-canvas {
+        background: var(--zen-bg, rgba(128,128,128,0.03));
+        color: var(--zen-fg, inherit);
+        border: 1px solid rgba(128, 128, 128, 0.18);
+        border-radius: 8px;
+        padding: 24px 32px;
+        min-height: 75vh;
+        font-size: var(--zen-size, 15px);
+        line-height: 1.75;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col_zt_title, col_zt_search, col_zt_theme, col_zt_exit = st.columns([3.2, 2.4, 2.2, 1.2], vertical_alignment="center")
+
+    with col_zt_title:
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
+            <span class="badge-ok" style="font-size:0.7rem;padding:2px 8px;font-weight:700;">[ZEN STUDIO]</span>
+            <span style="font-size:1.05rem;font-weight:700;color:#6366F1;">{normalizar_titulo_display(doc_name)}</span>
+            <span class="badge-info" style="font-size:0.68rem;">v{u_ver}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_zt_search:
+        zen_search_query = st.text_input("Buscar en doc:", placeholder="Resaltar término en documento...", label_visibility="collapsed", key="zen_search_in_doc")
+
+    with col_zt_theme:
+        col_zt_th1, col_zt_th2 = st.columns(2)
+        with col_zt_th1:
+            tema_lectura = st.selectbox("Tema", ["Obsidian", "Sepia", "Papel"], label_visibility="collapsed", key="zen_theme_selector")
+        with col_zt_th2:
+            tam_fuente = st.selectbox("Tamaño", ["Normal (15px)", "Grande (17px)", "Compacto (13px)"], label_visibility="collapsed", key="zen_font_size_selector")
+
+    with col_zt_exit:
+        if st.button(">_ Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
+            st.session_state["zen_studio_activo"] = False
+            st.rerun()
+
+    font_size_val = "17px" if "Grande" in tam_fuente else ("13px" if "Compacto" in tam_fuente else "15px")
+    if tema_lectura == "Sepia":
+        st.markdown(f"""
+        <style>
+        .zen-reader-canvas {{
+            --zen-bg: #fdf6e2;
+            --zen-fg: #2c251d;
+            --zen-size: {font_size_val};
+        }}
+        .zen-reader-canvas * {{
+            color: #2c251d !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+    elif tema_lectura == "Papel":
+        st.markdown(f"""
+        <style>
+        .zen-reader-canvas {{
+            --zen-bg: #ffffff;
+            --zen-fg: #0f172a;
+            --zen-size: {font_size_val};
+        }}
+        .zen-reader-canvas * {{
+            color: #0f172a !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <style>
+        .zen-reader-canvas {{
+            --zen-bg: rgba(15, 23, 42, 0.4);
+            --zen-fg: #f1f5f9;
+            --zen-size: {font_size_val};
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+
+    col_toc, col_canvas = st.columns([1.1, 3.4], gap="medium")
+
+    with col_toc:
+        st.markdown("##### [Índice de Secciones]")
+        toc_items = extraer_tabla_de_contenidos(md_content)
+        palabras = len(md_content.split())
+        minutos_lectura = max(1, palabras // 200)
+
+        if toc_items:
+            with st.container(border=True):
+                st.caption(f"**{len(toc_items)} secciones identificadas**:")
+                opciones_seccion = ["Documento Completo"] + [f"{'—' * (it['nivel'] - 1)} {it['titulo']}" for it in toc_items]
+                seccion_sel = st.selectbox("Saltar a Sección:", opciones_seccion, key="zen_section_jump_sel")
+
+                toc_html_list = []
+                for it in toc_items:
+                    indent = (it['nivel'] - 1) * 10
+                    badge_h = f"<span class='badge-tag' style='font-size:0.65rem;margin-right:4px;'>H{it['nivel']}</span>"
+                    toc_html_list.append(f"<div class='zen-toc-item' style='margin-left:{indent}px;'>{badge_h} {it['titulo']}</div>")
+                st.markdown(f"<div class='zen-toc-card'>{''.join(toc_html_list)}</div>", unsafe_allow_html=True)
+        else:
+            st.info("[INFO] Documento plano sin encabezados jerárquicos.")
+            seccion_sel = "Documento Completo"
+
+        st.markdown(f"""
+        <div class="zen-stats-card">
+            <div style="font-weight:700;color:#6366F1;margin-bottom:6px;">Métricas del Documento</div>
+            <div><b>Palabras:</b> {palabras:,}</div>
+            <div><b>Tiempo Lectura:</b> ~{minutos_lectura} min</div>
+            <div><b>Último Editor:</b> {u_edit}</div>
+            <div><b>Actualizado:</b> {u_time}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if ruta_original and os.path.exists(ruta_original):
+            ext_orig = os.path.splitext(ruta_original)[1].lower()
+            with open(ruta_original, "rb") as f_dl_zen:
+                st.download_button(
+                    label=f"Descargar Fuente ({ext_orig.upper().replace('.', '')})",
+                    data=f_dl_zen.read(),
+                    file_name=os.path.basename(ruta_original),
+                    mime=MIME_MAP.get(ext_orig, "application/octet-stream"),
+                    width="stretch",
+                    key=f"zen_dl_btn_{doc_name}"
+                )
+
+    with col_canvas:
+        texto_a_mostrar = md_content
+        if seccion_sel != "Documento Completo":
+            titulo_buscado = seccion_sel.lstrip('— ').strip()
+            patron_sec = re.compile(rf'(^#+\s+{re.escape(titulo_buscado)}[\s\S]*?)(?=^#+\s+|\Z)', re.MULTILINE)
+            m_sec = patron_sec.search(md_content)
+            if m_sec:
+                texto_a_mostrar = m_sec.group(1)
+
+        cnt_coincidencias = 0
+        if zen_search_query.strip():
+            texto_preparado = preparar_markdown_con_imagenes(texto_a_mostrar, doc_name=doc_name, ruta_original=ruta_original)
+            html_resaltado, cnt_coincidencias = resaltar_termino_en_html(texto_preparado, zen_search_query)
+            st.markdown(f"<div style='font-size:0.8rem;margin-bottom:6px;'><span class='badge-ok'>[{cnt_coincidencias} Coincidencias]</span> para '<b>{zen_search_query}</b>'</div>", unsafe_allow_html=True)
+        else:
+            html_resaltado = preparar_markdown_con_imagenes(texto_a_mostrar, doc_name=doc_name, ruta_original=ruta_original)
+
+        tiene_orig = ruta_original and os.path.exists(ruta_original)
+        if tiene_orig:
+            tab_z_fmt, tab_z_orig, tab_z_side = st.tabs(["Lector Markdown", "Documento Original", "Lado a Lado (50/50)"])
+            with tab_z_fmt:
+                st.markdown(f"<div class='zen-reader-canvas'>{html_resaltado}</div>", unsafe_allow_html=True)
+            with tab_z_orig:
+                with st.container(border=True):
+                    renderizar_original_adaptativo(ruta_original, doc_name, md_content=md_content, height=750, key_suffix="zen_orig")
+            with tab_z_side:
+                col_z_s1, col_z_s2 = st.columns(2, gap="medium")
+                with col_z_s1:
+                    st.markdown(f"<div class='zen-reader-canvas' style='padding:16px;'>{html_resaltado}</div>", unsafe_allow_html=True)
+                with col_z_s2:
+                    with st.container(border=True):
+                        renderizar_original_adaptativo(ruta_original, doc_name, md_content=md_content, height=750, key_suffix="zen_side")
+        else:
+            st.markdown(f"<div class='zen-reader-canvas'>{html_resaltado}</div>", unsafe_allow_html=True)

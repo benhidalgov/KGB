@@ -60,8 +60,11 @@ def verificar_credenciales(username_input: str, password_input: str) -> Optional
     if not u or not p:
         return None
 
-    if hasattr(st, "secrets") and u == "admin" and "ADMIN_PASSWORD" in st.secrets and p == str(st.secrets["ADMIN_PASSWORD"]).strip():
-        return {"username": "admin", "nombre": "Administrador (Cloud Secrets)", "rol": "Administrador", "activo": True}
+    try:
+        if hasattr(st, "secrets") and u == "admin" and "ADMIN_PASSWORD" in st.secrets and p == str(st.secrets["ADMIN_PASSWORD"]).strip():
+            return {"username": "admin", "nombre": "Administrador (Cloud Secrets)", "rol": "Administrador", "activo": True}
+    except Exception:
+        pass
 
     usuarios = inicializar_almacen_usuarios()
     if u in usuarios and usuarios[u].get("activo", True):

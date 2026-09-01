@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 import streamlit_antd_components as sac
 
-from core.visor import renderizar_lado_a_lado
+from core.visor import renderizar_lado_a_lado, renderizar_zen_studio
 from core.plantillas import (
     generar_doc_plantilla,
     obtener_todos_los_tipos_plantillas,
@@ -223,6 +223,21 @@ elif any(len(v) > 150_000 for v in st.session_state.doc_store.values()):
     limpiar_cache_documentos()
     st.session_state.doc_store.clear()
     cargar_documentos_locales(st.session_state.doc_store, force=True)
+
+# 3.1 Modo Zen Studio (Lector Inmersivo de Documentos y TOC)
+if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_sel"):
+    doc_z = st.session_state["zen_doc_sel"]
+    if doc_z in st.session_state.doc_store:
+        cont_z = st.session_state.doc_store[doc_z]
+        hist_z = inicializar_version_inicial_si_no_existe(doc_z, cont_z)
+        u_ver_z = len(hist_z)
+        u_edit_z = hist_z[-1]["autor"] if hist_z else "Técnico"
+        u_time_z = hist_z[-1]["timestamp"] if hist_z else "N/A"
+        ruta_orig_z = obtener_ruta_original(doc_z, cont_z)
+        renderizar_zen_studio(doc_z, cont_z, ruta_orig_z, u_ver_z, u_edit_z, u_time_z)
+        st.stop()
+    else:
+        st.session_state["zen_studio_activo"] = False
 
 # 4. Sidebar (Panel de Control e Ingesta)
 with st.sidebar:
@@ -637,14 +652,23 @@ with tab_docs:
             f_carga = historial[0]["timestamp"].split()[0] if (historial and " " in historial[0]["timestamp"]) else "N/A"
             ruta_orig = obtener_ruta_original(doc_sel, doc_cont)
 
-            st.markdown(f"""
-            <div style="background-color:rgba(128,128,128,0.08);border:1px solid rgba(128,128,128,0.2);border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                <div><b>Documento:</b> <span style="color:#6366F1;font-weight:600;">{normalizar_titulo_display(doc_sel)}</span> <span style="font-family:monospace;opacity:0.65;font-size:0.8rem;">({doc_sel})</span></div>
-                <div><b>Versión:</b> <span class="badge-ok">v{u_ver}</span></div>
-                <div><b>Fecha Carga:</b> <span class="badge-tag">[{f_carga}]</span></div>
-                <div><b>Último Editor:</b> <span style="color:#10B981;font-weight:500;">{u_edit}</span></div>
-                <div><b>Actualizado:</b> <span style="opacity:0.75;">{u_time}</span></div>
-            </div>""", unsafe_allow_html=True)
+            col_meta_t3, col_zen_t3 = st.columns([3.8, 1.2], vertical_alignment="center")
+            with col_meta_t3:
+                st.markdown(f"""
+                <div style="background-color:rgba(128,128,128,0.08);border:1px solid rgba(128,128,128,0.2);border-radius:6px;padding:8px 14px;font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <div><b>Documento:</b> <span style="color:#6366F1;font-weight:600;">{normalizar_titulo_display(doc_sel)}</span> <span style="font-family:monospace;opacity:0.65;font-size:0.8rem;">({doc_sel})</span></div>
+                    <div><b>Versión:</b> <span class="badge-ok">v{u_ver}</span></div>
+                    <div><b>Fecha Carga:</b> <span class="badge-tag">[{f_carga}]</span></div>
+                    <div><b>Último Editor:</b> <span style="color:#10B981;font-weight:500;">{u_edit}</span></div>
+                    <div><b>Actualizado:</b> <span style="opacity:0.75;">{u_time}</span></div>
+                </div>""", unsafe_allow_html=True)
+            with col_zen_t3:
+                if st.button(">_ Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_tab3_zen_top_{doc_sel}", help="Abre el entorno inmersivo Zen Studio a pantalla completa con índice interactivo."):
+                    st.session_state["zen_studio_activo"] = True
+                    st.session_state["zen_doc_sel"] = doc_sel
+                    st.rerun()
+
+            st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
 
             subtab_v, subtab_e, subtab_h = st.tabs(["Visualización Lado a Lado", "Editar Documento", f"Historial de Versiones ({u_ver})"])
 
