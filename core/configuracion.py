@@ -12,6 +12,7 @@ MANIFEST_PATH = os.path.join("data", "ingestion_manifest.json")
 ESTILOS_CSS_PATH = os.path.join("core", "estilos.css")
 VAULT_FILE_PATH = os.path.join("data", ".vault.enc")
 VAULT_KEY_PATH = os.path.join("data", ".vault.key")
+CATEGORIAS_PATH = os.path.join("data", "categorias.json")
 
 # Asegurar la existencia de directorios base
 for directory in [DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR, HISTORY_DIR]:

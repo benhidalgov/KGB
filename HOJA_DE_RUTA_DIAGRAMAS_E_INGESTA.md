@@ -47,7 +47,7 @@ Este documento contiene el registro de avances completados y la planificación t
   - **KPI Stat Chips:** Micro-tarjetas ampliadas de alta legibilidad para conteo en vivo de `Documentos` e `Inventario CMDB`.
   - **Pestañas Dinámicas:** Estandarización de títulos con contadores automáticos (`Consultas y Búsqueda`, `Historial de Mantenimientos (10)`, `Documentación Técnica (23)`, `Plantillas y Runbooks`).
   - **Paleta Obsidian & Indigo (Theme-Safe):** Acentos en Índigo (`#6366F1`), estados operativos `[OK]` (`#10B981`), `[WARN]` (`#D97706`), `[CRIT]` (`#E11D48`) y bordes laterales de 3.5px en tarjetas de búsqueda.
-  - **Gobernanza:** Prohibición estricta de la palabra "AIOps" y política de cero emojis en todo el proyecto.
+  - **Gobernanza:** Terminología estricta de Operaciones e Infraestructura y política de cero emojis en todo el proyecto.
 
 - [x] **Paso 8: Normalizador Integral de Nombres y Estandarización de Archivos** *(COMPLETADO)*
   - Sanitización automática de nombres de archivo a `snake_case` seguro en disco (`normalizar_nombre_archivo`), eliminando acentos, caracteres conflictivos y dobles extensiones.

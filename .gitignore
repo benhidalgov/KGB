@@ -15,6 +15,7 @@ data/docs/*
 !data/docs/.gitkeep
 data/mantenimientos.csv
 data/ingestion_manifest.json
+!data/categorias.json
 
 # Cache de Python y bytecode
 __pycache__/

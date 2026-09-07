@@ -7,6 +7,7 @@ import pandas as pd
 from core.configuracion import CSV_PATH
 from core.procesador import normalizar_titulo_display
 from core.vault import obtener_secreto
+from core.tags import obtener_tags_documento
 
 _DUCKDB_CON = None
 _DUCKDB_LAST_MTIME = -1.0
@@ -92,7 +93,14 @@ def buscar_en_documentos(query: str, doc_store: dict) -> list:
     resultados = []
     for doc_name, content in doc_store.items():
         name_norm, content_norm = _obtener_texto_normalizado(doc_name, content)
-        score = (30 if query_norm in content_norm else 0) + sum(20 for t in tokens if t in name_norm) + sum(content_norm.count(t) * 2 for t in tokens)
+        tags_d = obtener_tags_documento(doc_name)
+        tags_norm = [normalizar_texto(t) for t in tags_d]
+        score = (
+            (30 if query_norm in content_norm else 0)
+            + sum(20 for t in tokens if t in name_norm)
+            + sum(25 for t in tokens if any(t in tn for tn in tags_norm))
+            + sum(content_norm.count(t) * 2 for t in tokens)
+        )
         if score > 0:
             resultados.append((doc_name, content, score))
 
@@ -181,7 +189,7 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
             "Eres el Asistente de Infraestructura y Operaciones, un Ingeniero Principal de Infraestructura senior corporativo.\n"
             "DIRECTRICES ESTRICTAS:\n"
             "1. PROHIBICION TOTAL DE EMOJIS: Queda estrictamente prohibido incluir cualquier emoji o icono visual Unicode.\n"
-            "2. PROHIBICION TOTAL DE LA PALABRA 'AIOps': Utiliza terminos como 'Operaciones', 'Infraestructura' o 'Consola de Operaciones'.\n"
+            "2. TERMINOLOGIA EXCLUSIVA: Utiliza exclusivamente terminos formales como 'Operaciones', 'Infraestructura' o 'Consola de Operaciones'.\n"
             "3. ZERO HALLUCINATIONS: Basa tus respuestas unicamente en la evidencia provista en el contexto.\n"
             "4. ESTILO CORPORATIVO: Sobrio, formal, tablas Markdown y bloques de configuracion cuando sea pertinente."
         )
@@ -254,10 +262,12 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         frag = resaltar_terminos_en_html(limpiar_encabezados_snippet(extraer_fragmento_relevante(content, prompt_usuario)), prompt_usuario)
         tipo_badge = "[Diagrama]" if doc_name.startswith("DIAGRAMA__") else "[Documento]"
         score_label = "Alta" if score >= 20 else "Media"
+        tags_doc0 = obtener_tags_documento(doc_name)
+        tag_badge0 = f'<span class="badge-tag" style="margin-left: 6px;">[{tags_doc0[0]}]</span>' if tags_doc0 else ""
 
         html_out = f"""<div class="search-result-card" style="border-left: 3.5px solid #6366F1;">
     <div class="search-header-row">
-        <div><span class="badge-info">{tipo_badge}</span><span class="search-doc-title" style="margin-left: 8px;">{normalizar_titulo_display(doc_name)}</span><span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65; margin-left: 6px;">({doc_name})</span></div>
+        <div><span class="badge-info">{tipo_badge}</span>{tag_badge0}<span class="search-doc-title" style="margin-left: 8px;">{normalizar_titulo_display(doc_name)}</span><span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65; margin-left: 6px;">({doc_name})</span></div>
         <div><span class="badge-ok">Relevancia: {score_label} ({score} pts)</span></div>
     </div>
     <div style="font-size: 0.82rem; font-weight: 600; opacity: 0.85; margin-bottom: 6px;">Fragmento Recuperado:</div>
@@ -267,11 +277,13 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         if len(doc_matches) > 1:
             html_out += f"\n\n**Otros documentos coincidentes ({len(doc_matches) - 1}):**\n"
             for sec_name, sec_content, sec_score in doc_matches[1:3]:
+                sec_tags = obtener_tags_documento(sec_name)
+                sec_tag_b = f'<span class="badge-tag" style="margin-left: 6px;">[{sec_tags[0]}]</span>' if sec_tags else ""
                 sec_frag = resaltar_terminos_en_html(limpiar_encabezados_snippet(extraer_fragmento_relevante(sec_content, prompt_usuario, max_chars=250)), prompt_usuario)
                 sec_b = "[Diagrama]" if sec_name.startswith("DIAGRAMA__") else "[Documento]"
                 html_out += f"""\n<div style="background-color: rgba(128, 128, 128, 0.03); border: 1px solid rgba(128, 128, 128, 0.18); border-radius: 6px; padding: 10px; margin-top: 8px; font-size: 0.85rem;">
     <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-        <span><b>{sec_b} {normalizar_titulo_display(sec_name)}</b> <span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65;">({sec_name})</span></span>
+        <span><b>{sec_b} {normalizar_titulo_display(sec_name)}</b>{sec_tag_b} <span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65;">({sec_name})</span></span>
         <span class="badge-tag">Score: {sec_score} pts</span>
     </div>
     <div style="font-size: 0.82rem; opacity: 0.9; line-height: 1.4;">{sec_frag}</div>

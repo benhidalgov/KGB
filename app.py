@@ -31,6 +31,13 @@ from core.procesador import (
     obtener_ruta_original,
     limpiar_cache_documentos,
 )
+from core.tags import (
+    obtener_categorias_disponibles,
+    registrar_categoria,
+    obtener_tags_documento,
+    asignar_tags_documento,
+    filtrar_documentos_por_categoria,
+)
 from core.motor import (
     ejecutar_consulta_sql,
     buscar_servidores_duckdb,
@@ -85,9 +92,10 @@ def procesar_e_ingestar_binario(
     buf: bytes,
     doc_store: dict,
     autor: str = "Técnico / Panel Lateral",
-    origen_detalle: str = "Carga en panel lateral"
+    origen_detalle: str = "Carga en panel lateral",
+    tags: list[str] | None = None
 ) -> tuple[str, str]:
-    """Procesa e ingesta un archivo binario, versionándolo y actualizando doc_store."""
+    """Procesa e ingesta un archivo binario, versionándolo, asignando tags y actualizando doc_store."""
     ext = os.path.splitext(clean_name)[1].lower()
     nuevo_hash = calcular_sha256(buf)
 
@@ -108,6 +116,10 @@ def procesar_e_ingestar_binario(
             sha256_hash=nuevo_hash,
             categoria=origen_detalle
         )
+        if tags:
+            asignar_tags_documento(clean_name, tags, autor=autor)
+            asignar_tags_documento(doc_md_name, tags, autor=autor)
+
         if os.path.exists(md_save_path):
             with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
                 ex_content = f_ex.read()
@@ -138,6 +150,9 @@ def procesar_e_ingestar_binario(
 
     # 3. Documentos Ofimáticos, Excel, PDF y Texto
     else:
+        if tags:
+            asignar_tags_documento(clean_name, tags, autor=autor)
+
         save_path = os.path.join(DOCS_DIR, clean_name)
         if os.path.exists(save_path):
             with open(save_path, "rb") as f:
@@ -284,48 +299,103 @@ with st.sidebar:
     st.markdown("#### Ingesta de Archivos (Batch & Lotes)")
     st.markdown('<div class="sidebar-format-tags"><span class="sidebar-format-tag">[ZIP]</span><span class="sidebar-format-tag">[PDF]</span><span class="sidebar-format-tag">[DOCX]</span><span class="sidebar-format-tag">[XLSX]</span><span class="sidebar-format-tag">[DIAGRAMAS]</span><span class="sidebar-format-tag">[MD]</span></div>', unsafe_allow_html=True)
 
-    uploaded_files = st.file_uploader("Arrastra archivos o paquetes ZIP en lote:", type=["pdf", "docx", "xlsx", "xls", "csv", "txt", "md", "pptx", "png", "jpg", "jpeg", "svg", "webp", "zip"], accept_multiple_files=True, label_visibility="collapsed")
+    st.session_state.setdefault("uploader_key_ver", 0)
+    uploaded_files = st.file_uploader(
+        "Arrastra archivos o paquetes ZIP en lote:",
+        type=["pdf", "docx", "xlsx", "xls", "csv", "txt", "md", "pptx", "png", "jpg", "jpeg", "svg", "webp", "zip"],
+        accept_multiple_files=True,
+        label_visibility="collapsed",
+        key=f"uploader_files_{st.session_state.uploader_key_ver}"
+    )
     if uploaded_files:
-        proc_cnt, new_cnt, upd_cnt = 0, 0, 0
-        for uf in uploaded_files:
-            c_name = normalizar_nombre_archivo(uf.name)
-            ext_u = os.path.splitext(c_name)[1].lower()
-            buf = uf.getbuffer().tobytes()
+        st.markdown(f"""
+        <div style="background:rgba(99,102,241,0.07);border:1px solid #6366F1;border-radius:6px;padding:8px 10px;margin:8px 0 6px 0;font-size:0.8rem;">
+            <span class="badge-info">[CATEGORIZACIÓN OBLIGATORIA]</span>
+            <div style="margin-top:4px;opacity:0.9;">Documentos a subir: <b>{len(uploaded_files)} archivo(s)</b>.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            if ext_u == ".zip":
-                try:
-                    with zipfile.ZipFile(io.BytesIO(buf)) as z:
-                        zip_cnt = 0
-                        for zi in [i for i in z.infolist() if not i.is_dir()]:
-                            in_fn = os.path.basename(zi.filename)
-                            if not in_fn or in_fn.startswith(".") or "__MACOSX" in zi.filename:
-                                continue
-                            in_cl = normalizar_nombre_archivo(in_fn)
-                            if os.path.splitext(in_cl)[1].lower() in SUPPORTED_EXTENSIONS:
-                                st_res, _ = procesar_e_ingestar_binario(in_cl, z.read(zi), st.session_state.doc_store, autor="Técnico / Paquete ZIP", origen_detalle=f"Lote ZIP: {c_name}")
-                                zip_cnt += 1
-                                proc_cnt += 1
-                                if st_res == "nuevo":
-                                    new_cnt += 1
-                                elif st_res == "actualizado":
-                                    upd_cnt += 1
-                        st.toast(f"[OK] ZIP '{c_name}': {zip_cnt} archivos indexados.")
-                except Exception as e_z:
-                    st.error(f"[ERROR] Error al procesar ZIP '{c_name}': {str(e_z)}")
+        cats_disp = obtener_categorias_disponibles()
+        cat_seleccionadas = []
+
+        if not cats_disp:
+            st.caption("No existen categorías registradas en el catálogo. Ingrese la categoría para clasificar el/los documento(s):")
+            nueva_cat_input = st.text_input("Nueva Categoría (*):", placeholder="ej: Redes, Base de Datos, Servidores, Contingencias...", key=f"sb_nueva_cat_ini_{st.session_state.uploader_key_ver}")
+            if nueva_cat_input.strip():
+                cat_seleccionadas = [nueva_cat_input.strip()]
+        else:
+            modo_cat = st.radio("Clasificación:", ["Usar Existente", "Crear Nueva"], horizontal=True, key=f"sb_radio_modo_cat_{st.session_state.uploader_key_ver}")
+            if modo_cat == "Usar Existente":
+                cat_seleccionadas = st.multiselect("Categoría(s) Existente(s) (*):", options=cats_disp, key=f"sb_ms_cat_exist_{st.session_state.uploader_key_ver}")
             else:
-                st_res, msg = procesar_e_ingestar_binario(c_name, buf, st.session_state.doc_store, autor="Técnico / Panel Lateral", origen_detalle="Carga en panel lateral")
-                proc_cnt += 1
-                if st_res == "nuevo":
-                    new_cnt += 1
-                    st.toast(f"[OK] {msg}")
-                elif st_res == "actualizado":
-                    upd_cnt += 1
-                    st.toast(f"[OK] {msg}")
-                elif st_res == "sin_cambios":
-                    st.toast(f"[INFO] {msg}")
+                nueva_cat_input = st.text_input("Nombre de Nueva Categoría (*):", placeholder="ej: Almacenamiento SAN, VPN, Seguridad...", key=f"sb_nueva_cat_input_{st.session_state.uploader_key_ver}")
+                if nueva_cat_input.strip():
+                    cat_seleccionadas = [nueva_cat_input.strip()]
 
-        if proc_cnt > 1:
-            st.success(f"[OK] Lote: {proc_cnt} evaluados ({new_cnt} nuevos, {upd_cnt} actualizados).")
+        col_conf_up, col_canc_up = st.columns([2.4, 1.1])
+        with col_conf_up:
+            btn_confirmar_subida = st.button(">_ Confirmar e Ingestar", type="primary", width="stretch", key="btn_confirmar_ingesta_tags")
+        with col_canc_up:
+            if st.button("Cancelar", width="stretch", key="btn_cancelar_ingesta"):
+                st.session_state["uploader_key_ver"] += 1
+                st.rerun()
+
+        if btn_confirmar_subida:
+            if not cat_seleccionadas:
+                st.warning("[REQUERIDO] Debe seleccionar al menos una categoría existente o crear una nueva para continuar.")
+            else:
+                autor_act = f"{user_act.get('username', 'Técnico')} ({user_act.get('rol', 'Operador')})"
+                proc_cnt, new_cnt, upd_cnt = 0, 0, 0
+                for uf in uploaded_files:
+                    c_name = normalizar_nombre_archivo(uf.name)
+                    ext_u = os.path.splitext(c_name)[1].lower()
+                    buf = uf.getbuffer().tobytes()
+
+                    if ext_u == ".zip":
+                        try:
+                            with zipfile.ZipFile(io.BytesIO(buf)) as z:
+                                zip_cnt = 0
+                                for zi in [i for i in z.infolist() if not i.is_dir()]:
+                                    in_fn = os.path.basename(zi.filename)
+                                    if not in_fn or in_fn.startswith(".") or "__MACOSX" in zi.filename:
+                                        continue
+                                    in_cl = normalizar_nombre_archivo(in_fn)
+                                    if os.path.splitext(in_cl)[1].lower() in SUPPORTED_EXTENSIONS:
+                                        st_res, _ = procesar_e_ingestar_binario(
+                                            in_cl, z.read(zi), st.session_state.doc_store,
+                                            autor=autor_act, origen_detalle=f"Lote ZIP: {c_name}",
+                                            tags=cat_seleccionadas
+                                        )
+                                        zip_cnt += 1
+                                        proc_cnt += 1
+                                        if st_res == "nuevo":
+                                            new_cnt += 1
+                                        elif st_res == "actualizado":
+                                            upd_cnt += 1
+                                st.toast(f"[OK] ZIP '{c_name}': {zip_cnt} archivos indexados.")
+                        except Exception as e_z:
+                            st.error(f"[ERROR] Error al procesar ZIP '{c_name}': {str(e_z)}")
+                    else:
+                        st_res, msg = procesar_e_ingestar_binario(
+                            c_name, buf, st.session_state.doc_store,
+                            autor=autor_act, origen_detalle="Carga en panel lateral",
+                            tags=cat_seleccionadas
+                        )
+                        proc_cnt += 1
+                        if st_res == "nuevo":
+                            new_cnt += 1
+                            st.toast(f"[OK] {msg}")
+                        elif st_res == "actualizado":
+                            upd_cnt += 1
+                            st.toast(f"[OK] {msg}")
+                        elif st_res == "sin_cambios":
+                            asignar_tags_documento(c_name, cat_seleccionadas, autor=autor_act)
+                            st.toast(f"[INFO] Tags actualizados: {c_name}")
+
+                limpiar_cache_consultas()
+                st.session_state["uploader_key_ver"] += 1
+                st.toast(f"[OK] {proc_cnt} archivo(s) clasificados bajo: {', '.join(cat_seleccionadas)}")
+                st.rerun()
 
     st.markdown("---")
     cant_side = len(st.session_state.doc_store)
@@ -340,6 +410,12 @@ with st.sidebar:
         with st.expander("Filtrar e inspeccionar archivos", expanded=False):
             filt_opts = [f"Todos ({cant_side})", f"Diagramas ({c_img})", f"Excel ({c_xls})", f"Documentos ({c_doc})", f"Markdown ({c_txt})"]
             tipo_f = st.pills("Filtrar por tipo:", options=filt_opts, default=filt_opts[0], label_visibility="visible", key="sb_type_pill_filter") or filt_opts[0]
+
+            cats_disp_sb = obtener_categorias_disponibles()
+            filtro_cat_sb = "Todas"
+            if cats_disp_sb:
+                filtro_cat_sb = st.selectbox("Filtrar por Categoría:", ["Todas"] + cats_disp_sb, key="sb_cat_filter_sel")
+
             doc_filter = st.text_input("Buscar por nombre...", key="sb_doc_filter", placeholder="Nombre de archivo...")
 
             docs_f = []
@@ -354,6 +430,10 @@ with st.sidebar:
                     continue
                 if tipo_f.startswith("Markdown") and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
                     continue
+                if filtro_cat_sb != "Todas":
+                    tags_d_sb = obtener_tags_documento(d)
+                    if filtro_cat_sb not in tags_d_sb:
+                        continue
                 if doc_filter and doc_filter.lower() not in d.lower():
                     continue
                 docs_f.append(d)
@@ -363,10 +443,12 @@ with st.sidebar:
                 for d in docs_f:
                     ext_d = os.path.splitext(d)[1].lower()
                     tag = '<span class="badge-ok" style="font-size:0.64rem;padding:1px 4px;">[DIAGRAMA]</span>' if (d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS) else ('<span class="badge-info" style="font-size:0.64rem;padding:1px 4px;">[EXCEL]</span>' if ext_d in ('.xlsx', '.xls') else ('<span class="badge-warn" style="font-size:0.64rem;padding:1px 4px;">[DOC]</span>' if ext_d in ('.pdf', '.docx', '.pptx', '.doc') else '<span class="badge-tag" style="font-size:0.64rem;padding:1px 4px;">[MD]</span>'))
+                    tags_d = obtener_tags_documento(d)
+                    tag_cat_h = f'<span class="badge-info" style="font-size:0.62rem;padding:1px 4px;margin-left:4px;">[{tags_d[0]}]</span>' if tags_d else ''
                     f_d = obtener_fecha_carga_documento(d)
                     items_h.append(f"""
                     <div class="sidebar-doc-card">
-                        <div class="sidebar-doc-card-header"><span class="sidebar-doc-name" title="{d}">{normalizar_titulo_display(d)}</span>{tag}</div>
+                        <div class="sidebar-doc-card-header"><span class="sidebar-doc-name" title="{d}">{normalizar_titulo_display(d)}</span>{tag}{tag_cat_h}</div>
                         <div class="sidebar-doc-meta"><span>{f_d.strftime('%Y-%m-%d')}</span><span>{len(st.session_state.doc_store[d])/1024:.1f} KB</span></div>
                         <div style="font-size:0.65rem;opacity:0.55;font-family:monospace;margin-top:2px;word-break:break-all;">{d}</div>
                     </div>""")
@@ -646,9 +728,12 @@ with tab_docs:
         min_doc_d = min(fechas_v) if fechas_v else datetime.date.today()
         max_doc_d = max(fechas_v) if fechas_v else datetime.date.today()
 
-        col_t4_t, col_t4_d, col_t4_s = st.columns([1.1, 1.3, 2.2], gap="small")
+        cats_disp_t3 = obtener_categorias_disponibles()
+        col_t4_t, col_t4_c, col_t4_d, col_t4_s = st.columns([1.1, 1.0, 1.1, 1.8], gap="small")
         with col_t4_t:
             filtro_t4 = st.selectbox("Tipo", ["Todos", "Diagramas e Imágenes (.png, .jpg, .svg)", "Excel (.xlsx, .xls)", "Documentos (.docx, .pdf, .pptx)", "Markdown / Texto (.md, .txt)"], key="tab4_type_selector")
+        with col_t4_c:
+            filtro_cat_t3 = st.selectbox("Categoría:", ["Todas"] + cats_disp_t3, key="tab4_cat_selector") if cats_disp_t3 else "Todas"
         with col_t4_d:
             rango_fecha_doc = st.date_input("Fecha:", value=(min_doc_d, max_doc_d), min_value=min_doc_d, max_value=max_doc_d, key="tab4_date_range_selector")
 
@@ -664,6 +749,10 @@ with tab_docs:
                 continue
             if filtro_t4.startswith("Markdown") and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
                 continue
+            if filtro_cat_t3 != "Todas":
+                tags_d_t3 = obtener_tags_documento(d)
+                if filtro_cat_t3 not in tags_d_t3:
+                    continue
             f_d = mapa_fechas.get(d)
             if f_d and isinstance(rango_fecha_doc, (tuple, list)) and len(rango_fecha_doc) == 2 and not (rango_fecha_doc[0] <= f_d <= rango_fecha_doc[1]):
                 continue
@@ -680,12 +769,15 @@ with tab_docs:
             u_time = historial[-1]["timestamp"] if historial else "N/A"
             f_carga = historial[0]["timestamp"].split()[0] if (historial and " " in historial[0]["timestamp"]) else "N/A"
             ruta_orig = obtener_ruta_original(doc_sel, doc_cont)
+            tags_doc = obtener_tags_documento(doc_sel)
+            tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.75rem;padding:1px 6px;">[{t}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-tag" style="font-size:0.75rem;opacity:0.65;">[Sin categoría]</span>'
 
             col_meta_t3, col_zen_t3 = st.columns([3.8, 1.2], vertical_alignment="center")
             with col_meta_t3:
                 st.markdown(f"""
                 <div style="background-color:rgba(128,128,128,0.08);border:1px solid rgba(128,128,128,0.2);border-radius:6px;padding:8px 14px;font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                     <div><b>Documento:</b> <span style="color:#6366F1;font-weight:600;">{normalizar_titulo_display(doc_sel)}</span> <span style="font-family:monospace;opacity:0.65;font-size:0.8rem;">({doc_sel})</span></div>
+                    <div><b>Categoría:</b> {tags_badges}</div>
                     <div><b>Versión:</b> <span class="badge-ok">v{u_ver}</span></div>
                     <div><b>Fecha Carga:</b> <span class="badge-tag">[{f_carga}]</span></div>
                     <div><b>Último Editor:</b> <span style="color:#10B981;font-weight:500;">{u_edit}</span></div>
@@ -747,6 +839,14 @@ with tab_docs:
                     with col_e2:
                         mot_e = st.text_input("Motivo (*)", placeholder="Actualización técnica", key=f"motive_input_{doc_sel}")
 
+                    tags_actuales_doc = obtener_tags_documento(doc_sel)
+                    cats_disp_e = obtener_categorias_disponibles()
+                    col_te1, col_te2 = st.columns(2)
+                    with col_te1:
+                        tags_e_sel = st.multiselect("Categorías Asignadas:", options=sorted(list(set(cats_disp_e + tags_actuales_doc))), default=tags_actuales_doc, key=f"ms_tags_edit_{doc_sel}")
+                    with col_te2:
+                        nueva_cat_e = st.text_input("Agregar Nueva Categoría:", placeholder="ej: Contingencias, Networking...", key=f"input_new_cat_edit_{doc_sel}")
+
                     val_txt = doc_cont[:100_000] if len(doc_cont) > 100_000 else doc_cont
                     txt_edit = st.text_area("Contenido (Markdown)", value=val_txt, height=450, key=f"textarea_edit_{doc_sel}")
                     if st.button(f"Guardar y Publicar Versión v{u_ver + 1}", type="primary", key=f"btn_save_{doc_sel}"):
@@ -754,8 +854,13 @@ with tab_docs:
                             st.error("Error de Auditoría: Editor y Motivo son obligatorios.")
                         else:
                             nv = guardar_nueva_version(doc_sel, txt_edit, aut_e.strip(), mot_e.strip(), st.session_state.doc_store)
+                            tags_finales = list(tags_e_sel)
+                            if nueva_cat_e.strip():
+                                tags_finales.append(nueva_cat_e.strip())
+                            if tags_finales:
+                                asignar_tags_documento(doc_sel, tags_finales, autor=aut_e.strip())
                             if nv == u_ver:
-                                st.info("[INFO] Sin cambios respecto a la versión actual.")
+                                st.info("[INFO] Sin cambios de contenido respecto a la versión actual.")
                             else:
                                 st.toast(f"[OK] Versión v{nv} publicada con éxito")
                                 st.rerun()
@@ -931,26 +1036,41 @@ with tab_templates:
     with col_t2:
         st.markdown("#### 2. Previsualización en Vivo")
         nom_f = st.text_input("Nombre de Archivo Final (.md)", value=fname_sug, key="input_nombre_archivo_proc_final")
+
+        # Asignación obligatoria de categoría para el nuevo runbook
+        cats_disp_rb = obtener_categorias_disponibles()
+        col_rb_c1, col_rb_c2 = st.columns([1.5, 1.5])
+        with col_rb_c1:
+            cat_rb_exist = st.selectbox("Categoría Existente (*):", ["(Crear Nueva)"] + cats_disp_rb, key="sb_cat_proc_exist") if cats_disp_rb else "(Crear Nueva)"
+        with col_rb_c2:
+            cat_rb_nueva = st.text_input("Nueva Categoría (*):" if cat_rb_exist == "(Crear Nueva)" else "O escribir otra categoría:", placeholder="ej: Procedimientos, Runbooks, DRP...", key="input_cat_proc_nueva")
+
         with st.container(border=True):
             st.markdown(doc_gen_md)
 
         st.divider()
         if st.button("Guardar y Publicar en Base de Conocimiento", type="primary", width="stretch", key="btn_guardar_doc_plantilla_final"):
-            if not nom_f.endswith(".md"):
-                nom_f += ".md"
-            if es_nuevo_t and guardar_cat and nuevo_t_nom.strip():
-                guardar_plantilla_personalizada(nuevo_t_nom.strip(), f"Plantilla personalizada {nuevo_t_nom.strip()}", ["objetivo", "prerequisitos", "pasos_custom", "verificacion_custom", "rollback_custom"])
+            cat_final_rb = cat_rb_nueva.strip() if cat_rb_nueva.strip() else (cat_rb_exist if cat_rb_exist != "(Crear Nueva)" else "")
+            if not cat_final_rb:
+                st.warning("[REQUERIDO] Debe asignar una categoría existente o escribir una nueva para publicar el procedimiento.")
+            else:
+                if not nom_f.endswith(".md"):
+                    nom_f += ".md"
+                if es_nuevo_t and guardar_cat and nuevo_t_nom.strip():
+                    guardar_plantilla_personalizada(nuevo_t_nom.strip(), f"Plantilla personalizada {nuevo_t_nom.strip()}", ["objetivo", "prerequisitos", "pasos_custom", "verificacion_custom", "rollback_custom"])
 
-            ruta_dest = os.path.join(DOCS_DIR, nom_f)
-            os.makedirs(DOCS_DIR, exist_ok=True)
-            with open(ruta_dest, "w", encoding="utf-8") as f_out:
-                f_out.write(doc_gen_md)
+                ruta_dest = os.path.join(DOCS_DIR, nom_f)
+                os.makedirs(DOCS_DIR, exist_ok=True)
+                with open(ruta_dest, "w", encoding="utf-8") as f_out:
+                    f_out.write(doc_gen_md)
 
-            st.session_state.doc_store[nom_f] = doc_gen_md
-            inicializar_version_inicial_si_no_existe(nom_f, doc_gen_md, autor=autor, comentario=f"Creación mediante plantilla: {tipo_plantilla}")
-            st.toast(f"Procedimiento guardado como {nom_f}")
-            st.success(f"¡Procedimiento guardado e indexado como **{nom_f}** [Version v1]!")
-            st.rerun()
+                st.session_state.doc_store[nom_f] = doc_gen_md
+                asignar_tags_documento(nom_f, [cat_final_rb], autor=autor)
+                inicializar_version_inicial_si_no_existe(nom_f, doc_gen_md, autor=autor, comentario=f"Creación mediante plantilla: {tipo_plantilla}")
+                limpiar_cache_consultas()
+                st.toast(f"Procedimiento guardado como {nom_f} bajo categoría [{cat_final_rb}]")
+                st.success(f"¡Procedimiento guardado e indexado como **{nom_f}** [Version v1]!")
+                st.rerun()
 
 # ----------------- TAB 5: MANUAL PASO A PASO -----------------
 with tab_manual:
