@@ -67,11 +67,7 @@ def renderizar_manual_usuario():
     """Renderiza el manual exhaustivo y detallado estructurado en 8 módulos técnicos y operativos."""
     es_inicio = bool(st.session_state.get("manual_lanzamiento"))
 
-    col_head_title, col_head_link = st.columns([3.2, 1.3], vertical_alignment="center")
-    with col_head_title:
-        st.markdown('<p class="main-title" style="margin-bottom:2px;">Manual Técnico y Guía de Operación Detallada</p>', unsafe_allow_html=True)
-    with col_head_link:
-        st.markdown('<div style="text-align:right;"><a href="?view=manual" target="_blank" style="text-decoration:none; font-size:0.78rem; font-weight:600; color:#6366F1; border:1px solid rgba(99,102,241,0.3); padding:4px 10px; border-radius:6px; background:rgba(99,102,241,0.06); display:inline-flex; align-items:center; gap:4px;">Abrir en Nueva Pestaña ↗</a></div>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title" style="margin-bottom:2px;">Manual Técnico y Guía de Operación Detallada</p>', unsafe_allow_html=True)
 
     if es_inicio:
         st.caption("Guía exhaustiva del sistema. Revise los módulos paso a paso o ingrese directamente a la consola.")
