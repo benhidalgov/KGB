@@ -147,3 +147,91 @@ def filtrar_documentos_por_categoria(doc_list: list[str], categoria: str) -> lis
                     res.append(d)
                     break
     return res
+
+
+REGLAS_SUGERENCIA = [
+    ("Almacenamiento y SAN", ["san", "purestorage", "storage", "disco", "lun", "raid", "nfs", "iscsi"]),
+    ("Redes y Conectividad", ["red", "redes", "vlan", "nsx", "cisco", "switch", "router", "firewall", "vpn", "ip", "dns", "balancer", "f5"]),
+    ("Servidores y Datacenter", ["vmware", "esxi", "blade", "hpe", "servidor", "srv", "chasis", "datacenter", "hardware"]),
+    ("Middleware y APIs", ["wso2", "synapse", "api", "rest", "soap", "orquestador", "jwt", "gateway", "microservicio"]),
+    ("Bases de Datos y Cache", ["db", "sql", "mysql", "postgresql", "oracle", "redis", "mongo", "database", "cluster_cache"]),
+    ("Monitoreo y Alertas", ["nagios", "newrelic", "alertamiento", "metricas", "log", "logs", "postmortem", "incidente", "p1"]),
+    ("Continuidad y DRP", ["backup", "veeam", "contingencia", "rollback", "drp", "recuperacion", "failover"]),
+    ("Seguridad y Accesos", ["seguridad", "acceso", "formulario", "auditoria", "antivirus", "parchado", "credencial", "usuarios"]),
+    ("Procedimientos y Release", ["booking", "despliegue", "pipeline", "procedimiento", "manual", "runbook", "release"]),
+    ("Arquitectura y Sistemas", ["arquitectura", "flujo", "diagrama", "unicard", "sistema", "topologia", "cmdb"]),
+]
+
+
+def sugerir_categoria_documento(doc_name: str, content: str = "") -> str:
+    """Sugiere una categoría apropiada según heurísticas de nombre y contenido técnico."""
+    doc_tokens = set(re.split(r'[^a-z0-9]+', doc_name.lower()))
+    for cat, keywords in REGLAS_SUGERENCIA:
+        for kw in keywords:
+            if " " in kw:
+                if kw in doc_name.lower():
+                    return cat
+            else:
+                if kw.lower() in doc_tokens:
+                    return cat
+
+    if content:
+        sample_lower = content[:2000].lower()
+        sample_tokens = set(re.split(r'[^a-z0-9]+', sample_lower))
+        for cat, keywords in REGLAS_SUGERENCIA:
+            for kw in keywords:
+                if " " in kw:
+                    if kw in sample_lower:
+                        return cat
+                else:
+                    if kw.lower() in sample_tokens:
+                        return cat
+
+    return "Infraestructura General"
+
+
+def obtener_documentos_sin_categoria(doc_list: list[str]) -> list[str]:
+    """Retorna los documentos de la lista que no tienen categoría asignada."""
+    data = cargar_datos_categorias()
+    docs = data.get("documentos", {})
+    pendientes = []
+    for d in doc_list:
+        tags = docs.get(d, [])
+        if not tags and d.startswith("DIAGRAMA__"):
+            base_alias = d.replace("DIAGRAMA__", "").replace(".md", "")
+            for k, v in docs.items():
+                if base_alias in k and v:
+                    tags = v
+                    break
+        if not tags:
+            pendientes.append(d)
+    return pendientes
+
+
+def asignar_tags_en_lote(doc_tags_map: dict[str, list[str]], autor: str = "Operaciones") -> int:
+    """Asigna categorías a múltiples documentos en una única operación atómica."""
+    if not doc_tags_map:
+        return 0
+
+    data = cargar_datos_categorias()
+    categorias_set = set(data.get("categorias", []))
+    docs_map = data.setdefault("documentos", {})
+
+    actualizados = 0
+    for doc_name, tags in doc_tags_map.items():
+        tags_limpios = []
+        for t in tags:
+            norm = normalizar_categoria(t)
+            if norm and norm not in tags_limpios:
+                tags_limpios.append(norm)
+
+        if tags_limpios:
+            for t in tags_limpios:
+                categorias_set.add(t)
+            docs_map[doc_name] = tags_limpios
+            actualizados += 1
+
+    data["categorias"] = sorted(list(categorias_set))
+    guardar_datos_categorias(data)
+    return actualizados
+

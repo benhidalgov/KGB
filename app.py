@@ -37,6 +37,9 @@ from core.tags import (
     obtener_tags_documento,
     asignar_tags_documento,
     filtrar_documentos_por_categoria,
+    sugerir_categoria_documento,
+    obtener_documentos_sin_categoria,
+    asignar_tags_en_lote,
 )
 from core.motor import (
     ejecutar_consulta_sql,
@@ -412,9 +415,13 @@ with st.sidebar:
             tipo_f = st.pills("Filtrar por tipo:", options=filt_opts, default=filt_opts[0], label_visibility="visible", key="sb_type_pill_filter") or filt_opts[0]
 
             cats_disp_sb = obtener_categorias_disponibles()
-            filtro_cat_sb = "Todas"
-            if cats_disp_sb:
-                filtro_cat_sb = st.selectbox("Filtrar por Categoría:", ["Todas"] + cats_disp_sb, key="sb_cat_filter_sel")
+            docs_sin_cat_sb = obtener_documentos_sin_categoria(sorted(st.session_state.doc_store.keys()))
+            opts_cat_sb = ["Todas"]
+            if docs_sin_cat_sb:
+                opts_cat_sb.append(f"[Sin Categoría] ({len(docs_sin_cat_sb)})")
+            opts_cat_sb.extend(cats_disp_sb)
+
+            filtro_cat_sb = st.selectbox("Filtrar por Categoría:", opts_cat_sb, key="sb_cat_filter_sel")
 
             doc_filter = st.text_input("Buscar por nombre...", key="sb_doc_filter", placeholder="Nombre de archivo...")
 
@@ -430,7 +437,10 @@ with st.sidebar:
                     continue
                 if tipo_f.startswith("Markdown") and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
                     continue
-                if filtro_cat_sb != "Todas":
+                if filtro_cat_sb.startswith("[Sin Categoría]"):
+                    if obtener_tags_documento(d):
+                        continue
+                elif filtro_cat_sb != "Todas":
                     tags_d_sb = obtener_tags_documento(d)
                     if filtro_cat_sb not in tags_d_sb:
                         continue
@@ -444,7 +454,7 @@ with st.sidebar:
                     ext_d = os.path.splitext(d)[1].lower()
                     tag = '<span class="badge-ok" style="font-size:0.64rem;padding:1px 4px;">[DIAGRAMA]</span>' if (d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS) else ('<span class="badge-info" style="font-size:0.64rem;padding:1px 4px;">[EXCEL]</span>' if ext_d in ('.xlsx', '.xls') else ('<span class="badge-warn" style="font-size:0.64rem;padding:1px 4px;">[DOC]</span>' if ext_d in ('.pdf', '.docx', '.pptx', '.doc') else '<span class="badge-tag" style="font-size:0.64rem;padding:1px 4px;">[MD]</span>'))
                     tags_d = obtener_tags_documento(d)
-                    tag_cat_h = f'<span class="badge-info" style="font-size:0.62rem;padding:1px 4px;margin-left:4px;">[{tags_d[0]}]</span>' if tags_d else ''
+                    tag_cat_h = f'<span class="badge-info" style="font-size:0.62rem;padding:1px 4px;margin-left:4px;">[{tags_d[0]}]</span>' if tags_d else '<span class="badge-warn" style="font-size:0.62rem;padding:1px 4px;margin-left:4px;">[Sin Categoría]</span>'
                     f_d = obtener_fecha_carga_documento(d)
                     items_h.append(f"""
                     <div class="sidebar-doc-card">
@@ -723,17 +733,121 @@ with tab_docs:
     st.caption("Manuales de contingencia, procedimientos operativos, visor Lado a Lado y control de cambios.")
 
     if st.session_state.doc_store:
+        todos_docs = sorted(list(st.session_state.doc_store.keys()))
+        docs_pendientes = obtener_documentos_sin_categoria(todos_docs)
+        cats_disp_t3 = obtener_categorias_disponibles()
+
+        # Modulo de Clasificacion en Lote (Batch Tagger)
+        with st.expander(f"[ADMINISTRACION] Clasificación de Documentos en Lote ({len(docs_pendientes)} pendientes)", expanded=bool(docs_pendientes)):
+            if docs_pendientes:
+                st.warning(f"[PENDIENTE] Se detectaron {len(docs_pendientes)} documentos sin categoría asignada en el repositorio. Puede seleccionar los documentos y aplicar la sugerencia heurística o una categoría común.")
+            else:
+                st.success(f"[OK] Todos los documentos ({len(todos_docs)}) cuentan con al menos una categoría asignada. Puede utilizar esta herramienta para reclasificar en lote si lo requiere.")
+
+            col_bl_f, col_bl_s = st.columns([2.5, 1.5], vertical_alignment="center")
+            with col_bl_f:
+                filtro_lote = st.radio(
+                    "Alcance de clasificación:",
+                    options=[f"Solo pendientes ({len(docs_pendientes)})", f"Todos los documentos ({len(todos_docs)})"],
+                    index=0 if docs_pendientes else 1,
+                    horizontal=True,
+                    key="radio_batch_scope"
+                )
+
+            docs_a_gestionar = docs_pendientes if filtro_lote.startswith("Solo pendientes") else todos_docs
+
+            if docs_a_gestionar:
+                filas_lote = []
+                for d in docs_a_gestionar:
+                    tags_actuales = obtener_tags_documento(d)
+                    sug = sugerir_categoria_documento(d, st.session_state.doc_store.get(d, "")[:1500])
+                    filas_lote.append({
+                        "Seleccionar": True if not tags_actuales else False,
+                        "Documento": normalizar_titulo_display(d),
+                        "Sugerencia Heurística": sug,
+                        "Categoría Actual": ", ".join(tags_actuales) if tags_actuales else "[Sin Categoría]",
+                        "Archivo": d
+                    })
+                df_lote_base = pd.DataFrame(filas_lote)
+
+                df_lote_edit = st.data_editor(
+                    df_lote_base,
+                    column_config={
+                        "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=True),
+                        "Documento": st.column_config.TextColumn("Documento", disabled=True),
+                        "Sugerencia Heurística": st.column_config.TextColumn("Sugerencia Heurística", disabled=True),
+                        "Categoría Actual": st.column_config.TextColumn("Categoría Actual", disabled=True),
+                        "Archivo": st.column_config.TextColumn("Archivo", disabled=True),
+                    },
+                    hide_index=True,
+                    height=280,
+                    width="stretch",
+                    key="editor_batch_tagger"
+                )
+
+                col_ba1, col_ba2, col_ba3 = st.columns([2.0, 1.5, 1.5], vertical_alignment="bottom")
+                with col_ba1:
+                    opts_dest = ["[SUGERENCIA] Aplicar sugerencia heurística individual a cada uno"]
+                    if cats_disp_t3:
+                        opts_dest.extend(cats_disp_t3)
+                    opts_dest.append("[NUEVA] Crear una nueva categoría...")
+                    cat_dest_sel = st.selectbox("Categoría Destino para seleccionados:", opts_dest, key="batch_cat_dest_sel")
+
+                with col_ba2:
+                    nueva_cat_batch = ""
+                    if cat_dest_sel.startswith("[NUEVA]"):
+                        nueva_cat_batch = st.text_input("Nombre de nueva categoría (*):", placeholder="ej: Seguridad Perimetral", key="batch_new_cat_input")
+                    else:
+                        st.caption("Los documentos seleccionados recibirán la categoría seleccionada.")
+
+                with col_ba3:
+                    if st.button("[APLICAR] Clasificar Seleccionados", type="primary", width="stretch", key="btn_apply_batch_tags"):
+                        df_sel = df_lote_edit[df_lote_edit["Seleccionar"] == True]
+                        if df_sel.empty:
+                            st.warning("[ALERTA] Debe marcar al menos un documento en la columna 'Seleccionar'.")
+                        else:
+                            doc_tags_map = {}
+                            if cat_dest_sel.startswith("[SUGERENCIA]"):
+                                for _, row in df_sel.iterrows():
+                                    doc_tags_map[row["Archivo"]] = [row["Sugerencia Heurística"]]
+                            elif cat_dest_sel.startswith("[NUEVA]"):
+                                if not nueva_cat_batch.strip():
+                                    st.error("[ERROR] Debe indicar el nombre de la nueva categoría.")
+                                    st.stop()
+                                for _, row in df_sel.iterrows():
+                                    doc_tags_map[row["Archivo"]] = [nueva_cat_batch.strip()]
+                            else:
+                                for _, row in df_sel.iterrows():
+                                    doc_tags_map[row["Archivo"]] = [cat_dest_sel]
+
+                            if doc_tags_map:
+                                n_act = asignar_tags_en_lote(doc_tags_map, autor="Operaciones")
+                                limpiar_cache_consultas()
+                                limpiar_cache_documentos()
+                                st.toast(f"[OK] Se categorizaron {n_act} documentos exitosamente.")
+                                st.success(f"[OK] Clasificación completada: {n_act} documentos actualizados.")
+                                time.sleep(0.8)
+                                st.rerun()
+            else:
+                st.info("[INFO] No hay documentos en el alcance seleccionado.")
+
+        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+
         mapa_fechas = {d: obtener_fecha_carga_documento(d) for d in st.session_state.doc_store.keys()}
         fechas_v = [f for f in mapa_fechas.values() if f]
         min_doc_d = min(fechas_v) if fechas_v else datetime.date.today()
         max_doc_d = max(fechas_v) if fechas_v else datetime.date.today()
 
-        cats_disp_t3 = obtener_categorias_disponibles()
+        opts_cat_t3 = ["Todas"]
+        if docs_pendientes:
+            opts_cat_t3.append(f"[Sin Categoría] ({len(docs_pendientes)})")
+        opts_cat_t3.extend(cats_disp_t3)
+
         col_t4_t, col_t4_c, col_t4_d, col_t4_s = st.columns([1.1, 1.0, 1.1, 1.8], gap="small")
         with col_t4_t:
             filtro_t4 = st.selectbox("Tipo", ["Todos", "Diagramas e Imágenes (.png, .jpg, .svg)", "Excel (.xlsx, .xls)", "Documentos (.docx, .pdf, .pptx)", "Markdown / Texto (.md, .txt)"], key="tab4_type_selector")
         with col_t4_c:
-            filtro_cat_t3 = st.selectbox("Categoría:", ["Todas"] + cats_disp_t3, key="tab4_cat_selector") if cats_disp_t3 else "Todas"
+            filtro_cat_t3 = st.selectbox("Categoría:", opts_cat_t3, key="tab4_cat_selector")
         with col_t4_d:
             rango_fecha_doc = st.date_input("Fecha:", value=(min_doc_d, max_doc_d), min_value=min_doc_d, max_value=max_doc_d, key="tab4_date_range_selector")
 
@@ -749,7 +863,10 @@ with tab_docs:
                 continue
             if filtro_t4.startswith("Markdown") and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
                 continue
-            if filtro_cat_t3 != "Todas":
+            if filtro_cat_t3.startswith("[Sin Categoría]"):
+                if obtener_tags_documento(d):
+                    continue
+            elif filtro_cat_t3 != "Todas":
                 tags_d_t3 = obtener_tags_documento(d)
                 if filtro_cat_t3 not in tags_d_t3:
                     continue
@@ -823,6 +940,14 @@ with tab_docs:
                         with col_ae2:
                             mot_e = st.text_input("Motivo (*)", placeholder="Actualización de IP", key=f"motive_input_grid_{doc_sel}")
 
+                    tags_actuales_xl = obtener_tags_documento(doc_sel)
+                    cats_disp_xl = obtener_categorias_disponibles()
+                    col_tx1, col_tx2 = st.columns(2)
+                    with col_tx1:
+                        tags_xl_sel = st.multiselect("Categorías Asignadas:", options=sorted(list(set(cats_disp_xl + tags_actuales_xl))), default=tags_actuales_xl, key=f"ms_tags_edit_xl_{doc_sel}")
+                    with col_tx2:
+                        nueva_cat_xl = st.text_input("Agregar Nueva Categoría:", placeholder="ej: CMDB, Inventario...", key=f"input_new_cat_edit_xl_{doc_sel}")
+
                     df_e = cargar_hoja_excel_dataframe(p_xl, hoja_e, mt_xl)
                     df_mod = st.data_editor(df_e, width="stretch", num_rows="dynamic", height=480, key=f"grid_editor_{doc_sel}_{hoja_e}")
                     if st.button(f"Guardar y Publicar Versión v{u_ver + 1}", type="primary", key=f"btn_save_grid_{doc_sel}"):
@@ -830,6 +955,12 @@ with tab_docs:
                             st.error("Error de Auditoría: Editor y Motivo son obligatorios.")
                         else:
                             nv = guardar_nueva_version_excel(doc_sel, hoja_e, df_mod, aut_e.strip(), mot_e.strip(), st.session_state.doc_store)
+                            tags_finales_xl = list(tags_xl_sel)
+                            if nueva_cat_xl.strip():
+                                tags_finales_xl.append(nueva_cat_xl.strip())
+                            if tags_finales_xl:
+                                asignar_tags_documento(doc_sel, tags_finales_xl, autor=aut_e.strip())
+                                limpiar_cache_consultas()
                             st.toast(f"Versión v{nv} guardada exitosamente")
                             st.rerun()
                 else:
@@ -859,8 +990,11 @@ with tab_docs:
                                 tags_finales.append(nueva_cat_e.strip())
                             if tags_finales:
                                 asignar_tags_documento(doc_sel, tags_finales, autor=aut_e.strip())
+                                limpiar_cache_consultas()
                             if nv == u_ver:
-                                st.info("[INFO] Sin cambios de contenido respecto a la versión actual.")
+                                st.toast(f"[OK] Categorías actualizadas para {doc_sel}")
+                                time.sleep(0.5)
+                                st.rerun()
                             else:
                                 st.toast(f"[OK] Versión v{nv} publicada con éxito")
                                 st.rerun()
