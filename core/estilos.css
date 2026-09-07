@@ -1451,6 +1451,37 @@ div[data-testid="stPills"] button[data-checked="true"] {
     line-height: 1.45;
 }
 
+/* ==========================================================================
+   Estilos de Navegacion Lateral (Sidebar Navigation Cards)
+   ========================================================================== */
+[data-testid="stSidebar"] div[data-testid="stRadio"] > div[role="radiogroup"] {
+    gap: 5px !important;
+}
 
+[data-testid="stSidebar"] div[data-testid="stRadio"] label {
+    background: rgba(128, 128, 128, 0.05);
+    border: 1px solid rgba(128, 128, 128, 0.15);
+    border-radius: 6px;
+    padding: 7px 10px !important;
+    margin-bottom: 2px;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.83rem !important;
+    font-weight: 500;
+    width: 100% !important;
+}
 
+[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
+    background: rgba(99, 102, 241, 0.09) !important;
+    border-color: rgba(99, 102, 241, 0.35) !important;
+    color: #6366F1 !important;
+    transform: translateX(2px);
+}
 
+[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
+    background: rgba(99, 102, 241, 0.14) !important;
+    border-color: #6366F1 !important;
+    font-weight: 600 !important;
+    color: #6366F1 !important;
+    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.12);
+}

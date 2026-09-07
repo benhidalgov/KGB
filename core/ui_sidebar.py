@@ -1,7 +1,7 @@
 """
 Módulo desacoplado de renderizado para el Panel Lateral (Sidebar).
-Gestiona la información de sesión, la ingesta documental con categorización obligatoria,
-el explorador documental con filtros taxonómicos y las herramientas del sistema / bóveda de credenciales.
+Gestiona la navegación central por módulos de la aplicación, información de sesión,
+ingesta documental con categorización obligatoria, explorador rápido y bóveda de credenciales.
 """
 import os
 import io
@@ -33,10 +33,20 @@ from core.vault import (
 )
 
 
-def renderizar_sidebar(user_act: dict, doc_store: dict):
-    """Renderiza los componentes del panel lateral: usuario, ingesta, explorador y bóveda."""
+def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> str:
+    """Renderiza el panel lateral: navegación principal por módulos, usuario, ingesta y bóveda."""
     with st.sidebar:
-        # Cabecera de usuario y logout
+        # 1. Cabecera de Marca y Estado
+        st.markdown('''
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:2px 0 8px 0; border-bottom:1px solid rgba(128,128,128,0.18); margin-bottom:8px;">
+            <div style="font-size:0.88rem; font-weight:700; color:#6366F1; letter-spacing:0.4px;">
+                <span class="badge-tag" style="font-size:0.65rem; padding:1px 5px; margin-right:4px;">[CLI]</span> Consola Operativa
+            </div>
+            <span class="badge-pulse-online" style="font-size:0.62rem; padding:2px 6px;"><span class="pulse-dot"></span>ONLINE</span>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        # 2. Información de Sesión y Logout
         col_u_info, col_u_out = st.columns([2.5, 1.5], vertical_alignment="center")
         with col_u_info:
             st.markdown(f"""
@@ -47,9 +57,38 @@ def renderizar_sidebar(user_act: dict, doc_store: dict):
             if st.button(">_ Salir", width="stretch", key="btn_logout_sidebar", help="Cerrar sesión"):
                 cerrar_sesion()
 
-        st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
-        # 1. Ingesta de Archivos
+        # 3. Navegación Principal (Módulos de Trabajo)
+        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin-bottom:6px;">Navegación / Módulos</div>', unsafe_allow_html=True)
+
+        cant_docs = len(doc_store)
+        opciones_nav = [
+            "Consultas y Búsqueda",
+            f"Historial CMDB ({total_srvs})",
+            f"Documentación Técnica ({cant_docs})",
+            "Plantillas y Runbooks",
+            "Zen Studio (Modo Lectura)",
+            "Manual de Operaciones",
+        ]
+
+        if st.session_state.pop("_ir_consola", False):
+            st.session_state["nav_seccion_activa"] = opciones_nav[0]
+
+        seccion_sel = st.radio(
+            "Navegación Principal",
+            options=opciones_nav,
+            key="nav_seccion_activa",
+            label_visibility="collapsed"
+        )
+
+        st.markdown('''
+        <a href="?view=manual" target="_blank" style="display:block; text-align:center; font-size:0.72rem; font-weight:600; color:#6366F1; text-decoration:none; padding:5px 8px; margin:6px 0 12px 0; border-radius:5px; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.22); white-space:nowrap;" title="Abre el manual paso a paso en una pestaña nueva del navegador">>_ Manual de Uso [Nueva Pestaña ↗]</a>
+        ''', unsafe_allow_html=True)
+
+        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin:10px 0 6px 0;">Herramientas del Sistema</div>', unsafe_allow_html=True)
+
+        # 4. Ingesta de Archivos
         st.session_state.setdefault("uploader_key_ver", 0)
         with st.expander("Ingesta de Archivos (Batch & Lotes)", expanded=False):
             st.markdown('<div class="sidebar-format-tags" style="margin-bottom:8px;"><span class="sidebar-format-tag">[ZIP]</span><span class="sidebar-format-tag">[PDF]</span><span class="sidebar-format-tag">[DOCX]</span><span class="sidebar-format-tag">[XLSX]</span><span class="sidebar-format-tag">[DIAGRAMAS]</span><span class="sidebar-format-tag">[MD]</span></div>', unsafe_allow_html=True)
@@ -150,7 +189,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict):
                         st.toast(f"[OK] {proc_cnt} archivo(s) clasificados bajo: {', '.join(cat_seleccionadas)}")
                         st.rerun()
 
-        # 2. Explorador Documental
+        # 5. Explorador Documental
         cant_side = len(doc_store)
         with st.expander(f"Explorador Documental ({cant_side})", expanded=False):
             if cant_side > 0:
@@ -216,7 +255,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict):
             else:
                 st.caption("No hay documentos en el repositorio.")
 
-        # 3. Herramientas del Sistema y Bóveda
+        # 6. Herramientas del Sistema y Bóveda
         with st.expander("Herramientas del Sistema y Bóveda", expanded=False):
             if st.button(">_ Reindexar Base Documental", help="Recarga todos los documentos desde data/docs/", width="stretch", key="btn_sidebar_reindexar"):
                 limpiar_cache_documentos()
@@ -259,3 +298,5 @@ def renderizar_sidebar(user_act: dict, doc_store: dict):
                             if eliminar_secreto(k_final.strip().upper()):
                                 st.toast(f"[INFO] Clave '{k_final.strip().upper()}' eliminada de la bóveda")
                                 st.rerun()
+
+        return seccion_sel
