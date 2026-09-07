@@ -100,20 +100,44 @@ def renderizar_manual_usuario():
         "8. Ingesta ZIP y Runbooks"
     ]
 
-    paso_idx_prev = st.session_state["manual_paso_actual"] - 1
-    paso_sel_str = st.segmented_control(
+    def al_cambiar_stepper():
+        val = st.session_state.get("stepper_manual_selector")
+        if val in modulos_titulos:
+            st.session_state["manual_paso_actual"] = modulos_titulos.index(val) + 1
+
+    def navegar_modulo(nuevo_num: int):
+        if 1 <= nuevo_num <= len(modulos_titulos):
+            st.session_state["manual_paso_actual"] = nuevo_num
+            st.session_state["stepper_manual_selector"] = modulos_titulos[nuevo_num - 1]
+
+    paso_num = st.session_state["manual_paso_actual"]
+    if "stepper_manual_selector" not in st.session_state or st.session_state["stepper_manual_selector"] not in modulos_titulos:
+        st.session_state["stepper_manual_selector"] = modulos_titulos[paso_num - 1]
+
+    st.segmented_control(
         "Módulos del Sistema",
         modulos_titulos,
-        default=modulos_titulos[paso_idx_prev] if 0 <= paso_idx_prev < len(modulos_titulos) else modulos_titulos[0],
         label_visibility="collapsed",
-        key="stepper_manual_selector"
-    ) or modulos_titulos[0]
+        key="stepper_manual_selector",
+        on_change=al_cambiar_stepper
+    )
 
-    try:
-        paso_num = modulos_titulos.index(paso_sel_str) + 1
-    except ValueError:
-        paso_num = 1
-    st.session_state["manual_paso_actual"] = paso_num
+    paso_num = st.session_state["manual_paso_actual"]
+
+    # Barra superior de navegación rápida y progreso
+    col_t_prev, col_t_prog, col_t_next = st.columns([1.2, 2.0, 1.4], vertical_alignment="center")
+    with col_t_prev:
+        if paso_num > 1:
+            st.button(f"< Módulo {paso_num - 1}", width="stretch", key=f"btn_top_prev_{paso_num}", on_click=navegar_modulo, args=(paso_num - 1,))
+    with col_t_prog:
+        st.progress(paso_num / len(modulos_titulos), text=f"Progreso: Módulo {paso_num} de {len(modulos_titulos)}")
+    with col_t_next:
+        if paso_num < 8:
+            st.button(f"Siguiente: Módulo {paso_num + 1} >", type="primary", width="stretch", key=f"btn_top_next_{paso_num}", on_click=navegar_modulo, args=(paso_num + 1,))
+        else:
+            if st.button(">_ ¡Entrar a la Consola!", type="primary", width="stretch", key=f"btn_top_finish_{paso_num}"):
+                ir_a_consola_desde_manual()
+                st.rerun()
 
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
@@ -480,19 +504,15 @@ def renderizar_manual_usuario():
 
     with col_prev:
         if paso_num > 1:
-            if st.button(f"< Módulo {paso_num - 1}", width="stretch", key="btn_manual_prev_step"):
-                st.session_state["manual_paso_actual"] = paso_num - 1
-                st.rerun()
+            st.button(f"< Módulo {paso_num - 1}", width="stretch", key=f"btn_bot_prev_{paso_num}", on_click=navegar_modulo, args=(paso_num - 1,))
 
     with col_center_info:
         st.markdown(f"<div style='text-align: center; font-size: 0.82rem; opacity: 0.8;'>Módulo <b>{paso_num}</b> de <b>8</b> completado</div>", unsafe_allow_html=True)
 
     with col_next:
         if paso_num < 8:
-            if st.button(f"Siguiente: Módulo {paso_num + 1} >", type="primary", width="stretch", key="btn_manual_next_step"):
-                st.session_state["manual_paso_actual"] = paso_num + 1
-                st.rerun()
+            st.button(f"Siguiente: Módulo {paso_num + 1} >", type="primary", width="stretch", key=f"btn_bot_next_{paso_num}", on_click=navegar_modulo, args=(paso_num + 1,))
         else:
-            if st.button(">_ ¡Entrar a la Consola!", type="primary", width="stretch", key="btn_manual_finish"):
+            if st.button(">_ ¡Entrar a la Consola!", type="primary", width="stretch", key=f"btn_bot_finish_{paso_num}"):
                 ir_a_consola_desde_manual()
                 st.rerun()
