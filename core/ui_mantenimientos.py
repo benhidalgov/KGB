@@ -12,19 +12,6 @@ from core.configuracion import CSV_PATH
 from core.motor import ejecutar_consulta_sql
 
 
-def _render_kpi_grid(total_reg: int, cnt_op: int, cnt_rev: int, cnt_crit: int, tec_activo: str, pct_op: float, pct_crit: float):
-    """Renderiza la cuadrícula de métricas operativas clave (KPIs) del parque de servidores."""
-    st.markdown(f"""
-    <div class="kpi-container">
-        <div class="kpi-card"><span class="kpi-label">Total Servidores</span><span class="kpi-value-primary">{total_reg}</span><span class="kpi-caption">Registros CMDB</span></div>
-        <div class="kpi-card"><span class="kpi-label">Operativos</span><span class="kpi-value-ok">{cnt_op}</span><span class="kpi-caption">{pct_op}% del parque</span></div>
-        <div class="kpi-card"><span class="kpi-label">En Revisión</span><span class="kpi-value-warn">{cnt_rev}</span><span class="kpi-caption">Atención requerida</span></div>
-        <div class="kpi-card"><span class="kpi-label">Críticos</span><span class="kpi-value-crit">{cnt_crit}</span><span class="kpi-caption">{pct_crit}% del parque</span></div>
-        <div class="kpi-card"><span class="kpi-label">Técnico Principal</span><span class="kpi-value-neutral" style="font-size:1.05rem;padding-top:4px;">{tec_activo}</span><span class="kpi-caption">Mayor asignación</span></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
 def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
     """Renderiza el módulo analítico y de mantenimiento de infraestructura."""
     st.subheader("Motor SQL DuckDB - Historial de Mantenimientos e Inventario")
@@ -37,10 +24,10 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
             <b style="color:#6366F1;font-size:0.9rem;">Observabilidad de Infraestructura e Historial CMDB</b>
         </div>
         <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
-            <b>¿Qué hace?</b> Monitorea la salud del parque de servidores en tiempo real, registra eventos de mantenimiento preventivo y correctivo, y ejecuta consultas analíticas instantáneas vía SQL DuckDB.
+            <b>¿Qué hace?</b> Permite consultar el inventario y mantenimientos de servidores de la CMDB con filtrado multidimensional y ejecución de sentencias SQL instantáneas sobre DuckDB.
         </div>
         <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
-            <b>¿Cómo se usa?</b> Utilice los selectores de Capa (L1-L4), Estado, Técnico y Fecha para filtrar registros en la grilla interactiva, o despliegue la sección inferior para ingresar consultas SQL analíticas personalizadas.
+            <b>¿Cómo se usa?</b> Utilice los selectores de Capa (L1-L4), Estado, Técnico y Fecha para inspeccionar registros en la tabla interactiva, o despliegue la sección inferior para ingresar consultas SQL analíticas.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -88,14 +75,6 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
             df_filtrado = pd.DataFrame()
 
         total_reg = len(df_filtrado)
-        cnt_op = int((df_filtrado['estado'] == 'Operativo').sum()) if 'estado' in df_filtrado.columns else 0
-        cnt_rev = int((df_filtrado['estado'] == 'En Revision').sum()) if 'estado' in df_filtrado.columns else 0
-        cnt_crit = int((df_filtrado['estado'] == 'Critico').sum()) if 'estado' in df_filtrado.columns else 0
-        tec_activo = df_filtrado['tecnico'].value_counts().idxmax() if ('tecnico' in df_filtrado.columns and total_reg > 0) else "N/D"
-        pct_op = round(cnt_op / total_reg * 100, 1) if total_reg > 0 else 0
-        pct_crit = round(cnt_crit / total_reg * 100, 1) if total_reg > 0 else 0
-
-        _render_kpi_grid(total_reg, cnt_op, cnt_rev, cnt_crit, tec_activo, pct_op, pct_crit)
         st.markdown(f"<div style='font-size:0.85rem;margin-bottom:8px;font-weight:500;'><span class='badge-info'>{total_reg} registros coincidentes</span></div>", unsafe_allow_html=True)
         st.dataframe(df_filtrado, width="stretch", hide_index=True)
 

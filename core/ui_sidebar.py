@@ -81,11 +81,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
             label_visibility="collapsed"
         )
 
-        st.markdown('''
-        <a href="?view=manual" target="_blank" style="display:block; text-align:center; font-size:0.72rem; font-weight:600; color:#6366F1; text-decoration:none; padding:5px 8px; margin:6px 0 12px 0; border-radius:5px; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.22); white-space:nowrap;" title="Abre el manual paso a paso en una pestaña nueva del navegador">>_ Manual de Uso [Nueva Pestaña ↗]</a>
-        ''', unsafe_allow_html=True)
-
-        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin:10px 0 6px 0;">Herramientas del Sistema</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin:14px 0 6px 0;">Herramientas del Sistema</div>', unsafe_allow_html=True)
 
         # 4. Ingesta de Archivos
         st.session_state.setdefault("uploader_key_ver", 0)

@@ -129,6 +129,3 @@ elif "Zen" in seccion_activa:
         st.rerun()
     else:
         st.warning("No hay documentos indexados para previsualizar en Zen Studio.")
-
-elif "Manual" in seccion_activa:
-    renderizar_manual_usuario()
