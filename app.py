@@ -415,7 +415,11 @@ with st.container(border=True):
     with col_brand:
         st.markdown('<div class="navbar-brand-container"><span class="navbar-brand-badge">[CLI]</span><span class="navbar-brand-title">Consola de Infraestructura y Operaciones</span><div class="navbar-brand-badges"><span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span></div></div>', unsafe_allow_html=True)
     with col_nav_mode:
-        vista_seleccionada = st.segmented_control("Vista", ["Consola", "Zen Studio", "Manual de Uso"], default="Consola", label_visibility="collapsed", key="top_navbar_view_selector") or "Consola"
+        if st.session_state.pop("_ir_consola", False):
+            st.session_state["top_navbar_view_selector"] = "Consola"
+        if "top_navbar_view_selector" not in st.session_state:
+            st.session_state["top_navbar_view_selector"] = "Manual de Uso" if st.session_state.get("manual_lanzamiento") else "Consola"
+        vista_seleccionada = st.segmented_control("Vista", ["Consola", "Zen Studio", "Manual de Uso"], label_visibility="collapsed", key="top_navbar_view_selector") or "Consola"
     with col_stats:
         st.markdown(f'<div class="navbar-stats-container"><div class="navbar-stat-chip"><span class="navbar-stat-label">Documentos:</span><span class="navbar-stat-value-ok">{cant_docs}</span></div></div>', unsafe_allow_html=True)
 

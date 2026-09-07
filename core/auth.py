@@ -5,6 +5,7 @@ import hashlib
 from typing import Optional, Dict, Any
 import streamlit as st
 from core.auditoria import registrar_evento_auditoria
+from core.manual import activar_manual_en_inicio, renderizar_manual_lanzamiento
 
 AUTH_USERS_PATH = os.path.join("data", "users.json")
 DEFAULT_SALT = "infra_console_security_salt_2026"
@@ -100,16 +101,33 @@ def cerrar_sesion():
 
 
 def renderizar_pantalla_login():
-    """Renderiza la pantalla corporativa de inicio de sesión."""
-    _, col_centro, _ = st.columns([1, 1.8, 1])
-    with col_centro:
-        st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
+    """Renderiza la pantalla corporativa de inicio de sesión junto al manual de usuario."""
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
+    </style>
+    <div class="search-result-card" style="border-left: 4px solid #6366F1; margin: 8px 0 18px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+                <span class="navbar-brand-badge" style="font-size: 0.78rem; padding: 3px 10px;">[CLI]</span>
+                <span class="search-doc-title" style="margin-left: 8px;">Consola de Infraestructura y Operaciones</span>
+            </div>
+            <span class="badge-info">[INICIO]</span>
+        </div>
+        <div style="font-size: 0.84rem; opacity: 0.85; margin-top: 6px;">
+            Acceso restringido al inventario CMDB y a la base documental. Consulte el manual a la derecha e inicie sesión para continuar.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_login, col_manual = st.columns([1.05, 1.55], gap="large")
+    with col_login:
         with st.container(border=True):
             st.markdown("""
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span class="navbar-brand-badge" style="font-size: 0.85rem; padding: 3px 10px;">[CLI]</span>
-                <h3 style="margin-top: 10px; margin-bottom: 4px; font-weight: 700; color: #6366F1;">Consola de Infraestructura y Operaciones</h3>
-                <div style="font-size: 0.82rem; opacity: 0.8;">Acceso Restringido a Consola de Operaciones e Inventario CMDB</div>
+            <div style="margin-bottom: 12px;">
+                <span class="badge-info">[ACCESO]</span>
+                <div style="font-size: 1.05rem; font-weight: 700; margin-top: 8px;">Inicio de sesión</div>
+                <div style="font-size: 0.82rem; opacity: 0.8;">Credenciales corporativas · RBAC</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -124,6 +142,7 @@ def renderizar_pantalla_login():
                 if user_info:
                     st.session_state["auth_activa"] = True
                     st.session_state["usuario_actual"] = user_info
+                    activar_manual_en_inicio()
                     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_EXITOSO", version_ant=1, version_nueva=1, autor=user_info["username"], motivo=f"Inicio exitoso [{user_info['rol']}].")
                     st.toast(f"[OK] Sesión iniciada como {user_info['nombre']} [{user_info['rol']}]")
                     st.rerun()
@@ -132,7 +151,7 @@ def renderizar_pantalla_login():
                     st.error("[ERROR] Credenciales no válidas. Verifique su usuario y contraseña.")
 
             st.markdown("---")
-            with st.expander("Información de Cuentas Preconfiguradas para Pruebas", expanded=False):
+            with st.expander("Cuentas preconfiguradas para pruebas", expanded=False):
                 st.markdown("""
                 | Usuario | Rol Asignado | Clave Inicial | Nivel de Acceso |
                 | :--- | :--- | :--- | :--- |
@@ -140,3 +159,7 @@ def renderizar_pantalla_login():
                 | `operador` | Operador | `operador2026` | Consultas al Asistente, Búsqueda DuckDB, Ingesta |
                 | `auditor` | Auditor | `auditor2026` | Solo lectura (Búsqueda y Visor) |
                 """)
+
+    with col_manual:
+        with st.container(border=True):
+            renderizar_manual_lanzamiento()
