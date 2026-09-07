@@ -1487,84 +1487,119 @@ div[data-testid="stPills"] button[data-checked="true"] {
 }
 
 /* ==========================================================================
-   Pestañas como Botones Ejecutivos (Tabs as High-Contrast Buttons)
+   Pestañas como Botones estilo Sidebar (Tabs as Sidebar-Style Buttons)
    ========================================================================== */
 div[data-testid="stTabs"] {
     margin-top: 4px;
     margin-bottom: 12px;
 }
 
+/* Contenedor de la lista de pestañas */
+div[data-testid="stTabs"] [role="tablist"],
 div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
     display: flex !important;
-    gap: 10px !important;
+    gap: 8px !important;
     background: transparent !important;
-    border-bottom: 1px solid rgba(128, 128, 128, 0.18) !important;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15) !important;
     padding: 2px 0 10px 0 !important;
+    align-items: center !important;
 }
 
-/* Ocultar la línea roja plana por defecto de Streamlit */
+/* Ocultar la línea indicadora por defecto (roja) de Streamlit / React-Aria */
+div[data-testid="stTabs"] .react-aria-SelectionIndicator,
 div[data-testid="stTabs"] div[data-baseweb="tab-highlight"],
 div[data-testid="stTabs"] div[data-baseweb="tab-border"] {
     display: none !important;
-    height: 0 !important;
     opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
 }
 
-/* Estilo individual de cada pestaña como Botón */
+/* Cada pestaña individual con aspecto de botón de la sidebar */
+div[data-testid="stTabs"] [data-testid="stTab"],
+div[data-testid="stTabs"] [role="tab"],
 div[data-testid="stTabs"] button[data-baseweb="tab"] {
-    background: rgba(128, 128, 128, 0.08) !important;
+    background: rgba(128, 128, 128, 0.05) !important;
     border: 1px solid rgba(128, 128, 128, 0.22) !important;
-    border-radius: 7px !important;
-    padding: 8px 18px !important;
-    font-size: 0.84rem !important;
-    font-weight: 600 !important;
-    color: inherit !important;
+    border-radius: 6px !important;
+    padding: 7px 16px !important;
+    margin: 0 !important;
     cursor: pointer !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-size: 0.83rem !important;
+    font-weight: 500 !important;
+    color: inherit !important;
+    height: auto !important;
+    min-height: 36px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    gap: 6px !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
 }
 
+/* Hover: idéntico al hover de los botones de la sidebar */
+div[data-testid="stTabs"] [data-testid="stTab"]:hover,
+div[data-testid="stTabs"] [data-testid="stTab"][data-hovered],
+div[data-testid="stTabs"] [role="tab"]:hover,
 div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
-    background: rgba(99, 102, 241, 0.12) !important;
-    border-color: rgba(99, 102, 241, 0.45) !important;
+    background: rgba(99, 102, 241, 0.09) !important;
+    border-color: rgba(99, 102, 241, 0.38) !important;
     color: #6366F1 !important;
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.18) !important;
+    box-shadow: 0 2px 5px rgba(99, 102, 241, 0.12) !important;
 }
 
-/* Pestaña Activa / Seleccionada (Botón Primario Índigo) */
+/* Activo / Seleccionado: idéntico al seleccionado de la sidebar (fondo Indigo tenue + borde Indigo brillante) */
+div[data-testid="stTabs"] [data-testid="stTab"][data-selected],
+div[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"],
+div[data-testid="stTabs"] [role="tab"][aria-selected="true"],
 div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
-    background: #6366F1 !important;
-    border-color: #4F46E5 !important;
-    color: #FFFFFF !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4) !important;
+    background: rgba(99, 102, 241, 0.16) !important;
+    border-color: #6366F1 !important;
+    border-width: 1px !important;
+    color: #6366F1 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 1px 4px rgba(99, 102, 241, 0.22) !important;
 }
 
-div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p,
-div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] span,
-div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] div {
-    color: #FFFFFF !important;
+/* Forzar color de texto en hijos para sobreescribir el rojo primario de Streamlit */
+div[data-testid="stTabs"] [data-testid="stTab"][data-selected] *,
+div[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"] * {
+    color: #6366F1 !important;
+    font-weight: 600 !important;
+}
+
+div[data-testid="stTabs"] [data-testid="stTab"]:hover * {
+    color: #6366F1 !important;
 }
 
 /* Soporte para Segmented Control y Pills */
 div[data-testid="stSegmentedControl"] button,
 div[data-testid="stPills"] button {
-    border-radius: 7px !important;
+    border-radius: 6px !important;
     font-size: 0.83rem !important;
-    font-weight: 600 !important;
-    padding: 6px 16px !important;
+    font-weight: 500 !important;
+    padding: 6px 14px !important;
+    background: rgba(128, 128, 128, 0.05) !important;
     border: 1px solid rgba(128, 128, 128, 0.22) !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.18s ease !important;
+}
+
+div[data-testid="stSegmentedControl"] button:hover,
+div[data-testid="stPills"] button:hover {
+    background: rgba(99, 102, 241, 0.09) !important;
+    border-color: rgba(99, 102, 241, 0.38) !important;
+    color: #6366F1 !important;
 }
 
 div[data-testid="stSegmentedControl"] button[aria-checked="true"],
-div[data-testid="stPills"] button[aria-checked="true"] {
-    background: #6366F1 !important;
-    color: #FFFFFF !important;
+div[data-testid="stPills"] button[aria-checked="true"],
+div[data-testid="stPills"] button[data-checked="true"] {
+    background: rgba(99, 102, 241, 0.16) !important;
+    color: #6366F1 !important;
     border-color: #6366F1 !important;
-    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35) !important;
+    font-weight: 600 !important;
+    box-shadow: 0 1px 4px rgba(99, 102, 241, 0.22) !important;
 }
