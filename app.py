@@ -3,8 +3,18 @@ Consola Principal de Infraestructura y Operaciones.
 Orquestador central con navegación lateral desacoplada para maximizar el espacio del panel principal.
 """
 import os
+import sys
+import importlib
 import pandas as pd
 import streamlit as st
+
+# Recarga preventiva de submódulos 'core' para servidores Streamlit persistentes
+for _mod_k in list(sys.modules.keys()):
+    if _mod_k.startswith("core."):
+        try:
+            importlib.reload(sys.modules[_mod_k])
+        except Exception:
+            pass
 
 from core.estilos import cargar_estilos_css
 from core.configuracion import CSV_PATH

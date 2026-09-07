@@ -4,8 +4,16 @@ Permite configurar parámetros técnicos con esquemas dinámicos, previsualizar 
 y publicar procedimientos con control de versiones y categorización obligatoria.
 """
 import os
+import importlib
 import streamlit as st
 import streamlit_antd_components as sac
+
+try:
+    _mod_plant = importlib.import_module("core.plantillas")
+    if not hasattr(_mod_plant, "obtener_esquema_campos"):
+        importlib.reload(_mod_plant)
+except Exception:
+    pass
 
 from core.plantillas import (
     generar_doc_plantilla,

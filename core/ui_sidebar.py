@@ -6,7 +6,15 @@ ingesta documental con categorización obligatoria y bóveda de credenciales.
 import os
 import io
 import zipfile
+import importlib
 import streamlit as st
+
+try:
+    _mod_proc = importlib.import_module("core.procesador")
+    if not hasattr(_mod_proc, "procesar_e_ingestar_binario"):
+        importlib.reload(_mod_proc)
+except Exception:
+    pass
 
 from core.procesador import (
     SUPPORTED_EXTENSIONS,
