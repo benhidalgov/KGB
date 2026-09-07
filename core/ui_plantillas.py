@@ -28,6 +28,21 @@ def renderizar_pestana_plantillas(doc_store: dict):
     st.subheader("Generador Rápido de Documentación y Runbooks")
     st.caption("Crea y publica procedimientos técnicos estandarizados o define nuevos tipos personalizados en 2 minutos.")
 
+    st.markdown("""
+    <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.22);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="badge-info" style="font-size:0.68rem;padding:2px 6px;">[MÓDULO]</span>
+            <b style="color:#6366F1;font-size:0.9rem;">Generador Estandarizado de Procedimientos y Runbooks</b>
+        </div>
+        <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
+            <b>¿Qué hace?</b> Estandariza la redacción técnica de procedimientos operativos (Rollback, Paso a Producción, Postmortem, DRP, SSL) publicándolos directamente en la base documental indexada en Version v1.
+        </div>
+        <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
+            <b>¿Cómo se usa?</b> En el panel izquierdo seleccione el tipo de procedimiento y complete los parámetros técnicos requeridos; en el panel derecho previsualice el Markdown generado, asigne categoría obligatoria y presione <code>Guardar y Publicar</code>.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     sac.steps(items=[
         sac.StepsItem(title="Paso 1", subtitle="Selección y Metadatos"),
         sac.StepsItem(title="Paso 2", subtitle="Parámetros Técnicos"),

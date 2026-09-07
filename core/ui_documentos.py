@@ -48,6 +48,21 @@ def renderizar_pestana_documentacion(doc_store: dict):
     st.subheader("Repositorio de Documentación Técnica y Diagramas")
     st.caption("Visor interactivo Lado a Lado, control de cambios, editor de contenido y gestión taxonómica.")
 
+    st.markdown("""
+    <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.22);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="badge-info" style="font-size:0.68rem;padding:2px 6px;">[MÓDULO]</span>
+            <b style="color:#6366F1;font-size:0.9rem;">Repositorio Documental, Versionado y Clasificación Taxonómica</b>
+        </div>
+        <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
+            <b>¿Qué hace?</b> Centraliza manuales, procedimientos, diagramas de arquitectura y hojas de cálculo con versionado inmutable (SHA-256), auditoría obligatoria de cambios, diff entre versiones, rollback y etiquetado masivo.
+        </div>
+        <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
+            <b>¿Cómo se usa?</b> Utilice la subpestaña <i>Visor</i> para consultar y comparar versiones, <i>Editar Documento</i> para modificar Markdown o celdas de Excel con firma de autor, y <i>Clasificación en Lote</i> para asignar categorías masivas con sugerencias heurísticas.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     if not doc_store:
         st.warning("No hay documentos indexados en el repositorio.")
         return

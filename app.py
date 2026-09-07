@@ -109,19 +109,7 @@ seccion_activa = renderizar_sidebar(user_act, st.session_state.doc_store, total_
 # -------------------------------------------------------------
 # 5. ENRUTAMIENTO DEL PANEL PRINCIPAL (ESPACIO 100% ENFOCADO)
 # -------------------------------------------------------------
-if "Manual" in seccion_activa:
-    renderizar_manual_usuario()
-
-elif "Zen" in seccion_activa:
-    doc_zen_def = st.session_state.get("zen_doc_sel") or (sorted(st.session_state.doc_store.keys())[0] if st.session_state.doc_store else None)
-    if doc_zen_def and doc_zen_def in st.session_state.doc_store:
-        st.session_state["zen_studio_activo"] = True
-        st.session_state["zen_doc_sel"] = doc_zen_def
-        st.rerun()
-    else:
-        st.warning("No hay documentos indexados para previsualizar en Zen Studio.")
-
-elif "Consultas" in seccion_activa:
+if "Consultas" in seccion_activa:
     renderizar_modulo_consultas(st.session_state.doc_store)
 
 elif "Mantenimientos" in seccion_activa or "CMDB" in seccion_activa:
@@ -132,3 +120,15 @@ elif "Documentación" in seccion_activa:
 
 elif "Plantillas" in seccion_activa or "Runbook" in seccion_activa:
     renderizar_pestana_plantillas(st.session_state.doc_store)
+
+elif "Zen" in seccion_activa:
+    doc_zen_def = st.session_state.get("zen_doc_sel") or (sorted(st.session_state.doc_store.keys())[0] if st.session_state.doc_store else None)
+    if doc_zen_def and doc_zen_def in st.session_state.doc_store:
+        st.session_state["zen_studio_activo"] = True
+        st.session_state["zen_doc_sel"] = doc_zen_def
+        st.rerun()
+    else:
+        st.warning("No hay documentos indexados para previsualizar en Zen Studio.")
+
+elif "Manual" in seccion_activa:
+    renderizar_manual_usuario()

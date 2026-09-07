@@ -30,6 +30,21 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
     st.subheader("Motor SQL DuckDB - Historial de Mantenimientos e Inventario")
     st.caption("Consultas analíticas estructuradas con filtrado multidimensional por fecha, nivel, estado y técnico.")
 
+    st.markdown("""
+    <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.22);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="badge-info" style="font-size:0.68rem;padding:2px 6px;">[MÓDULO]</span>
+            <b style="color:#6366F1;font-size:0.9rem;">Observabilidad de Infraestructura e Historial CMDB</b>
+        </div>
+        <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
+            <b>¿Qué hace?</b> Monitorea la salud del parque de servidores en tiempo real, registra eventos de mantenimiento preventivo y correctivo, y ejecuta consultas analíticas instantáneas vía SQL DuckDB.
+        </div>
+        <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
+            <b>¿Cómo se usa?</b> Utilice los selectores de Capa (L1-L4), Estado, Técnico y Fecha para filtrar registros en la grilla interactiva, o despliegue la sección inferior para ingresar consultas SQL analíticas personalizadas.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     min_date, max_date = datetime.date(2026, 1, 1), datetime.date(2026, 12, 31)
     if not df_mantenimientos_cache.empty and 'fecha' in df_mantenimientos_cache.columns:
         try:
