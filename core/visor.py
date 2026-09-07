@@ -208,20 +208,26 @@ def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | 
         renderizar_diagrama_limpio(ruta_original, doc_name, md_content, ultima_version, ultimo_editor, ultimo_timestamp, key_suffix)
         return
 
-    col_sel, col_zen, col_stat = st.columns([2.0, 1.3, 1.2], vertical_alignment="center")
+    col_sel, col_stat, col_zen = st.columns([2.5, 1.2, 1.3], vertical_alignment="center")
     with col_sel:
-        modo_vista = st.segmented_control("Modo de Visualización", ["[Lado a Lado]", "[Solo Markdown]", "[Solo Formato Original]"], default="[Lado a Lado]", label_visibility="collapsed", key=f"seg_modo_vista_{doc_name}_{key_suffix}") or "[Lado a Lado]"
+        modo_vista = st.segmented_control(
+            "Modo de Visualización",
+            ["[Lado a Lado]", "[Solo Markdown]", "[Solo Formato Original]"],
+            default="[Lado a Lado]",
+            label_visibility="collapsed",
+            key=f"seg_modo_vista_{doc_name}_{key_suffix}"
+        ) or "[Lado a Lado]"
+    with col_stat:
+        badge = '<span class="badge-ok" style="font-size:0.72rem;padding:2px 7px;">Fuente Disponible</span>' if (ruta_original and os.path.exists(ruta_original)) else '<span class="badge-warn" style="font-size:0.72rem;padding:2px 7px;">Nativo Markdown</span>'
+        st.markdown(f'<div style="text-align:center;font-size:0.78rem;opacity:0.9;"><b>Estado:</b> {badge}</div>', unsafe_allow_html=True)
     with col_zen:
-        if st.button(">_ Abrir Zen Studio", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el entorno inmersivo de lectura a pantalla completa con índice interactivo y buscador interno."):
+        if st.button(">_ Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el entorno inmersivo de lectura a pantalla completa con índice interactivo y buscador interno."):
             st.session_state["zen_studio_activo"] = True
             st.session_state["zen_doc_sel"] = doc_name
             st.rerun()
-    with col_stat:
-        badge = '<span class="badge-ok">Fuente Disponible</span>' if (ruta_original and os.path.exists(ruta_original)) else '<span class="badge-warn">Nativo Markdown</span>'
-        st.markdown(f'<div style="text-align: right; padding-top: 14px;"><b>Estado:</b> {badge}</div>', unsafe_allow_html=True)
 
     alt_visores = 550
-    st.markdown("---")
+    st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
     if modo_vista == "[Lado a Lado]":
         col_md, col_orig = st.columns(2, gap="medium")

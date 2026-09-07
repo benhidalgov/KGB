@@ -92,35 +92,36 @@ def renderizar_pestana_documentacion(doc_store: dict):
             opts_cat_t3.append(f"[Sin Categoría] ({len(docs_pendientes)})")
         opts_cat_t3.extend(cats_disp_t3)
 
-        col_t4_t, col_t4_c, col_t4_d, col_t4_s = st.columns([1.1, 1.0, 1.1, 1.8], gap="small")
-        with col_t4_t:
-            filtro_t4 = st.selectbox(
-                "Tipo",
-                ["Todos", "Diagramas e Imágenes (.png, .jpg, .svg)", "Excel (.xlsx, .xls)", "Documentos (.docx, .pdf, .pptx)", "Markdown / Texto (.md, .txt)"],
-                key="tab4_type_selector"
-            )
+        col_t4_s, col_t4_c, col_t4_t, col_t4_d = st.columns([3.2, 1.3, 1.1, 0.8], gap="small", vertical_alignment="bottom")
         with col_t4_c:
             filtro_cat_t3 = st.selectbox("Categoría:", opts_cat_t3, key="tab4_cat_selector")
-        with col_t4_d:
-            rango_fecha_doc = st.date_input(
-                "Fecha:",
-                value=(min_doc_d, max_doc_d),
-                min_value=min_doc_d,
-                max_value=max_doc_d,
-                key="tab4_date_range_selector"
+        with col_t4_t:
+            filtro_t4 = st.selectbox(
+                "Tipo:",
+                ["Todos", "Diagramas", "Excel", "Documentos", "Markdown"],
+                key="tab4_type_selector"
             )
+        with col_t4_d:
+            with st.popover("Fecha", use_container_width=True):
+                rango_fecha_doc = st.date_input(
+                    "Rango de Fechas:",
+                    value=(min_doc_d, max_doc_d),
+                    min_value=min_doc_d,
+                    max_value=max_doc_d,
+                    key="tab4_date_range_selector"
+                )
 
         docs_disp = []
         for d in sorted(doc_store.keys()):
             ext_d = os.path.splitext(d)[1].lower()
             is_diag = d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS
-            if filtro_t4.startswith("Diagramas") and not is_diag:
+            if filtro_t4 == "Diagramas" and not is_diag:
                 continue
-            if filtro_t4.startswith("Excel") and ext_d not in ('.xlsx', '.xls'):
+            if filtro_t4 == "Excel" and ext_d not in ('.xlsx', '.xls'):
                 continue
-            if filtro_t4.startswith("Documentos") and ext_d not in ('.docx', '.pdf', '.pptx', '.doc'):
+            if filtro_t4 == "Documentos" and ext_d not in ('.docx', '.pdf', '.pptx', '.doc'):
                 continue
-            if filtro_t4.startswith("Markdown") and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
+            if filtro_t4 == "Markdown" and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
                 continue
             if filtro_cat_t3.startswith("[Sin Categoría]"):
                 if obtener_tags_documento(d):
@@ -136,7 +137,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
         with col_t4_s:
             doc_sel = st.selectbox(
-                f"Seleccione Documento ({len(docs_disp)} disponibles)",
+                f"Documento Seleccionado ({len(docs_disp)} disponibles):",
                 docs_disp,
                 format_func=normalizar_titulo_display,
                 key="tab4_doc_selector"
@@ -151,26 +152,24 @@ def renderizar_pestana_documentacion(doc_store: dict):
             f_carga = historial[0]["timestamp"].split()[0] if (historial and " " in historial[0]["timestamp"]) else "N/A"
             ruta_orig = obtener_ruta_original(doc_sel, doc_cont)
             tags_doc = obtener_tags_documento(doc_sel)
-            tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.75rem;padding:1px 6px;">[{t}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-warn" style="font-size:0.75rem;padding:1px 6px;">[Sin Categoría]</span>'
+            tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.72rem;padding:1px 5px;">[{t}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-warn" style="font-size:0.72rem;padding:1px 5px;">[Sin Categoría]</span>'
+            ext_badge = os.path.splitext(doc_sel)[1].upper().replace(".", "") or "MD"
 
-            col_meta_t3, col_zen_t3 = st.columns([3.8, 1.2], vertical_alignment="center")
-            with col_meta_t3:
-                st.markdown(f"""
-                <div style="background-color:rgba(128,128,128,0.08);border:1px solid rgba(128,128,128,0.2);border-radius:6px;padding:8px 14px;font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                    <div><b>Documento:</b> <span style="color:#6366F1;font-weight:600;">{normalizar_titulo_display(doc_sel)}</span> <span style="font-family:monospace;opacity:0.65;font-size:0.8rem;">({doc_sel})</span></div>
-                    <div><b>Categoría:</b> {tags_badges}</div>
-                    <div><b>Versión:</b> <span class="badge-ok">v{u_ver}</span></div>
-                    <div><b>Fecha Carga:</b> <span class="badge-tag">[{f_carga}]</span></div>
-                    <div><b>Último Editor:</b> <span style="color:#10B981;font-weight:500;">{u_edit}</span></div>
-                    <div><b>Actualizado:</b> <span style="opacity:0.75;">{u_time}</span></div>
-                </div>""", unsafe_allow_html=True)
-            with col_zen_t3:
-                if st.button(">_ Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_tab3_zen_top_{doc_sel}", help="Abre el entorno inmersivo Zen Studio a pantalla completa con índice interactivo."):
-                    st.session_state["zen_studio_activo"] = True
-                    st.session_state["zen_doc_sel"] = doc_sel
-                    st.rerun()
+            st.markdown(f"""
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 6px 0;margin:2px 0 6px 0;font-size:0.8rem;border-bottom:1px solid rgba(128,128,128,0.14);">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span class="badge-tag" style="font-size:0.68rem;padding:1px 5px;">[{ext_badge}]</span>
+                    <span class="badge-ok" style="font-size:0.68rem;padding:1px 5px;">v{u_ver}</span>
+                    {tags_badges}
+                    <span style="opacity:0.35;">•</span>
+                    <span style="opacity:0.85;">Editor: <b style="color:#10B981;">{u_edit}</b></span>
+                    <span style="opacity:0.35;">•</span>
+                    <span style="opacity:0.7;font-family:monospace;font-size:0.74rem;">{u_time}</span>
+                </div>
+                <div style="font-size:0.72rem;opacity:0.48;font-family:monospace;">{doc_sel}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
             renderizar_lado_a_lado(doc_sel, doc_cont, ruta_orig, u_ver, u_edit, u_time, key_suffix="tab3_view")
             st.markdown("---")
             col_dla, col_dli = st.columns([1.5, 2.5])

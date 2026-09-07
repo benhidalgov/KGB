@@ -1603,3 +1603,35 @@ div[data-testid="stPills"] button[data-checked="true"] {
     font-weight: 600 !important;
     box-shadow: 0 1px 4px rgba(99, 102, 241, 0.22) !important;
 }
+
+/* ==========================================================================
+   Botones Primarios estilo Índigo Corporativo (Sobreescribe rojo por defecto)
+   ========================================================================== */
+button[kind="primary"],
+div[data-testid="stButton"] button[kind="primary"],
+button[data-testid="baseButton-primary"],
+.stButton > button[kind="primary"] {
+    background-color: #6366F1 !important;
+    border-color: #4F46E5 !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.25) !important;
+    transition: all 0.18s ease !important;
+}
+
+button[kind="primary"]:hover,
+div[data-testid="stButton"] button[kind="primary"]:hover,
+button[data-testid="baseButton-primary"]:hover,
+.stButton > button[kind="primary"]:hover {
+    background-color: #4F46E5 !important;
+    border-color: #4338CA !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(99, 102, 241, 0.35) !important;
+}
+
+button[kind="primary"] * {
+    color: #FFFFFF !important;
+}
+
