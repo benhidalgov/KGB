@@ -1,5 +1,5 @@
 """
-Módulo de documentación interactiva y Guía Práctica Paso a Paso de la Consola de Infraestructura y Operaciones.
+Módulo de documentación interactiva y Guía Práctica de Uso Paso a Paso de la Consola de Infraestructura y Operaciones.
 """
 import streamlit as st
 
@@ -18,93 +18,87 @@ def ir_a_consola_desde_manual():
 
 
 def renderizar_manual_lanzamiento():
-    """Manual de inicio rápido en 3 pasos visible en la pantalla de login antes de autenticar."""
+    """Guía de inicio rápido paso a paso en la pantalla de login antes de autenticar."""
     st.markdown("""
     <div class="search-result-card" style="border-left: 3.5px solid #6366F1; margin-bottom: 12px;">
         <div class="search-header-row">
             <div>
-                <span class="badge-info">[GUÍA RÁPIDA]</span>
-                <span class="search-doc-title" style="margin-left: 8px;">Inicio de Operaciones en 3 Pasos</span>
+                <span class="badge-info">[GUÍA DE USO]</span>
+                <span class="search-doc-title" style="margin-left: 8px;">Cómo utilizar la consola paso a paso</span>
             </div>
-            <span class="badge-tag">Paso a Paso</span>
+            <span class="badge-tag">Flujo Operativo</span>
         </div>
         <div style="font-size: 0.86rem; line-height: 1.55; opacity: 0.92; margin-top: 4px;">
-            Plataforma centralizada para inventario CMDB, base documental versionada y asistencia técnica con RAG.
+            Aprenda el flujo completo de trabajo: desde la recepción de una alerta hasta el diagnóstico, consulta técnica y resolución documentada.
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    ##### Paso 1: Seleccionar Perfil de Acceso
-    Elija una de las cuentas preconfiguradas según su rol operativo:
-    * **`admin`** (`admin2026`): Acceso total a Bóveda `[VAULT]`, Ingesta, Edición y Rollback auditado.
-    * **`operador`** (`operador2026`): Consultas RAG, Búsqueda DuckDB, Visor de Documentos e Ingesta.
-    * **`auditor`** (`auditor2026`): Modo de solo lectura para inspección técnica y bitácora.
+    ##### 1. Cómo iniciar sesión
+    1. Seleccione una cuenta en la tabla de abajo según su rol:
+       * **`admin`** / `admin2026` (Control total, bóveda de claves, ingesta y reversiones).
+       * **`operador`** / `operador2026` (Búsquedas, asistente generativo, visor y edición).
+       * **`auditor`** / `auditor2026` (Inspección en solo lectura y bitácora).
+    2. Escriba usuario y contraseña en el formulario y presione **Iniciar Sesión**.
 
-    ##### Paso 2: Autenticación y Flujo Guiado
-    1. Ingrese el usuario y la contraseña en el formulario a la izquierda.
-    2. Al autenticarse, se desplegará automáticamente el **Manual Paso a Paso** con los 6 flujos clave.
-    3. Puede cambiar en cualquier momento entre el **Manual**, la **Consola** o el **Zen Studio** desde la barra superior.
-
-    ##### Paso 3: Consultas y Operación en Consola
-    * **Búsqueda instantánea (< 2 ms):** Escriba un hostname (`BALANCER001`), IP (`10.24.0.125`) o serial (`SN-8842-A`).
-    * **Diagnóstico Asistido:** Pregunte en lenguaje natural sobre contingencias, arquitectura o procedimientos.
+    ##### 2. Qué hacer una vez dentro
+    1. Se abrirá la **Guía Práctica Paso a Paso** con el recorrido operativo en 6 etapas.
+    2. Revise el flujo o presione **`>_ Ir a la Consola`** para comenzar a operar.
+    3. Para probar el sistema de inmediato, busque `BALANCER001`, `10.24.0.125` o `Failover Redis`.
     """)
 
-    with st.expander("Términos y Atajos Recomendados", expanded=False):
+    with st.expander("Atajos y Casos de Prueba Listos", expanded=False):
         st.markdown("""
-        * **Balanceador de Carga:** `BALANCER001`
-        * **Seguridad y Tokens:** `JWT`
-        * **Dirección IP Crítica:** `10.24.0.125`
-        * **Procedimiento de Contingencia:** `Failover Redis`
-        * **Número de Serie Físico:** `SN-8842-A`
+        * **Buscar Balanceador:** `BALANCER001`
+        * **Buscar por Dirección IP:** `10.24.0.125`
+        * **Buscar Seguridad / Tokens:** `JWT`
+        * **Consultar Contingencia:** `Failover Redis`
+        * **Buscar por Serial Físico:** `SN-8842-A`
         """)
 
 
 def renderizar_manual_usuario():
-    """Renderiza el manual interactivo paso a paso estructurado como flujo guiado de 6 etapas."""
+    """Renderiza la guía práctica de uso paso a paso estructurada en 6 etapas secuenciales del trabajo diario."""
     es_inicio = bool(st.session_state.get("manual_lanzamiento"))
 
-    st.markdown('<p class="main-title">Manual de Operaciones: Flujo Guiado Paso a Paso</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">Guía Práctica: Cómo usar el sistema paso a paso</p>', unsafe_allow_html=True)
     if es_inicio:
-        st.caption("Guía de bienvenida interactiva. Complete los pasos secuenciales o ingrese directamente a la consola.")
+        st.caption("Flujo de inducción operativa. Siga los pasos secuenciales o pulse el botón para ir a la consola.")
         col_cta, col_hint = st.columns([1.2, 2.8], gap="small", vertical_alignment="center")
         with col_cta:
             if st.button(">_ Ir a la Consola", type="primary", width="stretch", key="btn_manual_ir_consola"):
                 ir_a_consola_desde_manual()
                 st.rerun()
         with col_hint:
-            st.caption("También puede alternar la vista en la barra superior: Consola | Zen Studio | Manual de Uso.")
+            st.caption("Puede alternar en cualquier momento entre Consola | Zen Studio | Manual de Uso desde la barra superior.")
         st.markdown("---")
     else:
-        st.caption("Guía operativa interactiva. Seleccione un paso para revisar el procedimiento detallado.")
+        st.caption("Recorrido práctico del trabajo diario en la consola. Seleccione una etapa para ver cómo se ejecuta.")
 
-    # Inicialización del paso activo
     if "manual_paso_actual" not in st.session_state:
         st.session_state["manual_paso_actual"] = 1
 
-    pasos_titulos = [
-        "1. Acceso y Roles (RBAC)",
-        "2. Búsqueda en CMDB (< 2 ms)",
-        "3. Asistente Técnico (RAG)",
-        "4. Visor Lado a Lado y Zen",
-        "5. Edición y Rollback Seguro",
-        "6. Ingesta Batch y Runbooks"
+    etapas_titulos = [
+        "Paso 1: Iniciar Turno y Verificar Estado",
+        "Paso 2: Buscar Servidores ante una Alerta",
+        "Paso 3: Pedir Diagnóstico al Asistente",
+        "Paso 4: Consultar Manuales en Zen Studio",
+        "Paso 5: Registrar Cambios con Auditoría",
+        "Paso 6: Crear Runbooks e Ingestar Lotes"
     ]
 
-    # Stepper interactivo en barra segmentada
     paso_idx_prev = st.session_state["manual_paso_actual"] - 1
     paso_sel_str = st.segmented_control(
-        "Navegación de Pasos",
-        pasos_titulos,
-        default=pasos_titulos[paso_idx_prev] if 0 <= paso_idx_prev < len(pasos_titulos) else pasos_titulos[0],
+        "Etapas de Operación",
+        etapas_titulos,
+        default=etapas_titulos[paso_idx_prev] if 0 <= paso_idx_prev < len(etapas_titulos) else etapas_titulos[0],
         label_visibility="collapsed",
         key="stepper_manual_selector"
-    ) or pasos_titulos[0]
+    ) or etapas_titulos[0]
 
-    # Sincronizar índice según la selección del usuario
     try:
-        paso_num = pasos_titulos.index(paso_sel_str) + 1
+        paso_num = etapas_titulos.index(paso_sel_str) + 1
     except ValueError:
         paso_num = 1
     st.session_state["manual_paso_actual"] = paso_num
@@ -112,247 +106,249 @@ def renderizar_manual_usuario():
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
     # =========================================================================
-    # PASO 1: ACCESO Y ROLES (RBAC)
+    # PASO 1: INICIAR TURNO Y VERIFICAR ESTADO
     # =========================================================================
     if paso_num == 1:
         st.markdown("""
         <div class="search-result-card" style="border-left: 4px solid #6366F1; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span class="badge-info">[PASO 1 DE 6]</span>
-                <span class="badge-tag">Seguridad y Permisos</span>
+                <span class="badge-tag">Inicio de Turno</span>
             </div>
-            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Paso 1: Identificación y Niveles de Acceso (RBAC)</h3>
+            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Paso 1: Iniciar Turno y Verificar el Entorno Operativo</h3>
             <div style="font-size: 0.88rem; opacity: 0.85;">
-                Comprenda el modelo de permisos corporativo y cómo verificar los privilegios de su sesión activa.
+                Compruebe la disponibilidad de los servicios, su rol activo y el estado de la base documental antes de operar.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        #### 1. Objetivo del Paso
-        Verificar la identidad del operador y reconocer el alcance de acciones autorizadas para su perfil de usuario.
+        #### ¿Qué se hace en este paso?
+        Al comenzar su guardia o turno operativo, valide que la consola está lista para responder consultas y reconozca sus permisos.
 
         ---
 
-        #### 2. Instrucciones Paso a Paso
-        1. **Revise la tarjeta de Sesión Activa:** En el panel lateral izquierdo, observe el recuadro superior donde figura su nombre de usuario, nombre corporativo y badge de rol (`Administrador`, `Operador` o `Auditor`).
-        2. **Identifique los permisos de su perfil:**
-           * **`Administrador`:** Acceso total a la Bóveda de Credenciales `[VAULT]`, carga masiva de archivos ZIP, edición en caliente de documentos y ejecución de *Rollbacks*.
-           * **`Operador`:** Consultas con el Asistente Técnico, búsquedas instantáneas en DuckDB, visor multimodal, carga de archivos y edición estándar (sin reversiones destructivas ni acceso a secretos).
-           * **`Auditor`:** Inspección en modo solo lectura de documentos, tablas de servidores y verificación de firmas SHA-256 en la bitácora.
-        3. **Configuración de Bóveda (Solo Administradores):** En la sección `Bóveda de Credenciales [VAULT]` del panel lateral, configure la variable `GEMINI_API_KEY` para habilitar el motor generativo en la nube.
-        4. **Cierre de Turno:** Al finalizar sus tareas operativas, pulse el botón **`>_ Cerrar Sesión`** para registrar el evento en auditoría y revocar la sesión.
+        #### Cómo se hace paso a paso:
+        1. **Mire la Barra Superior (Navbar):**
+           * Compruebe que el indicador marque **`● ONLINE`** (verde con pulso activo).
+           * Verifique el contador de documentos activos en la esquina derecha (debe indicar 30 documentos cargados).
+        2. **Revise el Panel Lateral (Sidebar):**
+           * En la tarjeta superior **`Sesión Activa`**, valide su nombre de usuario y su rol (`Administrador`, `Operador` o `Auditor`).
+           * Despliegue la sección **`Explorador Documental`** para ver el catálogo de diagramas, libros Excel y manuales Word/PDF.
+        3. **Verificación de Claves (Solo Administradores):**
+           * En la sección **`Bóveda de Credenciales [VAULT]`**, verifique que `GEMINI_API_KEY` figure como `[CONFIGURADO]`. Si no lo está, ingrese la clave y pulse **`>_ Guardar`**.
 
         ---
 
-        #### 3. Resultado Esperado en Pantalla
-        * El Navbar superior mostrará el indicador de estado **`● ONLINE`** y el contador de documentos activos.
-        * Las pestañas operativas quedarán habilitadas de acuerdo con la matriz de permisos de su perfil.
+        #### Resultado en pantalla:
+        * La consola se encuentra lista y conectada en memoria RAM para procesar búsquedas en menos de 2 milisegundos.
         """)
 
     # =========================================================================
-    # PASO 2: BÚSQUEDA EN CMDB DUCKDB
+    # PASO 2: BUSCAR SERVIDORES ANTE UNA ALERTA
     # =========================================================================
     elif paso_num == 2:
         st.markdown("""
         <div class="search-result-card" style="border-left: 4px solid #10B981; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span class="badge-ok">[PASO 2 DE 6]</span>
-                <span class="badge-tag">Rendimiento en RAM</span>
+                <span class="badge-tag">Atención de Incidentes</span>
             </div>
-            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #10B981;">Paso 2: Búsqueda Rápida en CMDB y Documentación (< 2 ms)</h3>
+            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #10B981;">Paso 2: Buscar Servidores o IPs ante una Alerta (< 2 ms)</h3>
             <div style="font-size: 0.88rem; opacity: 0.85;">
-                Localice servidores, IPs, números de serie y fragmentos documentales con latencia sub-milisegundo.
+                Localice de inmediato el servidor afectado, su técnico asignado y los manuales de contingencia relacionados.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        #### 1. Objetivo del Paso
-        Aprender a consultar el inventario de infraestructura y los manuales técnicos sin consumir cuota de API externa.
+        #### ¿Qué se hace en este paso?
+        Llega una notificación de monitoreo (Nagios/PRTG) indicando lentitud o corte en un servicio. Debe ubicar la máquina en la CMDB en milisegundos.
 
         ---
 
-        #### 2. Instrucciones Paso a Paso
-        1. Ingrese a la pestaña **`Consultas y Búsqueda`** -> subpestaña **`Búsqueda Textual (DuckDB & Docs)`**.
-        2. En la barra de búsqueda superior, escriba un término concreto. Ejemplos de prueba:
-           * Hostname exacto: `BALANCER001`
-           * Dirección IP: `10.24.0.125`
-           * Estándar o protocolo: `JWT` o `SSL`
-           * Procedimiento: `Failover Redis`
+        #### Cómo se hace paso a paso:
+        1. Vaya a la primera pestaña: **`Consultas y Búsqueda`** -> subpestaña **`Búsqueda Textual (DuckDB & Docs)`**.
+        2. Escriba el dato que le entregó la alerta en la barra de búsqueda:
+           * Por Hostname: `BALANCER001`
+           * Por Dirección IP: `10.24.0.125`
+           * Por Número de Serie: `SN-8842-A`
+           * Por Servicio o Tecnología: `Redis`, `JWT`, `PostgreSQL`
         3. Presione `Enter` o haga clic en **`>_ Buscar en CMDB y Documentos`**.
-        4. Analice los dos paneles de respuesta generados en memoria RAM:
-           * **Cuadrícula de Servidores CMDB:** Muestra hostname, IP, nivel de arquitectura (`L1` a `L4`), estado operativo (`[OPERATIVO]`, `[ALERTA]`, `[CRÍTICO]`) y técnico responsable.
-           * **Extractos Documentales con Score:** Presenta los párrafos exactos donde aparece el término con resaltado amarillo `<mark>`.
-        5. **Escalar al Asistente:** Si detecta un servidor con alarma o requiere un análisis más profundo, pulse el botón **`>_ Analizar con Asistente`** para transferir la consulta a la IA generativa.
+        4. **Revise la Tabla de Servidores (Panel Superior):**
+           * Identifique la IP, Nivel arquitectónico (`L1 Hardware`, `L2 Virtualización`, `L3 Middleware`, `L4 Aplicaciones`), Estado (`[OPERATIVO]`, `[ALERTA]`, `[CRÍTICO]`) y Técnico Responsable.
+        5. **Revise los Extractos Documentales (Panel Inferior):**
+           * Lea los párrafos exactos de manuales donde se menciona el servidor con los términos destacados en amarillo `<mark>`.
+        6. **Escalamiento Rápido:** Pulse el botón **`>_ Analizar con Asistente`** situado en la tarjeta del servidor para trasladar la consulta al módulo de IA.
 
         ---
 
-        #### 3. Cómo se calcula el Score de Relevancia
-        | Criterio de Coincidencia | Puntos Asignados |
-        | :--- | :--- |
-        | **Frase exacta coincidente en el texto** | **+30 puntos** (Máxima certeza) |
-        | **Término presente en el nombre del archivo** | **+20 puntos** |
-        | **Frecuencia del término en párrafos** | **+2 puntos** por cada repetición |
+        #### Ejemplo de resultado:
+        | Servidor | Dirección IP | Capa | Estado | Técnico |
+        | :--- | :--- | :--- | :--- | :--- |
+        | `BALANCER001` | `10.24.0.125` | `L2 (Virtualización)` | `[ALERTA]` | Carlos DevOps |
         """)
 
     # =========================================================================
-    # PASO 3: ASISTENTE TÉCNICO (GEMINI RAG)
+    # PASO 3: PEDIR DIAGNÓSTICO AL ASISTENTE
     # =========================================================================
     elif paso_num == 3:
         st.markdown("""
         <div class="search-result-card" style="border-left: 4px solid #6366F1; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span class="badge-info">[PASO 3 DE 6]</span>
-                <span class="badge-tag">Inferencia Generativa</span>
+                <span class="badge-tag">Diagnóstico Asistido</span>
             </div>
-            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Paso 3: Diagnóstico y Asistencia Técnica con Gemini RAG</h3>
+            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Paso 3: Pedir Diagnóstico y Comandos al Asistente Técnico</h3>
             <div style="font-size: 0.88rem; opacity: 0.85;">
-                Obtenga explicaciones técnicas, análisis de causa raíz y comandos asistidos fundamentados en la evidencia.
+                Consulte en lenguaje natural cómo resolver el problema basándose en la documentación oficial de la empresa.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        #### 1. Objetivo del Paso
-        Formular preguntas en lenguaje natural para recibir diagnósticos técnicos basados exclusivamente en la CMDB y los manuales corporativos (*Zero Hallucinations*).
+        #### ¿Qué se hace en este paso?
+        No recuerda la secuencia exacta de comandos para conmutar un nodo o reiniciar un clúster. El Asistente redacta la guía paso a paso basada en los manuales de la empresa.
 
         ---
 
-        #### 2. Instrucciones Paso a Paso
-        1. Vaya a la subpestaña **`Asistente Técnico (Gemini RAG)`** dentro de la pestaña de búsqueda.
-        2. Escriba su consulta técnica en el campo de texto. Ejemplos recomendados:
-           * *"¿Cuál es el procedimiento detallado de failover para el clúster de Redis?"*
-           * *"Indícame la IP, capa arquitectónica y técnico a cargo de BALANCER001."*
-           * *"¿Qué servidores de nivel L3 se encuentran en estado de alerta o revisión?"*
+        #### Cómo se hace paso a paso:
+        1. Abra la subpestaña **`Asistente Técnico (Gemini RAG)`**.
+        2. Formule su pregunta técnica en lenguaje natural. Ejemplos de uso diario:
+           * *"¿Cómo realizo el failover manual del clúster Redis según los manuales de contingencia?"*
+           * *"Indícame los pasos para reiniciar de forma segura el balanceador BALANCER001 sin botar sesiones."*
+           * *"¿Cuáles son los servidores de base de datos en estado crítico y quién los administra?"*
         3. Presione el botón **`>_ Consultar Asistente`**.
-        4. El motor inyectará el contexto recuperado de DuckDB y los documentos locales hacia el modelo **`gemini-2.5-flash`**, entregando:
-           * Diagnóstico formal sin informalidades ni emojis.
-           * Tablas Markdown y bloques de comandos de terminal listos para ejecutar.
-           * Identificación explícita de los documentos y servidores usados como evidencia.
-        5. **Mecanismo de Resiliencia (Fallback Local):** Si la clave de Gemini no está configurada o hay una interrupción externa, el sistema conmuta automáticamente al **Motor Local Autónomo** para responder con datos deterministas sin interrumpir la operación.
-        6. **Limpieza de Sesión:** Use el botón **`>_ Limpiar Chat`** para reiniciar la bitácora de diálogo.
+        4. El motor recupera la evidencia documental y genera una respuesta formal con:
+           * Diagnóstico estructurado y orden cronológico de ejecución.
+           * Bloques de comandos de terminal listos para copiar.
+           * Referencias a los documentos exactos utilizados como evidencia.
+        5. **Si no hay conexión a internet o falta la API Key:** La consola activa automáticamente el **Motor Local Autónomo** para responder con los datos duros de la CMDB sin caídas de servicio.
+
+        ---
+
+        #### Para reiniciar la conversación:
+        * Pulse el botón **`>_ Limpiar Chat`** para borrar el historial de preguntas y comenzar un nuevo caso de diagnóstico.
         """)
 
     # =========================================================================
-    # PASO 4: VISOR LADO A LADO Y ZEN STUDIO
+    # PASO 4: CONSULTAR MANUALES EN ZEN STUDIO
     # =========================================================================
     elif paso_num == 4:
         st.markdown("""
         <div class="search-result-card" style="border-left: 4px solid #D97706; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span class="badge-warn">[PASO 4 DE 6]</span>
-                <span class="badge-tag">Experiencia de Lectura</span>
+                <span class="badge-tag">Inspección de Documentos</span>
             </div>
-            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #D97706;">Paso 4: Exploración de Documentación y Lector Zen Studio</h3>
+            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #D97706;">Paso 4: Consultar Manuales y Planos en Zen Studio</h3>
             <div style="font-size: 0.88rem; opacity: 0.85;">
-                Inspeccione documentos en dos columnas paralelas o ingrese a pantalla completa con índice interactivo.
+                Lea manuales de 50+ páginas, hojas Excel o diagramas de red en pantalla completa sin distracciones.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        #### 1. Objetivo del Paso
-        Comparar el texto indexado contra el archivo binario original y utilizar el entorno inmersivo para manuales extensos.
+        #### ¿Qué se hace en este paso?
+        Necesita verificar el diagrama de arquitectura o el documento PDF oficial antes de ejecutar un cambio en producción.
 
         ---
 
-        #### 2. Instrucciones Paso a Paso
-        1. Diríjase a la pestaña **`Documentación Técnica`**.
-        2. Utilice los filtros superiores para seleccionar el tipo de activo (*Diagramas, Excel, PDFs, Markdown*) y elija un archivo del catálogo.
-        3. **Visor Lado a Lado Estándar:**
-           * **Columna Izquierda:** Texto estructurado en Markdown limpio procesado por el motor.
-           * **Columna Derecha:** Archivo fuente original (PDF interactivo, cuadrícula Excel con cambio de hojas, diagrama en alta resolución o visor de código).
-        4. **Entrar al Lector Zen Studio:**
-           * Haga clic en el botón **`>_ Abrir en Zen Studio`** en la cabecera del documento (o elija `Zen Studio` en la barra de navegación superior).
-        5. **Herramientas de Zen Studio:**
-           * **Índice Interactivo (TOC):** Salte directamente a encabezados `H1`-`H4` desde el panel lateral izquierdo.
-           * **Buscador Interno:** Escriba un término en la cabecera Zen para resaltarlo en amarillo `<mark>` a lo largo de todo el texto.
-           * **Selector de Temas:** Alterne entre los temas `Obsidian`, `Sepia` y `Papel` según la iluminación de su entorno.
-           * **Métricas de Lectura:** Verifique el total de palabras y el tiempo estimado de lectura en minutos.
-        6. **Salir:** Presione el botón **`>_ Salir`** para volver a la consola normal.
+        #### Cómo se hace paso a paso:
+        1. Vaya a la pestaña **`Documentación Técnica`**.
+        2. Seleccione el documento en el catálogo desplegable (ej: `CMDB UNICARD v 1.1.xlsx` o `DIAGRAMA__Arquitectura_Red.png`).
+        3. **Visor Lado a Lado (Comparativa):**
+           * A la izquierda verá el texto Markdown normalizado.
+           * A la derecha verá el archivo original: PDF interactivo para hacer zoom, Excel con selector de hojas o imagen en alta resolución.
+        4. **Lector Inmersivo Zen Studio:**
+           * Presione el botón azul **`>_ Abrir en Zen Studio`** (o elija `Zen Studio` en la barra superior).
+           * La pantalla ocultará todos los menús laterales para dejar el 100% del espacio al documento.
+        5. **Herramientas en Zen Studio:**
+           * **Índice (TOC):** En el panel izquierdo, haga clic en cualquier título `H1-H4` para saltar directo a esa sección.
+           * **Buscador en documento:** Escriba `failover` o `puerto 8080` en la cabecera para resaltar todas las apariciones en amarillo.
+           * **Temas de lectura:** Alterne entre `Obsidian` (oscuro), `Sepia` (cálido) y `Papel` (blanco).
+        6. Presione **`>_ Salir`** en la esquina superior para volver a la consola operativa.
         """)
 
     # =========================================================================
-    # PASO 5: EDICIÓN Y ROLLBACK SEGURO
+    # PASO 5: REGISTRAR CAMBIOS CON AUDITORÍA
     # =========================================================================
     elif paso_num == 5:
         st.markdown("""
         <div class="search-result-card" style="border-left: 4px solid #6A397B; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span class="badge-crit">[PASO 5 DE 6]</span>
-                <span class="badge-tag">Auditoría e Inmutabilidad</span>
+                <span class="badge-tag">Versionado y Rollback</span>
             </div>
-            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6A397B;">Paso 5: Edición Colaborativa, Versionado y Rollback Seguro</h3>
+            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6A397B;">Paso 5: Registrar Cambios con Auditoría y Rollback Seguro</h3>
             <div style="font-size: 0.88rem; opacity: 0.85;">
-                Actualice fichas técnicas y libros Excel con registro obligatorio de auditoría y respaldo inmutable.
+                Actualice fichas técnicas y libros Excel con registro de autor y capacidad de revertir errores en un clic.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        #### 1. Objetivo del Paso
-        Modificar información técnica con trazabilidad estricta y aprender a revertir cambios fallidos sin riesgo de pérdida de datos.
+        #### ¿Qué se hace en este paso?
+        Modificó la IP de contingencia de un servidor o actualizó un libro Excel y debe guardar el cambio sin riesgo de sobreescribir a ciegas.
 
         ---
 
-        #### 2. Instrucciones Paso a Paso
-        1. En la pestaña **`Documentación Técnica`**, seleccione el archivo deseado y abra la subpestaña **`Editar Documento`**.
-        2. **Edición según formato:**
-           * **Si es Excel:** Modifique los datos directamente en la tabla interactiva (`st.data_editor`).
-           * **Si es Markdown / Texto:** Edite el contenido en el área de texto protegida.
-           * **Si es un Diagrama:** Modifique la descripción técnica (*Caption*) en su formulario dedicado.
-        3. **Registro Obligatorio de Auditoría:** Ingrese su nombre en **Editor / Responsable** y detalle el **Motivo del Cambio** (ej: *"Actualización de IP de réplica en cluster PostgreSQL"*).
-        4. Haga clic en **`Guardar y Publicar Versión v{N+1}`**. El sistema genera un snapshot inmutable en `data/history/` y calcula la firma SHA-256.
-        5. **Cómo Ejecutar un Rollback (Reversión):**
-           * Abra la subpestaña **`Historial de Versiones`**.
-           * Seleccione la versión previa que desea restaurar (ej: `v1`).
+        #### Cómo se hace paso a paso:
+        1. En **`Documentación Técnica`**, abra la subpestaña **`Editar Documento`**.
+        2. **Realice la modificación:**
+           * Si es Excel: Cambie el valor directamente en la celda de la tabla interactiva (`st.data_editor`).
+           * Si es Markdown / Texto: Modifique las líneas en el editor de texto.
+           * Si es un Diagrama: Edite la descripción técnica (*Caption*).
+        3. **Complete los Campos Obligatorios de Auditoría:**
+           * Ingrese su nombre en **Editor (*)** (ej: `Carlos DevOps`).
+           * Ingrese la justificación en **Motivo (*)** (ej: `Actualización de IP de réplica tras mantenimiento`).
+        4. Presione **`Guardar y Publicar Versión v{N+1}`**. El sistema genera una versión inmutable con copia de respaldo en `data/history/`.
+        5. **¿Cómo hacer Rollback si el cambio fue erróneo?**
+           * Vaya a la subpestaña **`Historial de Versiones`**.
+           * Seleccione la versión anterior en el desplegable (ej: `v1`).
            * Revise el comparador visual de diferencias (*Diff*).
-           * Ingrese la justificación técnica del rollback y presione **`Confirmar y Ejecutar Rollback`**.
-           * El sistema restaurará el archivo anterior, creando una nueva versión y registrando el evento en `data/audit_log.json`.
+           * Ingrese el motivo del rollback y presione **`Confirmar y Ejecutar Rollback`**. El sistema restaurará la versión anterior de inmediato.
         """)
 
     # =========================================================================
-    # PASO 6: INGESTA BATCH Y RUNBOOKS
+    # PASO 6: CREAR RUNBOOKS E INGESTAR LOTES
     # =========================================================================
     elif paso_num == 6:
         st.markdown("""
         <div class="search-result-card" style="border-left: 4px solid #10B981; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span class="badge-ok">[PASO 6 DE 6]</span>
-                <span class="badge-tag">Operaciones Avanzadas</span>
+                <span class="badge-tag">Estandarización e Ingesta</span>
             </div>
-            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #10B981;">Paso 6: Ingesta Masiva de Archivos y Generación de Runbooks</h3>
+            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #10B981;">Paso 6: Crear Runbooks Oficiales e Ingestar Paquetes ZIP</h3>
             <div style="font-size: 0.88rem; opacity: 0.85;">
-                Incorpore lotes de documentos comprimidos y estandarice procedimientos operativos formales.
+                Estandarice los procedimientos operativos del equipo y cargue paquetes masivos de archivos en segundos.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        #### 1. Objetivo del Paso
-        Cargar paquetes masivos de documentación y redactar procedimientos de emergencia listos para producción.
+        #### ¿Qué se hace en este paso?
+        Redacta el informe postmortem del incidente o sube un paquete ZIP con nuevos manuales técnicos para que todo el equipo pueda buscarlos.
 
         ---
 
-        #### 2. Instrucciones Paso a Paso
-        1. **Ingesta de Paquetes ZIP (Panel Lateral):**
-           * Arrastre archivos individuales o un archivo **`.zip`** completo hacia el cargador de archivos en la barra lateral.
-           * El motor descomprime el lote en memoria (`io.BytesIO`), extrae el texto, sanitiza formatos, genera copias `v1` e indexa todos los archivos en tiempo real sin reiniciar el servidor.
-        2. **Generación de Runbooks y Procedimientos:**
+        #### Cómo se hace paso a paso:
+        1. **Crear un Runbook Formal:**
            * Abra la pestaña **`Plantillas y Runbooks`**.
-           * Seleccione una plantilla prediseñada:
-             * *Rollback de Emergencia*
-             * *Paso a Producción*
-             * *Postmortem de Incidente P1*
-             * *Ficha Técnica de API REST / SOAP*
-             * *Plan de Contingencia y DRP*
-             * *Parchado de Sistema Operativo*
-             * *Renovación de Certificados SSL/TLS*
-             * *Respaldo y Restauración de Base de Datos*
-           * Complete los campos guiados (Servicio, Criticidad, Ventana de Horario, Pasos Secuenciales, Comandos).
-           * Compruebe la vista previa generada a la derecha y pulse **`Publicar Procedimiento en data/docs/`**.
-        3. **Sincronización:** Pulse **`>_ Reindexar`** en el panel lateral para refrescar la memoria caché si agregó documentos externos por terminal.
+           * Seleccione el tipo de procedimiento: *Postmortem P1, Rollback de Emergencia, Paso a Producción, DRP, Parchado SO, Certificados SSL*.
+           * Complete el formulario guiado (Nombre del servicio, criticidad, ventana de mantenimiento, pasos secuenciales).
+           * Revise la vista previa generada en tiempo real a la derecha.
+           * Presione **`Publicar Procedimiento en data/docs/`**. El runbook queda indexado como `v1` y disponible de inmediato para búsquedas.
+        2. **Cargar Lotes de Archivos (Paquetes ZIP):**
+           * En el panel lateral, arrastre un archivo comprimido **`.zip`** (o archivos sueltos `.pdf`, `.docx`, `.xlsx`, `.png`) al cargador.
+           * El motor descomprime en memoria, sanitiza nombres, genera versiones `v1` e indexa todo en tiempo real.
+        3. **Sincronización Final:**
+           * Si agregó archivos por terminal en `data/docs/`, pulse el botón **`>_ Reindexar`** en el panel lateral para refrescar la memoria caché de consultas.
+
+        ---
+
+        #### ¡Listo! Ya conoce el ciclo operativo completo.
         """)
 
     # =========================================================================
