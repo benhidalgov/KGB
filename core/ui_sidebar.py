@@ -1,7 +1,7 @@
 """
 Módulo desacoplado de renderizado para el Panel Lateral (Sidebar).
 Gestiona la navegación central por módulos de la aplicación, información de sesión,
-ingesta documental con categorización obligatoria, explorador rápido y bóveda de credenciales.
+ingesta documental con categorización obligatoria y bóveda de credenciales.
 """
 import os
 import io
@@ -9,22 +9,17 @@ import zipfile
 import streamlit as st
 
 from core.procesador import (
-    IMAGE_EXTENSIONS,
     SUPPORTED_EXTENSIONS,
     normalizar_nombre_archivo,
-    normalizar_titulo_display,
     limpiar_cache_documentos,
     cargar_documentos_locales,
     procesar_e_ingestar_binario,
 )
 from core.tags import (
     obtener_categorias_disponibles,
-    obtener_tags_documento,
     asignar_tags_documento,
-    obtener_documentos_sin_categoria,
 )
 from core.motor import limpiar_cache_consultas
-from core.auditoria import obtener_fecha_carga_documento
 from core.auth import cerrar_sesion, tiene_permiso
 from core.vault import (
     listar_secretos_disponibles,
@@ -183,74 +178,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                         st.session_state["uploader_key_ver"] += 1
                         st.toast(f"[OK] {proc_cnt} archivo(s) clasificados bajo: {', '.join(cat_seleccionadas)}")
                         st.rerun()
-
-        # 5. Explorador Documental
-        cant_side = len(doc_store)
-        with st.expander(f"Explorador Documental ({cant_side})", expanded=False):
-            if cant_side > 0:
-                c_img = sum(1 for d in doc_store if d.startswith("DIAGRAMA__") or any(d.lower().endswith(e) for e in IMAGE_EXTENSIONS))
-                c_xls = sum(1 for d in doc_store if os.path.splitext(d)[1].lower() in ('.xlsx', '.xls'))
-                c_doc = sum(1 for d in doc_store if os.path.splitext(d)[1].lower() in ('.docx', '.pdf', '.pptx', '.doc'))
-                c_txt = sum(1 for d in doc_store if os.path.splitext(d)[1].lower() in ('.md', '.txt', '.csv') and not d.startswith("DIAGRAMA__"))
-
-                filt_opts = [f"Todos ({cant_side})", f"Diagramas ({c_img})", f"Excel ({c_xls})", f"Documentos ({c_doc})", f"Markdown ({c_txt})"]
-                tipo_f = st.pills("Tipo:", options=filt_opts, default=filt_opts[0], label_visibility="collapsed", key="sb_type_pill_filter") or filt_opts[0]
-
-                cats_disp_sb = obtener_categorias_disponibles()
-                docs_sin_cat_sb = obtener_documentos_sin_categoria(sorted(doc_store.keys()))
-                opts_cat_sb = ["Todas"]
-                if docs_sin_cat_sb:
-                    opts_cat_sb.append(f"[Sin Categoría] ({len(docs_sin_cat_sb)})")
-                opts_cat_sb.extend(cats_disp_sb)
-
-                filtro_cat_sb = st.selectbox("Categoría:", opts_cat_sb, key="sb_cat_filter_sel")
-                doc_filter = st.text_input("Buscar nombre...", key="sb_doc_filter", placeholder="Filtrar por nombre...")
-
-                docs_f = []
-                for d in sorted(doc_store.keys()):
-                    ext_d = os.path.splitext(d)[1].lower()
-                    is_diag = d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS
-                    if tipo_f.startswith("Diagramas") and not is_diag:
-                        continue
-                    if tipo_f.startswith("Excel") and ext_d not in ('.xlsx', '.xls'):
-                        continue
-                    if tipo_f.startswith("Documentos") and ext_d not in ('.docx', '.pdf', '.pptx', '.doc'):
-                        continue
-                    if tipo_f.startswith("Markdown") and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
-                        continue
-                    if filtro_cat_sb.startswith("[Sin Categoría]"):
-                        if obtener_tags_documento(d):
-                            continue
-                    elif filtro_cat_sb != "Todas":
-                        tags_d_sb = obtener_tags_documento(d)
-                        if filtro_cat_sb not in tags_d_sb:
-                            continue
-                    if doc_filter and doc_filter.lower() not in d.lower():
-                        continue
-                    docs_f.append(d)
-
-                if docs_f:
-                    items_h = ['<div class="sidebar-doc-list">']
-                    for d in docs_f:
-                        ext_d = os.path.splitext(d)[1].lower()
-                        tag = '<span class="badge-ok" style="font-size:0.64rem;padding:1px 4px;">[DIAGRAMA]</span>' if (d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS) else ('<span class="badge-info" style="font-size:0.64rem;padding:1px 4px;">[EXCEL]</span>' if ext_d in ('.xlsx', '.xls') else ('<span class="badge-warn" style="font-size:0.64rem;padding:1px 4px;">[DOC]</span>' if ext_d in ('.pdf', '.docx', '.pptx', '.doc') else '<span class="badge-tag" style="font-size:0.64rem;padding:1px 4px;">[MD]</span>'))
-                        tags_d = obtener_tags_documento(d)
-                        tag_cat_h = f'<span class="badge-info" style="font-size:0.62rem;padding:1px 4px;margin-left:4px;">[{tags_d[0]}]</span>' if tags_d else '<span class="badge-warn" style="font-size:0.62rem;padding:1px 4px;margin-left:4px;">[Sin Categoría]</span>'
-                        f_d = obtener_fecha_carga_documento(d)
-                        items_h.append(f"""
-                        <div class="sidebar-doc-card">
-                            <div class="sidebar-doc-card-header"><span class="sidebar-doc-name" title="{d}">{normalizar_titulo_display(d)}</span>{tag}{tag_cat_h}</div>
-                            <div class="sidebar-doc-meta"><span>{f_d.strftime('%Y-%m-%d')}</span><span>{len(doc_store[d])/1024:.1f} KB</span></div>
-                            <div style="font-size:0.65rem;opacity:0.55;font-family:monospace;margin-top:2px;word-break:break-all;">{d}</div>
-                        </div>""")
-                    items_h.append('</div>')
-                    st.markdown("".join(items_h), unsafe_allow_html=True)
-                else:
-                    st.caption("No hay documentos coincidentes.")
-            else:
-                st.caption("No hay documentos en el repositorio.")
-
-        # 6. Herramientas del Sistema y Bóveda
+        # 5. Herramientas del Sistema y Bóveda
         with st.expander("Herramientas del Sistema y Bóveda", expanded=False):
             if st.button(">_ Reindexar Base Documental", help="Recarga todos los documentos desde data/docs/", width="stretch", key="btn_sidebar_reindexar"):
                 limpiar_cache_documentos()

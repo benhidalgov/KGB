@@ -24,7 +24,7 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
             <b style="color:#6366F1;font-size:0.9rem;">Observabilidad de Infraestructura e Historial CMDB</b>
         </div>
         <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
-            <b>¿Qué hace?</b> Permite consultar el inventario y mantenimientos de servidores de la CMDB con filtrado multidimensional y ejecución de sentencias SQL instantáneas sobre DuckDB.
+            <b>¿Qué hace?</b> Permite consultar el inventario con ejecución de sentencias SQL instantáneas sobre DuckDB.
         </div>
         <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
             <b>¿Cómo se usa?</b> Utilice los selectores de Capa (L1-L4), Estado, Técnico y Fecha para inspeccionar registros en la tabla interactiva, o despliegue la sección inferior para ingresar consultas SQL analíticas.
