@@ -744,7 +744,7 @@ with tab_docs:
             else:
                 st.success(f"[OK] Todos los documentos ({len(todos_docs)}) cuentan con al menos una categoría asignada. Puede utilizar esta herramienta para reclasificar en lote si lo requiere.")
 
-            col_bl_f, col_bl_s = st.columns([2.5, 1.5], vertical_alignment="center")
+            col_bl_f, col_bl_s = st.columns([2.2, 1.8], vertical_alignment="bottom")
             with col_bl_f:
                 filtro_lote = st.radio(
                     "Alcance de clasificación:",
@@ -753,16 +753,29 @@ with tab_docs:
                     horizontal=True,
                     key="radio_batch_scope"
                 )
+            with col_bl_s:
+                col_bs1, col_bs2 = st.columns(2)
+                with col_bs1:
+                    if st.button("[Marcar Todos]", width="stretch", key="btn_batch_sel_all"):
+                        st.session_state["batch_select_default"] = True
+                        st.session_state["batch_tagger_ver"] = st.session_state.get("batch_tagger_ver", 0) + 1
+                        st.rerun()
+                with col_bs2:
+                    if st.button("[Deseleccionar Todos]", width="stretch", key="btn_batch_desel_all"):
+                        st.session_state["batch_select_default"] = False
+                        st.session_state["batch_tagger_ver"] = st.session_state.get("batch_tagger_ver", 0) + 1
+                        st.rerun()
 
             docs_a_gestionar = docs_pendientes if filtro_lote.startswith("Solo pendientes") else todos_docs
 
             if docs_a_gestionar:
+                default_sel = st.session_state.get("batch_select_default", False)
                 filas_lote = []
                 for d in docs_a_gestionar:
                     tags_actuales = obtener_tags_documento(d)
                     sug = sugerir_categoria_documento(d, st.session_state.doc_store.get(d, "")[:1500])
                     filas_lote.append({
-                        "Seleccionar": True if not tags_actuales else False,
+                        "Seleccionar": bool(default_sel),
                         "Documento": normalizar_titulo_display(d),
                         "Sugerencia Heurística": sug,
                         "Categoría Actual": ", ".join(tags_actuales) if tags_actuales else "[Sin Categoría]",
@@ -770,10 +783,11 @@ with tab_docs:
                     })
                 df_lote_base = pd.DataFrame(filas_lote)
 
+                tagger_ver = st.session_state.get("batch_tagger_ver", 0)
                 df_lote_edit = st.data_editor(
                     df_lote_base,
                     column_config={
-                        "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=True),
+                        "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False),
                         "Documento": st.column_config.TextColumn("Documento", disabled=True),
                         "Sugerencia Heurística": st.column_config.TextColumn("Sugerencia Heurística", disabled=True),
                         "Categoría Actual": st.column_config.TextColumn("Categoría Actual", disabled=True),
@@ -782,7 +796,7 @@ with tab_docs:
                     hide_index=True,
                     height=280,
                     width="stretch",
-                    key="editor_batch_tagger"
+                    key=f"editor_batch_tagger_{tagger_ver}_{filtro_lote}"
                 )
 
                 col_ba1, col_ba2, col_ba3 = st.columns([2.0, 1.5, 1.5], vertical_alignment="bottom")
@@ -801,7 +815,9 @@ with tab_docs:
                         st.caption("Los documentos seleccionados recibirán la categoría seleccionada.")
 
                 with col_ba3:
-                    if st.button("[APLICAR] Clasificar Seleccionados", type="primary", width="stretch", key="btn_apply_batch_tags"):
+                    cant_marcados = len(df_lote_edit[df_lote_edit["Seleccionar"] == True]) if "Seleccionar" in df_lote_edit.columns else 0
+                    btn_label = f"[APLICAR] Clasificar Seleccionados ({cant_marcados})" if cant_marcados > 0 else "[APLICAR] Clasificar Seleccionados"
+                    if st.button(btn_label, type="primary", width="stretch", key="btn_apply_batch_tags"):
                         df_sel = df_lote_edit[df_lote_edit["Seleccionar"] == True]
                         if df_sel.empty:
                             st.warning("[ALERTA] Debe marcar al menos un documento en la columna 'Seleccionar'.")
@@ -824,6 +840,7 @@ with tab_docs:
                                 n_act = asignar_tags_en_lote(doc_tags_map, autor="Operaciones")
                                 limpiar_cache_consultas()
                                 limpiar_cache_documentos()
+                                st.session_state["batch_select_default"] = False
                                 st.toast(f"[OK] Se categorizaron {n_act} documentos exitosamente.")
                                 st.success(f"[OK] Clasificación completada: {n_act} documentos actualizados.")
                                 time.sleep(0.8)
