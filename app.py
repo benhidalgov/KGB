@@ -787,7 +787,7 @@ with tab_docs:
 
                 col_ba1, col_ba2, col_ba3 = st.columns([2.0, 1.5, 1.5], vertical_alignment="bottom")
                 with col_ba1:
-                    opts_dest = ["[SUGERENCIA] Aplicar sugerencia heurística individual a cada uno"]
+                    opts_dest = ["[SUGERENCIA] Usar categoría sugerida de cada archivo"]
                     if cats_disp_t3:
                         opts_dest.extend(cats_disp_t3)
                     opts_dest.append("[NUEVA] Crear una nueva categoría...")
