@@ -12,9 +12,34 @@ def activar_manual_en_inicio():
 
 
 def ir_a_consola_desde_manual():
-    """Cierra el onboarding de inicio y pide entrar a la consola en el siguiente rerun."""
+    """Cierra el onboarding de inicio o la vista standalone y redirige a la consola."""
     st.session_state["manual_lanzamiento"] = False
     st.session_state["_ir_consola"] = True
+    st.session_state["top_navbar_view_selector"] = "Consola"
+    try:
+        if hasattr(st, "query_params"):
+            for p in ["view", "manual"]:
+                if p in st.query_params:
+                    del st.query_params[p]
+            st.query_params.clear()
+    except Exception:
+        pass
+
+
+def renderizar_boton_entrar_consola(key_prefix: str, paso_num: int, label: str = ">_ ¡Entrar a la Consola!"):
+    """Renderiza el botón de acceso a la consola compatible con vistas standalone y estándar."""
+    es_standalone = bool(
+        hasattr(st, "query_params") and (st.query_params.get("view") == "manual" or st.query_params.get("manual") == "1")
+    )
+    if es_standalone:
+        st.markdown(
+            f'<a href="./" target="_self" style="display:flex;justify-content:center;align-items:center;width:100%;height:38px;background:#6366F1;color:#ffffff;font-weight:600;font-size:0.875rem;border-radius:8px;text-decoration:none;border:none;box-shadow:0 1px 2px rgba(0,0,0,0.2);cursor:pointer;">{label}</a>',
+            unsafe_allow_html=True
+        )
+    else:
+        if st.button(label, type="primary", width="stretch", key=f"{key_prefix}_{paso_num}", on_click=ir_a_consola_desde_manual):
+            ir_a_consola_desde_manual()
+            st.rerun()
 
 
 def renderizar_manual_lanzamiento():
@@ -73,9 +98,7 @@ def renderizar_manual_usuario():
         st.caption("Guía exhaustiva del sistema. Revise los módulos paso a paso o ingrese directamente a la consola.")
         col_cta, col_hint = st.columns([1.2, 2.8], gap="small", vertical_alignment="center")
         with col_cta:
-            if st.button(">_ Ir a la Consola", type="primary", width="stretch", key="btn_manual_ir_consola"):
-                ir_a_consola_desde_manual()
-                st.rerun()
+            renderizar_boton_entrar_consola("btn_manual_ir_consola", 0, label=">_ Ir a la Consola")
         with col_hint:
             st.caption("Puede alternar en cualquier momento entre Consola | Zen Studio | Manual de Uso desde la barra superior.")
         st.markdown("---")
@@ -131,9 +154,7 @@ def renderizar_manual_usuario():
         if paso_num < 8:
             st.button(f"Siguiente: Módulo {paso_num + 1} >", type="primary", width="stretch", key=f"btn_top_next_{paso_num}", on_click=navegar_modulo, args=(paso_num + 1,))
         else:
-            if st.button(">_ ¡Entrar a la Consola!", type="primary", width="stretch", key=f"btn_top_finish_{paso_num}"):
-                ir_a_consola_desde_manual()
-                st.rerun()
+            renderizar_boton_entrar_consola("btn_top_finish", paso_num)
 
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
@@ -509,6 +530,4 @@ def renderizar_manual_usuario():
         if paso_num < 8:
             st.button(f"Siguiente: Módulo {paso_num + 1} >", type="primary", width="stretch", key=f"btn_bot_next_{paso_num}", on_click=navegar_modulo, args=(paso_num + 1,))
         else:
-            if st.button(">_ ¡Entrar a la Consola!", type="primary", width="stretch", key=f"btn_bot_finish_{paso_num}"):
-                ir_a_consola_desde_manual()
-                st.rerun()
+            renderizar_boton_entrar_consola("btn_bot_finish", paso_num)

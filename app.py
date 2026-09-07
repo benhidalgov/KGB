@@ -208,6 +208,13 @@ st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
 
 # 1.1 Vista Directa del Manual en Nueva Pestaña del Navegador (?view=manual)
 if st.query_params.get("view") == "manual" or st.query_params.get("manual") == "1":
+    if st.session_state.pop("_ir_consola", False):
+        try:
+            st.query_params.clear()
+        except Exception:
+            pass
+        st.session_state["top_navbar_view_selector"] = "Consola"
+        st.rerun()
     from core.manual import renderizar_manual_usuario
     st.markdown('<style>[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }</style>', unsafe_allow_html=True)
     renderizar_manual_usuario()
