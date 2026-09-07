@@ -206,6 +206,13 @@ st.set_page_config(page_title="Consola de Infraestructura y Operaciones", layout
 st.markdown(cargar_estilos_css(), unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
 
+# 1.1 Vista Directa del Manual en Nueva Pestaña del Navegador (?view=manual)
+if st.query_params.get("view") == "manual" or st.query_params.get("manual") == "1":
+    from core.manual import renderizar_manual_usuario
+    st.markdown('<style>[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }</style>', unsafe_allow_html=True)
+    renderizar_manual_usuario()
+    st.stop()
+
 # 2. Control de Autenticación RBAC
 if not es_usuario_autenticado():
     renderizar_pantalla_login()
@@ -411,7 +418,7 @@ df_mantenimientos_cache = obtener_dataframe_mantenimientos(mtime_csv)
 total_srvs = len(df_mantenimientos_cache)
 
 with st.container(border=True):
-    col_brand, col_nav_mode, col_stats = st.columns([1.6, 1.6, 0.9], gap="small", vertical_alignment="center")
+    col_brand, col_nav_mode, col_stats = st.columns([1.5, 1.4, 1.3], gap="small", vertical_alignment="center")
     with col_brand:
         st.markdown('<div class="navbar-brand-container"><span class="navbar-brand-badge">[CLI]</span><span class="navbar-brand-title">Consola de Infraestructura y Operaciones</span><div class="navbar-brand-badges"><span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span></div></div>', unsafe_allow_html=True)
     with col_nav_mode:
@@ -421,7 +428,10 @@ with st.container(border=True):
             st.session_state["top_navbar_view_selector"] = "Manual de Uso" if st.session_state.get("manual_lanzamiento") else "Consola"
         vista_seleccionada = st.segmented_control("Vista", ["Consola", "Zen Studio", "Manual de Uso"], label_visibility="collapsed", key="top_navbar_view_selector") or "Consola"
     with col_stats:
-        st.markdown(f'<div class="navbar-stats-container"><div class="navbar-stat-chip"><span class="navbar-stat-label">Documentos:</span><span class="navbar-stat-value-ok">{cant_docs}</span></div></div>', unsafe_allow_html=True)
+        st.markdown(f'''<div class="navbar-stats-container" style="gap:8px;">
+            <div class="navbar-stat-chip"><span class="navbar-stat-label">Docs:</span><span class="navbar-stat-value-ok">{cant_docs}</span></div>
+            <a href="?view=manual" target="_blank" style="text-decoration:none; font-size:0.75rem; font-weight:600; color:#6366F1; border:1px solid rgba(99,102,241,0.3); padding:4px 8px; border-radius:5px; background:rgba(99,102,241,0.06); white-space:nowrap;" title="Abre el manual paso a paso en una pestaña nueva del navegador">>_ Manual ↗</a>
+        </div>''', unsafe_allow_html=True)
 
 if "Manual" in str(vista_seleccionada):
     renderizar_manual_usuario()
@@ -435,11 +445,12 @@ if "Zen" in str(vista_seleccionada):
         st.rerun()
 
 # 6. Pestañas Principales
-tab_chat, tab_analytics, tab_docs, tab_templates = st.tabs([
+tab_chat, tab_analytics, tab_docs, tab_templates, tab_manual = st.tabs([
     "Consultas y Búsqueda",
     f"Historial de Mantenimientos ({total_srvs})",
     f"Documentación Técnica ({cant_docs})",
-    "Plantillas y Runbooks"
+    "Plantillas y Runbooks",
+    "Manual Paso a Paso"
 ])
 
 # ----------------- TAB 1: CONSULTAS Y BÚSQUEDA -----------------
@@ -934,7 +945,12 @@ with tab_templates:
             st.success(f"¡Procedimiento guardado e indexado como **{nom_f}** [Version v1]!")
             st.rerun()
 
-# ----------------- TAB 5: INTEGRACIÓN SAP (API) (OCULTO TEMPORALMENTE) -----------------
+# ----------------- TAB 5: MANUAL PASO A PASO -----------------
+with tab_manual:
+    from core.manual import renderizar_manual_usuario
+    renderizar_manual_usuario()
+
+# ----------------- TAB SAP: INTEGRACIÓN SAP (API) (OCULTO TEMPORALMENTE) -----------------
 if False:
     st.markdown("""
     <div class="search-result-card" style="margin-bottom: 18px; border-left: 4px solid #6366F1;">

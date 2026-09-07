@@ -48,6 +48,12 @@ def renderizar_manual_lanzamiento():
     3. Para probar el sistema de inmediato, busque `BALANCER001`, `10.24.0.125` o `Failover Redis`.
     """)
 
+    st.markdown("""
+    <div style="margin-top: 10px; margin-bottom: 8px;">
+        <a href="?view=manual" target="_blank" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:0.82rem; color:#6366F1; border:1px solid rgba(99,102,241,0.3); padding:6px 14px; border-radius:6px; background:rgba(99,102,241,0.06);">>_ Abrir Manual en Nueva Pestaña ↗</a>
+    </div>
+    """, unsafe_allow_html=True)
+
     with st.expander("Atajos y Casos de Prueba Listos", expanded=False):
         st.markdown("""
         * **Buscar Balanceador:** `BALANCER001`
@@ -62,7 +68,12 @@ def renderizar_manual_usuario():
     """Renderiza la guía práctica de uso paso a paso estructurada en 6 etapas secuenciales del trabajo diario."""
     es_inicio = bool(st.session_state.get("manual_lanzamiento"))
 
-    st.markdown('<p class="main-title">Guía Práctica: Cómo usar el sistema paso a paso</p>', unsafe_allow_html=True)
+    col_head_title, col_head_link = st.columns([3.2, 1.3], vertical_alignment="center")
+    with col_head_title:
+        st.markdown('<p class="main-title" style="margin-bottom:2px;">Guía Práctica: Cómo usar el sistema paso a paso</p>', unsafe_allow_html=True)
+    with col_head_link:
+        st.markdown('<div style="text-align:right;"><a href="?view=manual" target="_blank" style="text-decoration:none; font-size:0.78rem; font-weight:600; color:#6366F1; border:1px solid rgba(99,102,241,0.3); padding:4px 10px; border-radius:6px; background:rgba(99,102,241,0.06); display:inline-flex; align-items:center; gap:4px;">Abrir en Nueva Pestaña ↗</a></div>', unsafe_allow_html=True)
+
     if es_inicio:
         st.caption("Flujo de inducción operativa. Siga los pasos secuenciales o pulse el botón para ir a la consola.")
         col_cta, col_hint = st.columns([1.2, 2.8], gap="small", vertical_alignment="center")
