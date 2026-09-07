@@ -5,7 +5,15 @@ Permite clasificar, filtrar y persistir etiquetas para la base documental corpor
 import os
 import json
 import re
-from core.configuracion import CATEGORIAS_PATH
+import importlib
+
+try:
+    import core.configuracion
+    if not hasattr(core.configuracion, "CATEGORIAS_PATH"):
+        importlib.reload(core.configuracion)
+    CATEGORIAS_PATH = getattr(core.configuracion, "CATEGORIAS_PATH", os.path.join("data", "categorias.json"))
+except Exception:
+    CATEGORIAS_PATH = os.path.join("data", "categorias.json")
 
 SIGLAS_COMUNES = {
     "CMDB", "DRP", "SSL", "TLS", "API", "REST", "SOAP", "BD", "SQL", "SAN",
