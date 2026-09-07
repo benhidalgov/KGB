@@ -49,6 +49,82 @@ def obtener_todos_los_tipos_plantillas() -> list:
     return [f"[Plantilla] {k}" for k in custom] + ["[+ Crear Nueva Plantilla / Procedimiento...]"]
 
 
+ESQUEMAS_CAMPOS_PLANTILLAS = {
+    "Rollback": [
+        ("criterio", "Criterio de Activación", "Latencia > 500ms o Error Rate > 2%", "area"),
+        ("pasos", "Pasos de Reversión", "1. Ejecutar pipeline rollback release-v2.4.1\n2. Revertir esquema BD\n3. redis-cli FLUSHDB", "area"),
+        ("verif", "Verificación de Salud", "curl -I https://api.booking.internal/health\nsystemctl status booking-service", "area"),
+    ],
+    "Paso a Producción": [
+        ("version", "Versión / Tag", "v2.5.0", "text"),
+        ("pipeline", "Pipeline URL", "https://dev.azure.com/smucorp/pipelines/142", "text"),
+        ("variables", "Variables de Entorno", "REDIS_HOST=10.24.0.126\nLOG_LEVEL=INFO", "area"),
+        ("smoke", "Checklist Smoke Tests", "- [ ] Endpoint /health HTTP 200\n- [ ] Cero alertas en Nagios", "area"),
+    ],
+    "Postmortem": [
+        ("incidente_id", "Ticket ID", "INC-88912", "text"),
+        ("impacto", "Impacto", "Indisponibilidad de 14 minutos. 120 transacciones rechazadas.", "area"),
+        ("causa", "Causa Raíz (RCA)", "Agotamiento de pool de conexiones JDBC.", "area"),
+        ("solucion", "Solución Inmediata", "Reinicio worker WSO2 y ampliación de maxConnections.", "area"),
+        ("preventiva", "Medida Preventiva", "Creación de índice y ajuste de timeout.", "area"),
+    ],
+    "Microservicio": [
+        ("endpoint", "Endpoint Base", "/api/v1/booking", "text"),
+        ("auth", "Autenticación", "OAuth2 Bearer Token (Redis Sentinel)", "text"),
+        ("dependencias", "Dependencias", "* VM: VM-BOOKING-01 (10.24.0.125)\n* DB: Postgres HA (10.24.0.130)", "area"),
+    ],
+    "Parchado": [
+        ("paquetes", "Paquetes", "Actualización mensual del kernel y OpenSSL.", "area"),
+        ("pasos_parchado", "Pasos de Parchado", "1. Snapshot en vCloud\n2. yum update -y\n3. Reboot nodo secundario", "area"),
+        ("rollback_parchado", "Plan de Reversión", "Revertir al snapshot de VM en vCloud.", "area"),
+    ],
+    "Certificados": [
+        ("dominio", "Dominio / CN", "*.smucorp.internal", "text"),
+        ("ruta_cert", "Ruta de Instalación", "/etc/ssl/certs/api_smucorp.crt", "text"),
+        ("comandos_renov", "Comandos Generación", "openssl req -new -newkey rsa:2048 -nodes -keyout api.key -out api.csr", "area"),
+        ("validacion_ssl", "Validación SSL", "echo | openssl s_client -connect localhost:443 -servername api.smucorp.internal 2>/dev/null | openssl x509 -noout -dates", "area"),
+    ],
+    "Disaster Recovery": [
+        ("rpo_rto", "RPO / RTO", "RPO: 15 min | RTO: 1 hora", "text"),
+        ("activacion_drp", "Criterios Activación DRP", "Indisponibilidad total del Datacenter Principal.", "area"),
+        ("pasos_drp", "Pasos Conmutación", "1. Conmutar DNS\n2. Promover réplica PostgreSQL\n3. Iniciar workers", "area"),
+    ],
+    "Respaldo": [
+        ("motor_bd", "Motor de BD", "PostgreSQL 15 HA", "text"),
+        ("comando_backup", "Script Backup", "pg_dump -h 10.24.0.130 -U admin -Fc db_booking > backup.dump", "area"),
+        ("comando_restore", "Script Restore", "pg_restore -h 10.24.0.130 -U admin -d db_booking backup.dump", "area"),
+    ],
+    "Contingencia": [
+        ("sintoma", "Síntoma de Falla", "Host ESXi no responde o alerta CRITICAL en Nagios.", "area"),
+        ("pasos", "Procedimiento Failover", "1. Conmutar en HAProxy a BALANCER002\n2. Activar réplica en vCloud", "area"),
+    ],
+}
+
+
+def obtener_esquema_campos(tipo: str) -> list[tuple[str, str, str, str]]:
+    """Retorna la lista de tuplas (clave, etiqueta, valor_defecto, tipo_control) para una plantilla."""
+    for clave, esquema in ESQUEMAS_CAMPOS_PLANTILLAS.items():
+        if clave in tipo:
+            return esquema
+    if "Mantenimiento de SO" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Parchado"]
+    if "SSL" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Certificados"]
+    if "DRP" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Disaster Recovery"]
+    if "Base de Datos" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Respaldo"]
+    if "Failover" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Contingencia"]
+    return [
+        ("objetivo", "Objetivo y Alcance", "Procedimiento para {tipo_plantilla} en {servicio}.", "area"),
+        ("prerequisitos", "Requisitos Previos", "* Acceso SSH con sudo\n* Notificación a Operaciones\n* Snapshot preventivo", "area"),
+        ("pasos_custom", "Pasos Detallados", "1. Validar estado: systemctl status servicio\n2. Ejecutar script\n3. Verificar logs", "area"),
+        ("verificacion_custom", "Validación", "* Cero errores 5xx\n* Nagios check_http en OK", "area"),
+        ("rollback_custom", "Plan de Contingencia", "1. Detener script\n2. Restaurar backup\n3. Reiniciar servicio", "area"),
+    ]
+
+
 def generar_doc_plantilla(tipo: str, autor: str, servicio: str, nivel: str, params: dict) -> tuple[str, str]:
     """Genera el contenido Markdown y el nombre de archivo sugerido segun la plantilla seleccionada."""
     srv_clean = servicio.lower().replace(" ", "_").replace("/", "_").replace("\\", "_")

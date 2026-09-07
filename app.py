@@ -1,46 +1,30 @@
+"""
+Consola Principal de Infraestructura y Operaciones.
+Orquestador central de navegación, autenticación RBAC, consultas y módulos desacoplados.
+"""
 import os
-import io
-import json
 import time
 import html
-import shutil
-import zipfile
 import datetime
 import duckdb
 import pandas as pd
 import streamlit as st
-import streamlit_antd_components as sac
 
-from core.visor import renderizar_lado_a_lado, renderizar_zen_studio
-from core.plantillas import (
-    generar_doc_plantilla,
-    obtener_todos_los_tipos_plantillas,
-    guardar_plantilla_personalizada,
-    PLANTILLAS_BASE_RESERVADAS,
+from core.estilos import cargar_estilos_css
+from core.configuracion import CSV_PATH
+from core.auth import (
+    es_usuario_autenticado,
+    obtener_usuario_actual,
+    renderizar_pantalla_login,
 )
 from core.procesador import (
-    IMAGE_EXTENSIONS,
-    SUPPORTED_EXTENSIONS,
     cargar_documentos_locales,
-    cargar_documento_individual,
-    calcular_sha256,
-    sanitizar_nombre_descarga,
-    normalizar_nombre_archivo,
-    normalizar_titulo_display,
-    generar_ficha_diagrama,
-    obtener_ruta_original,
     limpiar_cache_documentos,
+    obtener_ruta_original,
 )
-from core.tags import (
-    obtener_categorias_disponibles,
-    registrar_categoria,
-    obtener_tags_documento,
-    asignar_tags_documento,
-    filtrar_documentos_por_categoria,
-    sugerir_categoria_documento,
-    obtener_documentos_sin_categoria,
-    asignar_tags_en_lote,
-)
+from core.auditoria import inicializar_version_inicial_si_no_existe
+from core.visor import renderizar_zen_studio
+from core.manual import renderizar_manual_usuario
 from core.motor import (
     ejecutar_consulta_sql,
     buscar_servidores_duckdb,
@@ -48,149 +32,15 @@ from core.motor import (
     extraer_fragmento_relevante,
     resaltar_terminos_en_html,
     generar_respuesta_asistente,
-    limpiar_cache_consultas,
 )
-from core.auditoria import (
-    obtener_historial_versiones,
-    inicializar_version_inicial_si_no_existe,
-    guardar_nueva_version,
-    guardar_nueva_version_excel,
-    obtener_contenido_version,
-    obtener_bytes_snapshot,
-    cargar_hoja_excel_dataframe,
-    obtener_nombres_hojas_excel,
-    generar_diff_texto,
-    obtener_todos_los_eventos_auditoria,
-    obtener_fecha_carga_documento,
-)
-from core.estilos import cargar_estilos_css
-from core.configuracion import CSV_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, HISTORY_DIR
-from core.manual import renderizar_manual_usuario
-from core.conector_sap import (
-    probar_conexion_api_sap,
-    obtener_inventario_sap_df,
-    obtener_alertas_sap,
-    generar_payload_json_sap,
-    generar_topologia_sap_mermaid,
-    sincronizar_servidores_sap_cmdb,
-)
-from core.vault import (
-    obtener_secreto,
-    guardar_secreto,
-    eliminar_secreto,
-    listar_secretos_disponibles,
-)
-from core.auth import (
-    es_usuario_autenticado,
-    obtener_usuario_actual,
-    tiene_permiso,
-    cerrar_sesion,
-    renderizar_pantalla_login,
-)
-from excel_cleaner import procesar_excel_limpio
-
-
-def procesar_e_ingestar_binario(
-    clean_name: str,
-    buf: bytes,
-    doc_store: dict,
-    autor: str = "Técnico / Panel Lateral",
-    origen_detalle: str = "Carga en panel lateral",
-    tags: list[str] | None = None
-) -> tuple[str, str]:
-    """Procesa e ingesta un archivo binario, versionándolo, asignando tags y actualizando doc_store."""
-    ext = os.path.splitext(clean_name)[1].lower()
-    nuevo_hash = calcular_sha256(buf)
-
-    # 1. Preservar siempre en data/originals/
-    with open(os.path.join(ORIGINALS_DIR, clean_name), "wb") as f_orig:
-        f_orig.write(buf)
-
-    # 2. Imágenes y Diagramas
-    if ext in IMAGE_EXTENSIONS:
-        with open(os.path.join(ASSETS_DIR, clean_name), "wb") as f_asset:
-            f_asset.write(buf)
-
-        doc_md_name = f"DIAGRAMA__{clean_name}.md"
-        md_save_path = os.path.join(DOCS_DIR, doc_md_name)
-        ficha_content = generar_ficha_diagrama(
-            image_filename=clean_name,
-            orig_rel_path=f"assets/{clean_name}",
-            sha256_hash=nuevo_hash,
-            categoria=origen_detalle
-        )
-        if tags:
-            asignar_tags_documento(clean_name, tags, autor=autor)
-            asignar_tags_documento(doc_md_name, tags, autor=autor)
-
-        if os.path.exists(md_save_path):
-            with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
-                ex_content = f_ex.read()
-            if calcular_sha256(ex_content.encode("utf-8")) == calcular_sha256(ficha_content.encode("utf-8")):
-                return "sin_cambios", f"Diagrama '{clean_name}' ya registrado sin cambios."
-            with open(md_save_path, "w", encoding="utf-8") as f_out:
-                f_out.write(ficha_content)
-            doc_store[doc_md_name] = ficha_content
-            nueva_v = guardar_nueva_version(
-                doc_name=doc_md_name,
-                nuevo_contenido=ficha_content,
-                autor=autor,
-                comentario=f"Actualización de activo gráfico '{clean_name}'",
-                doc_store=doc_store
-            )
-            return "actualizado", f"Diagrama '{clean_name}' actualizado [Version v{nueva_v}]"
-        else:
-            with open(md_save_path, "w", encoding="utf-8") as f_out:
-                f_out.write(ficha_content)
-            doc_store[doc_md_name] = ficha_content
-            inicializar_version_inicial_si_no_existe(
-                doc_name=doc_md_name,
-                contenido_actual=ficha_content,
-                autor=autor,
-                comentario=f"Carga inicial de activo gráfico '{clean_name}'"
-            )
-            return "nuevo", f"Diagrama '{clean_name}' indexado como Version v1"
-
-    # 3. Documentos Ofimáticos, Excel, PDF y Texto
-    else:
-        if tags:
-            asignar_tags_documento(clean_name, tags, autor=autor)
-
-        save_path = os.path.join(DOCS_DIR, clean_name)
-        if os.path.exists(save_path):
-            with open(save_path, "rb") as f:
-                existente_bytes = f.read()
-            if nuevo_hash == calcular_sha256(existente_bytes):
-                return "sin_cambios", f"Archivo '{clean_name}' ya indexado sin cambios."
-            with open(save_path, "wb") as f:
-                f.write(buf)
-            content = cargar_documento_individual(save_path)
-            doc_store[clean_name] = content
-            nueva_v = guardar_nueva_version(
-                doc_name=clean_name,
-                nuevo_contenido=content,
-                autor=autor,
-                comentario=f"Actualización de archivo '{clean_name}' ({origen_detalle})",
-                doc_store=doc_store
-            )
-            return "actualizado", f"Archivo '{clean_name}' actualizado [Version v{nueva_v}]"
-        else:
-            with open(save_path, "wb") as f:
-                f.write(buf)
-            content = cargar_documento_individual(save_path)
-            doc_store[clean_name] = content
-            inicializar_version_inicial_si_no_existe(
-                doc_name=clean_name,
-                contenido_actual=content,
-                autor=autor,
-                comentario=f"Carga inicial de archivo ({origen_detalle})"
-            )
-            return "nuevo", f"Documento '{clean_name}' indexado como Version v1"
+from core.ui_sidebar import renderizar_sidebar
+from core.ui_documentos import renderizar_pestana_documentacion
+from core.ui_plantillas import renderizar_pestana_plantillas
 
 
 @st.cache_data(show_spinner=False)
 def obtener_dataframe_mantenimientos(mtime: float) -> pd.DataFrame:
-    """Carga mantenimientos.csv en cache evitando accesos repetitivos a disco."""
+    """Carga en caché el CSV de mantenimientos de la CMDB indexado por mtime."""
     if os.path.exists(CSV_PATH):
         try:
             return pd.read_csv(CSV_PATH)
@@ -200,26 +50,21 @@ def obtener_dataframe_mantenimientos(mtime: float) -> pd.DataFrame:
 
 
 def _render_kpi_grid(total_reg: int, cnt_op: int, cnt_rev: int, cnt_crit: int, tec_activo: str, pct_op: float, pct_crit: float):
-    """Renderiza las tarjetas KPI de analítica con diseño Obsidian & Indigo."""
-    kpi_defs = [
-        ("Total Registros", str(total_reg), "en el periodo filtrado", "#6366F1", "rgba(99,102,241,0.10)"),
-        ("Operativos", str(cnt_op), f"{pct_op}% del total", "#10B981", "rgba(16,185,129,0.10)"),
-        ("En Revision", str(cnt_rev), "revision activa", "#D97706", "rgba(217,119,6,0.10)"),
-        ("Criticos", str(cnt_crit), f"{pct_crit}% del total", "rgb(106, 57, 123)", "rgba(106, 57, 123, 0.14)"),
-        ("Tecnico Mas Activo", str(tec_activo), "mayor cantidad de registros", "#6366F1", "rgba(128,128,128,0.08)"),
-    ]
-    cards_html = []
-    for titulo, valor, sub, color, bg in kpi_defs:
-        cards_html.append(f"""
-        <div style="background:{bg};border:1px solid rgba(128,128,128,0.22);border-top:3px solid {color};border-radius:10px;padding:14px 16px;">
-            <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;opacity:0.75;margin-bottom:6px;">{titulo}</div>
-            <div style="font-size:{'1.05rem' if len(valor) > 6 else '1.85rem'};font-weight:700;line-height:1.2;color:{color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{valor}</div>
-            <div style="font-size:0.72rem;opacity:0.6;margin-top:4px;">{sub}</div>
-        </div>""")
-    st.markdown(f'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0 18px 0;">{"".join(cards_html)}</div>', unsafe_allow_html=True)
+    """Renderiza la cuadrícula de métricas operativas clave (KPIs) del parque de servidores."""
+    st.markdown(f"""
+    <div class="kpi-container">
+        <div class="kpi-card"><span class="kpi-label">Total Servidores</span><span class="kpi-value-primary">{total_reg}</span><span class="kpi-caption">Registros CMDB</span></div>
+        <div class="kpi-card"><span class="kpi-label">Operativos</span><span class="kpi-value-ok">{cnt_op}</span><span class="kpi-caption">{pct_op}% del parque</span></div>
+        <div class="kpi-card"><span class="kpi-label">En Revisión</span><span class="kpi-value-warn">{cnt_rev}</span><span class="kpi-caption">Atención requerida</span></div>
+        <div class="kpi-card"><span class="kpi-label">Críticos</span><span class="kpi-value-crit">{cnt_crit}</span><span class="kpi-caption">{pct_crit}% del parque</span></div>
+        <div class="kpi-card"><span class="kpi-label">Técnico Principal</span><span class="kpi-value-neutral" style="font-size:1.05rem;padding-top:4px;">{tec_activo}</span><span class="kpi-caption">Mayor asignación</span></div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
-# 1. Configuración de Streamlit
+# -------------------------------------------------------------
+# 1. CONFIGURACIÓN Y ESTILOS DE STREAMLIT
+# -------------------------------------------------------------
 st.set_page_config(page_title="Consola de Infraestructura y Operaciones", layout="wide", initial_sidebar_state="expanded")
 st.markdown(cargar_estilos_css(), unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
@@ -233,17 +78,20 @@ if st.query_params.get("view") == "manual" or st.query_params.get("manual") == "
             pass
         st.session_state["top_navbar_view_selector"] = "Consola"
         st.rerun()
-    from core.manual import renderizar_manual_usuario
     st.markdown('<style>[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }</style>', unsafe_allow_html=True)
     renderizar_manual_usuario()
     st.stop()
 
-# 2. Control de Autenticación RBAC
+# -------------------------------------------------------------
+# 2. CONTROL DE AUTENTICACIÓN RBAC
+# -------------------------------------------------------------
 if not es_usuario_autenticado():
     renderizar_pantalla_login()
     st.stop()
 
-# 3. Inicialización de Estado y Documentos
+# -------------------------------------------------------------
+# 3. INICIALIZACIÓN DE ESTADO Y ALMACÉN DOCUMENTAL
+# -------------------------------------------------------------
 for k, default_v in [("historial_busquedas", []), ("messages", []), ("quick_pills_version", 0)]:
     if k not in st.session_state:
         st.session_state[k] = default_v
@@ -256,7 +104,7 @@ elif any(len(v) > 150_000 for v in st.session_state.doc_store.values()):
     st.session_state.doc_store.clear()
     cargar_documentos_locales(st.session_state.doc_store, force=True)
 
-# 3.1 Modo Zen Studio (Lector Inmersivo de Documentos y TOC)
+# 3.1 Modo Zen Studio (Lector Inmersivo de Documentos)
 if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_sel"):
     doc_z = st.session_state["zen_doc_sel"]
     if doc_z in st.session_state.doc_store:
@@ -271,232 +119,15 @@ if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_s
     else:
         st.session_state["zen_studio_activo"] = False
 
-# 4. Sidebar (Panel de Control e Ingesta)
-with st.sidebar:
-    user_act = obtener_usuario_actual()
-    col_u_info, col_u_out = st.columns([2.5, 1.5], vertical_alignment="center")
-    with col_u_info:
-        st.markdown(f"""
-        <div style="font-size:0.86rem;font-weight:600;line-height:1.2;">{user_act.get('nombre', user_act.get('username'))}</div>
-        <div style="font-size:0.68rem;opacity:0.75;margin-top:2px;"><span class="badge-ok" style="font-size:0.6rem;padding:1px 4px;">{user_act.get('rol', 'Usuario')}</span> <span style="font-family:monospace;opacity:0.6;">@{user_act.get('username')}</span></div>
-        """, unsafe_allow_html=True)
-    with col_u_out:
-        if st.button(">_ Salir", width="stretch", key="btn_logout_sidebar", help="Cerrar sesión"):
-            cerrar_sesion()
+# -------------------------------------------------------------
+# 4. PANEL LATERAL (SIDEBAR) MODULARIZADO
+# -------------------------------------------------------------
+user_act = obtener_usuario_actual()
+renderizar_sidebar(user_act, st.session_state.doc_store)
 
-    st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-
-    # 4.1 Ingesta de Archivos
-    st.session_state.setdefault("uploader_key_ver", 0)
-    with st.expander("Ingesta de Archivos (Batch & Lotes)", expanded=False):
-        st.markdown('<div class="sidebar-format-tags" style="margin-bottom:8px;"><span class="sidebar-format-tag">[ZIP]</span><span class="sidebar-format-tag">[PDF]</span><span class="sidebar-format-tag">[DOCX]</span><span class="sidebar-format-tag">[XLSX]</span><span class="sidebar-format-tag">[DIAGRAMAS]</span><span class="sidebar-format-tag">[MD]</span></div>', unsafe_allow_html=True)
-        uploaded_files = st.file_uploader(
-            "Arrastra archivos o paquetes ZIP en lote:",
-            type=["pdf", "docx", "xlsx", "xls", "csv", "txt", "md", "pptx", "png", "jpg", "jpeg", "svg", "webp", "zip"],
-            accept_multiple_files=True,
-            label_visibility="collapsed",
-            key=f"uploader_files_{st.session_state.uploader_key_ver}"
-        )
-        if uploaded_files:
-            st.markdown(f"""
-            <div style="background:rgba(99,102,241,0.07);border:1px solid #6366F1;border-radius:6px;padding:8px 10px;margin:8px 0 6px 0;font-size:0.8rem;">
-                <span class="badge-info">[CATEGORIZACIÓN OBLIGATORIA]</span>
-                <div style="margin-top:4px;opacity:0.9;">Documentos a subir: <b>{len(uploaded_files)} archivo(s)</b>.</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            cats_disp = obtener_categorias_disponibles()
-            cat_seleccionadas = []
-
-            if not cats_disp:
-                st.caption("No existen categorías registradas en el catálogo. Ingrese la categoría para clasificar el/los documento(s):")
-                nueva_cat_input = st.text_input("Nueva Categoría (*):", placeholder="ej: Redes, Base de Datos, Servidores, Contingencias...", key=f"sb_nueva_cat_ini_{st.session_state.uploader_key_ver}")
-                if nueva_cat_input.strip():
-                    cat_seleccionadas = [nueva_cat_input.strip()]
-            else:
-                modo_cat = st.radio("Clasificación:", ["Usar Existente", "Crear Nueva"], horizontal=True, key=f"sb_radio_modo_cat_{st.session_state.uploader_key_ver}")
-                if modo_cat == "Usar Existente":
-                    cat_seleccionadas = st.multiselect("Categoría(s) Existente(s) (*):", options=cats_disp, key=f"sb_ms_cat_exist_{st.session_state.uploader_key_ver}")
-                else:
-                    nueva_cat_input = st.text_input("Nombre de Nueva Categoría (*):", placeholder="ej: Almacenamiento SAN, VPN, Seguridad...", key=f"sb_nueva_cat_input_{st.session_state.uploader_key_ver}")
-                    if nueva_cat_input.strip():
-                        cat_seleccionadas = [nueva_cat_input.strip()]
-
-            col_conf_up, col_canc_up = st.columns([2.4, 1.1])
-            with col_conf_up:
-                btn_confirmar_subida = st.button(">_ Confirmar e Ingestar", type="primary", width="stretch", key="btn_confirmar_ingesta_tags")
-            with col_canc_up:
-                if st.button("Cancelar", width="stretch", key="btn_cancelar_ingesta"):
-                    st.session_state["uploader_key_ver"] += 1
-                    st.rerun()
-
-            if btn_confirmar_subida:
-                if not cat_seleccionadas:
-                    st.warning("[REQUERIDO] Debe seleccionar al menos una categoría existente o crear una nueva para continuar.")
-                else:
-                    autor_act = f"{user_act.get('username', 'Técnico')} ({user_act.get('rol', 'Operador')})"
-                    proc_cnt, new_cnt, upd_cnt = 0, 0, 0
-                    for uf in uploaded_files:
-                        c_name = normalizar_nombre_archivo(uf.name)
-                        ext_u = os.path.splitext(c_name)[1].lower()
-                        buf = uf.getbuffer().tobytes()
-
-                        if ext_u == ".zip":
-                            try:
-                                with zipfile.ZipFile(io.BytesIO(buf)) as z:
-                                    zip_cnt = 0
-                                    for zi in [i for i in z.infolist() if not i.is_dir()]:
-                                        in_fn = os.path.basename(zi.filename)
-                                        if not in_fn or in_fn.startswith(".") or "__MACOSX" in zi.filename:
-                                            continue
-                                        in_cl = normalizar_nombre_archivo(in_fn)
-                                        if os.path.splitext(in_cl)[1].lower() in SUPPORTED_EXTENSIONS:
-                                            st_res, _ = procesar_e_ingestar_binario(
-                                                in_cl, z.read(zi), st.session_state.doc_store,
-                                                autor=autor_act, origen_detalle=f"Lote ZIP: {c_name}",
-                                                tags=cat_seleccionadas
-                                            )
-                                            zip_cnt += 1
-                                            proc_cnt += 1
-                                            if st_res == "nuevo":
-                                                new_cnt += 1
-                                            elif st_res == "actualizado":
-                                                upd_cnt += 1
-                                    st.toast(f"[OK] ZIP '{c_name}': {zip_cnt} archivos indexados.")
-                            except Exception as e_z:
-                                st.error(f"[ERROR] Error al procesar ZIP '{c_name}': {str(e_z)}")
-                        else:
-                            st_res, msg = procesar_e_ingestar_binario(
-                                c_name, buf, st.session_state.doc_store,
-                                autor=autor_act, origen_detalle="Carga en panel lateral",
-                                tags=cat_seleccionadas
-                            )
-                            proc_cnt += 1
-                            if st_res == "nuevo":
-                                new_cnt += 1
-                                st.toast(f"[OK] {msg}")
-                            elif st_res == "actualizado":
-                                upd_cnt += 1
-                                st.toast(f"[OK] {msg}")
-                            elif st_res == "sin_cambios":
-                                asignar_tags_documento(c_name, cat_seleccionadas, autor=autor_act)
-                                st.toast(f"[INFO] Tags actualizados: {c_name}")
-
-                    limpiar_cache_consultas()
-                    st.session_state["uploader_key_ver"] += 1
-                    st.toast(f"[OK] {proc_cnt} archivo(s) clasificados bajo: {', '.join(cat_seleccionadas)}")
-                    st.rerun()
-
-    # 4.2 Explorador Documental
-    cant_side = len(st.session_state.doc_store)
-    with st.expander(f"Explorador Documental ({cant_side})", expanded=False):
-        if cant_side > 0:
-            c_img = sum(1 for d in st.session_state.doc_store if d.startswith("DIAGRAMA__") or any(d.lower().endswith(e) for e in IMAGE_EXTENSIONS))
-            c_xls = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[1].lower() in ('.xlsx', '.xls'))
-            c_doc = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[1].lower() in ('.docx', '.pdf', '.pptx', '.doc'))
-            c_txt = sum(1 for d in st.session_state.doc_store if os.path.splitext(d)[1].lower() in ('.md', '.txt', '.csv') and not d.startswith("DIAGRAMA__"))
-
-            filt_opts = [f"Todos ({cant_side})", f"Diagramas ({c_img})", f"Excel ({c_xls})", f"Documentos ({c_doc})", f"Markdown ({c_txt})"]
-            tipo_f = st.pills("Tipo:", options=filt_opts, default=filt_opts[0], label_visibility="collapsed", key="sb_type_pill_filter") or filt_opts[0]
-
-            cats_disp_sb = obtener_categorias_disponibles()
-            docs_sin_cat_sb = obtener_documentos_sin_categoria(sorted(st.session_state.doc_store.keys()))
-            opts_cat_sb = ["Todas"]
-            if docs_sin_cat_sb:
-                opts_cat_sb.append(f"[Sin Categoría] ({len(docs_sin_cat_sb)})")
-            opts_cat_sb.extend(cats_disp_sb)
-
-            filtro_cat_sb = st.selectbox("Categoría:", opts_cat_sb, key="sb_cat_filter_sel")
-            doc_filter = st.text_input("Buscar nombre...", key="sb_doc_filter", placeholder="Filtrar por nombre...")
-
-            docs_f = []
-            for d in sorted(st.session_state.doc_store.keys()):
-                ext_d = os.path.splitext(d)[1].lower()
-                is_diag = d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS
-                if tipo_f.startswith("Diagramas") and not is_diag:
-                    continue
-                if tipo_f.startswith("Excel") and ext_d not in ('.xlsx', '.xls'):
-                    continue
-                if tipo_f.startswith("Documentos") and ext_d not in ('.docx', '.pdf', '.pptx', '.doc'):
-                    continue
-                if tipo_f.startswith("Markdown") and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
-                    continue
-                if filtro_cat_sb.startswith("[Sin Categoría]"):
-                    if obtener_tags_documento(d):
-                        continue
-                elif filtro_cat_sb != "Todas":
-                    tags_d_sb = obtener_tags_documento(d)
-                    if filtro_cat_sb not in tags_d_sb:
-                        continue
-                if doc_filter and doc_filter.lower() not in d.lower():
-                    continue
-                docs_f.append(d)
-
-            if docs_f:
-                items_h = ['<div class="sidebar-doc-list">']
-                for d in docs_f:
-                    ext_d = os.path.splitext(d)[1].lower()
-                    tag = '<span class="badge-ok" style="font-size:0.64rem;padding:1px 4px;">[DIAGRAMA]</span>' if (d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS) else ('<span class="badge-info" style="font-size:0.64rem;padding:1px 4px;">[EXCEL]</span>' if ext_d in ('.xlsx', '.xls') else ('<span class="badge-warn" style="font-size:0.64rem;padding:1px 4px;">[DOC]</span>' if ext_d in ('.pdf', '.docx', '.pptx', '.doc') else '<span class="badge-tag" style="font-size:0.64rem;padding:1px 4px;">[MD]</span>'))
-                    tags_d = obtener_tags_documento(d)
-                    tag_cat_h = f'<span class="badge-info" style="font-size:0.62rem;padding:1px 4px;margin-left:4px;">[{tags_d[0]}]</span>' if tags_d else '<span class="badge-warn" style="font-size:0.62rem;padding:1px 4px;margin-left:4px;">[Sin Categoría]</span>'
-                    f_d = obtener_fecha_carga_documento(d)
-                    items_h.append(f"""
-                    <div class="sidebar-doc-card">
-                        <div class="sidebar-doc-card-header"><span class="sidebar-doc-name" title="{d}">{normalizar_titulo_display(d)}</span>{tag}{tag_cat_h}</div>
-                        <div class="sidebar-doc-meta"><span>{f_d.strftime('%Y-%m-%d')}</span><span>{len(st.session_state.doc_store[d])/1024:.1f} KB</span></div>
-                        <div style="font-size:0.65rem;opacity:0.55;font-family:monospace;margin-top:2px;word-break:break-all;">{d}</div>
-                    </div>""")
-                items_h.append('</div>')
-                st.markdown("".join(items_h), unsafe_allow_html=True)
-            else:
-                st.caption("No hay documentos coincidentes.")
-        else:
-            st.caption("No hay documentos en el repositorio.")
-
-    # 4.3 Herramientas del Sistema y Bóveda
-    with st.expander("Herramientas del Sistema y Bóveda", expanded=False):
-        if st.button(">_ Reindexar Base Documental", help="Recarga todos los documentos desde data/docs/", width="stretch", key="btn_sidebar_reindexar"):
-            limpiar_cache_documentos()
-            cargar_documentos_locales(st.session_state.doc_store, force=True)
-            limpiar_cache_consultas()
-            st.toast("[OK] Base documental reindexada con éxito")
-            st.rerun()
-
-        if tiene_permiso("puede_ver_vault"):
-            st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-            st.markdown("<b style='font-size:0.78rem;'>Bóveda de Credenciales [AES-256]:</b>", unsafe_allow_html=True)
-            sec_list = listar_secretos_disponibles()
-            cfg_cnt = sum(1 for s in sec_list if s["estado"] == "[CONFIGURADO]")
-            st.markdown(f"<div style='font-size:0.72rem;margin-bottom:8px;opacity:0.8;'>Estado: <b>{cfg_cnt} configurada(s)</b>.</div>", unsafe_allow_html=True)
-            for s in sec_list:
-                badge_s = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[CONFIGURADO]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[NO CONFIGURADO]</span>'
-                prev_s = f"({s['vista_previa']})" if s['vista_previa'] != '-' else ""
-                st.markdown(f"<div style='font-size:0.72rem;padding:3px 0;display:flex;justify-content:space-between;align-items:center;'><span style='font-family:monospace;font-weight:600;'>{s['clave']}</span>{badge_s}</div><div style='font-size:0.64rem;opacity:0.6;margin-bottom:4px;'>Origen: {s['origen']} {prev_s}</div>", unsafe_allow_html=True)
-
-            st.markdown("<b style='font-size:0.75rem;'>Guardar o Actualizar Clave:</b>", unsafe_allow_html=True)
-            sel_k = st.selectbox("Seleccionar Llave:", [s["clave"] for s in sec_list] + ["OTRA_CLAVE_PERSONALIZADA"], key="sb_vault_sel_key", label_visibility="collapsed")
-            k_final = st.text_input("Nombre de la Clave:", value="", placeholder="EJ: MI_API_KEY", key="sb_vault_custom_key") if sel_k == "OTRA_CLAVE_PERSONALIZADA" else sel_k
-            if "vault_input_version" not in st.session_state:
-                st.session_state.vault_input_version = 0
-            val_sec = st.text_input("Valor del Secreto:", value="", type="password", key=f"sb_vault_secret_val_{st.session_state.vault_input_version}", label_visibility="collapsed", placeholder="Pegar token / API key...")
-
-            col_vg, col_vd = st.columns(2)
-            with col_vg:
-                if st.button(">_ Guardar", width="stretch", key="btn_vault_guardar"):
-                    if k_final and val_sec and guardar_secreto(k_final, val_sec, autor=f"{user_act.get('username', 'admin')} ({user_act.get('rol', 'Admin')})"):
-                        st.session_state.vault_input_version += 1
-                        st.toast(f"[OK] Credencial '{k_final}' cifrada en bóveda.")
-                        st.rerun()
-            with col_vd:
-                if st.button(">_ Revocar", width="stretch", key="btn_vault_eliminar"):
-                    if k_final and eliminar_secreto(k_final, autor=f"{user_act.get('username', 'admin')} ({user_act.get('rol', 'Admin')})"):
-                        st.session_state.vault_input_version += 1
-                        st.toast(f"[INFO] Credencial '{k_final}' revocada.")
-                        st.rerun()
-
-    st.markdown(f'<div class="sidebar-footer"><span class="sidebar-footer-version">[v1.0] Consola Operaciones</span><span class="sidebar-footer-ts">{datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}</span></div>', unsafe_allow_html=True)
-
-# 5. Navbar Hero Card
+# -------------------------------------------------------------
+# 5. BARRA DE NAVEGACIÓN SUPERIOR
+# -------------------------------------------------------------
 cant_docs = len(st.session_state.doc_store)
 mtime_csv = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
 df_mantenimientos_cache = obtener_dataframe_mantenimientos(mtime_csv)
@@ -529,7 +160,9 @@ if "Zen" in str(vista_seleccionada):
         st.session_state["zen_doc_sel"] = doc_zen_def
         st.rerun()
 
-# 6. Pestañas Principales de la Consola
+# -------------------------------------------------------------
+# 6. PESTAÑAS PRINCIPALES DE LA CONSOLA
+# -------------------------------------------------------------
 tab_chat, tab_analytics, tab_docs, tab_templates = st.tabs([
     "Consultas y Búsqueda",
     f"Historial de Mantenimientos ({total_srvs})",
@@ -560,7 +193,7 @@ with tab_chat:
             <div class="empty-state-container">
                 <div class="empty-state-console-icon">&gt;_ Buscador :1</div>
                 <div class="empty-state-title">Motor de Búsqueda Textual en RAM</div>
-                <div class="empty-state-subtitle">Búsqueda ultrarrápida indexada directamente sobre la CMDB y los documentos técnicos locales.</div>
+                <div class="empty-state-subtitle">Búsqueda ultrarrápida indexada directamente sobre los documentos técnicos locales.</div>
             </div>""", unsafe_allow_html=True)
         else:
             t0_d = time.perf_counter()
@@ -712,516 +345,10 @@ with tab_analytics:
         if st.button("Ejecutar") and os.path.exists(CSV_PATH):
             st.dataframe(ejecutar_consulta_sql(custom_sql), width="stretch")
 
-# ----------------- TAB 3: DOCUMENTACION TECNICA -----------------
+# ----------------- TAB 3: DOCUMENTACIÓN TÉCNICA -----------------
 with tab_docs:
-    st.subheader("Repositorio de Documentación Técnica y Diagramas")
-    st.caption("Visor interactivo Lado a Lado, control de cambios, editor de contenido y gestión taxonómica.")
-
-    if st.session_state.doc_store:
-        todos_docs = sorted(list(st.session_state.doc_store.keys()))
-        docs_pendientes = obtener_documentos_sin_categoria(todos_docs)
-        cats_disp_t3 = obtener_categorias_disponibles()
-
-        lbl_lote = f"Clasificación en Lote ({len(docs_pendientes)} pendientes)" if docs_pendientes else "Clasificación en Lote"
-        subtab_visor, subtab_editor, subtab_lote = st.tabs([
-            "Visor y Explorador Documental",
-            "Editar Documento Activo",
-            lbl_lote
-        ])
-
-        with subtab_visor:
-            mapa_fechas = {d: obtener_fecha_carga_documento(d) for d in st.session_state.doc_store.keys()}
-            fechas_v = [f for f in mapa_fechas.values() if f]
-            min_doc_d = min(fechas_v) if fechas_v else datetime.date.today()
-            max_doc_d = max(fechas_v) if fechas_v else datetime.date.today()
-
-            opts_cat_t3 = ["Todas"]
-            if docs_pendientes:
-                opts_cat_t3.append(f"[Sin Categoría] ({len(docs_pendientes)})")
-            opts_cat_t3.extend(cats_disp_t3)
-
-            col_t4_t, col_t4_c, col_t4_d, col_t4_s = st.columns([1.1, 1.0, 1.1, 1.8], gap="small")
-            with col_t4_t:
-                filtro_t4 = st.selectbox("Tipo", ["Todos", "Diagramas e Imágenes (.png, .jpg, .svg)", "Excel (.xlsx, .xls)", "Documentos (.docx, .pdf, .pptx)", "Markdown / Texto (.md, .txt)"], key="tab4_type_selector")
-            with col_t4_c:
-                filtro_cat_t3 = st.selectbox("Categoría:", opts_cat_t3, key="tab4_cat_selector")
-            with col_t4_d:
-                rango_fecha_doc = st.date_input("Fecha:", value=(min_doc_d, max_doc_d), min_value=min_doc_d, max_value=max_doc_d, key="tab4_date_range_selector")
-
-            docs_disp = []
-            for d in sorted(st.session_state.doc_store.keys()):
-                ext_d = os.path.splitext(d)[1].lower()
-                is_diag = d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS
-                if filtro_t4.startswith("Diagramas") and not is_diag:
-                    continue
-                if filtro_t4.startswith("Excel") and ext_d not in ('.xlsx', '.xls'):
-                    continue
-                if filtro_t4.startswith("Documentos") and ext_d not in ('.docx', '.pdf', '.pptx', '.doc'):
-                    continue
-                if filtro_t4.startswith("Markdown") and (is_diag or ext_d not in ('.md', '.txt', '.csv')):
-                    continue
-                if filtro_cat_t3.startswith("[Sin Categoría]"):
-                    if obtener_tags_documento(d):
-                        continue
-                elif filtro_cat_t3 != "Todas":
-                    tags_d_t3 = obtener_tags_documento(d)
-                    if filtro_cat_t3 not in tags_d_t3:
-                        continue
-                f_d = mapa_fechas.get(d)
-                if f_d and isinstance(rango_fecha_doc, (tuple, list)) and len(rango_fecha_doc) == 2 and not (rango_fecha_doc[0] <= f_d <= rango_fecha_doc[1]):
-                    continue
-                docs_disp.append(d)
-
-            with col_t4_s:
-                doc_sel = st.selectbox(f"Seleccione Documento ({len(docs_disp)} disponibles)", docs_disp, format_func=normalizar_titulo_display, key="tab4_doc_selector") if docs_disp else None
-
-            if doc_sel:
-                doc_cont = st.session_state.doc_store.get(doc_sel, "")
-                historial = inicializar_version_inicial_si_no_existe(doc_sel, doc_cont)
-                u_ver = len(historial)
-                u_edit = historial[-1]["autor"] if historial else "Desconocido"
-                u_time = historial[-1]["timestamp"] if historial else "N/A"
-                f_carga = historial[0]["timestamp"].split()[0] if (historial and " " in historial[0]["timestamp"]) else "N/A"
-                ruta_orig = obtener_ruta_original(doc_sel, doc_cont)
-                tags_doc = obtener_tags_documento(doc_sel)
-                tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.75rem;padding:1px 6px;">[{t}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-warn" style="font-size:0.75rem;padding:1px 6px;">[Sin Categoría]</span>'
-
-                col_meta_t3, col_zen_t3 = st.columns([3.8, 1.2], vertical_alignment="center")
-                with col_meta_t3:
-                    st.markdown(f"""
-                    <div style="background-color:rgba(128,128,128,0.08);border:1px solid rgba(128,128,128,0.2);border-radius:6px;padding:8px 14px;font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                        <div><b>Documento:</b> <span style="color:#6366F1;font-weight:600;">{normalizar_titulo_display(doc_sel)}</span> <span style="font-family:monospace;opacity:0.65;font-size:0.8rem;">({doc_sel})</span></div>
-                        <div><b>Categoría:</b> {tags_badges}</div>
-                        <div><b>Versión:</b> <span class="badge-ok">v{u_ver}</span></div>
-                        <div><b>Fecha Carga:</b> <span class="badge-tag">[{f_carga}]</span></div>
-                        <div><b>Último Editor:</b> <span style="color:#10B981;font-weight:500;">{u_edit}</span></div>
-                        <div><b>Actualizado:</b> <span style="opacity:0.75;">{u_time}</span></div>
-                    </div>""", unsafe_allow_html=True)
-                with col_zen_t3:
-                    if st.button(">_ Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_tab3_zen_top_{doc_sel}", help="Abre el entorno inmersivo Zen Studio a pantalla completa con índice interactivo."):
-                        st.session_state["zen_studio_activo"] = True
-                        st.session_state["zen_doc_sel"] = doc_sel
-                        st.rerun()
-
-                st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-                renderizar_lado_a_lado(doc_sel, doc_cont, ruta_orig, u_ver, u_edit, u_time, key_suffix="tab3_view")
-                st.markdown("---")
-                col_dla, col_dli = st.columns([1.5, 2.5])
-                with col_dla:
-                    es_x = doc_sel.lower().endswith(('.xlsx', '.xls')) and os.path.exists(os.path.join(DOCS_DIR, doc_sel))
-                    if es_x:
-                        with open(os.path.join(DOCS_DIR, doc_sel), "rb") as fx:
-                            st.download_button(label=f"Descargar Versión Activa v{u_ver} (.xlsx)", data=fx.read(), file_name=sanitizar_nombre_descarga(doc_sel, u_ver, ".xlsx"), mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch", key=f"dl_act_x_{doc_sel}")
-                    else:
-                        st.download_button(label=f"Descargar Versión Activa v{u_ver} (.md)", data=doc_cont.encode("utf-8"), file_name=sanitizar_nombre_descarga(doc_sel, u_ver, ".md"), mime="text/markdown", width="stretch", key=f"dl_act_m_{doc_sel}")
-                with col_dli:
-                    st.caption(f"Descarga la versión activa actual (**v{u_ver}**).")
-
-                with st.expander(f"Historial de Revisiones y Control de Cambios ({u_ver} versiones)", expanded=False):
-                    df_h = pd.DataFrame(historial)
-                    cols_h = [c for c in ["version", "timestamp", "autor", "comentario", "caracteres", "sha256"] if c in df_h.columns]
-                    df_h = df_h[cols_h].rename(columns={"version": "Versión", "timestamp": "Fecha y Hora", "autor": "Editor / Responsable", "comentario": "Motivo del Cambio", "caracteres": "Caracteres", "sha256": "Firma SHA-256"})
-                    st.dataframe(df_h, width="stretch", hide_index=True)
-
-                    st.markdown("---")
-                    opts_ver = {f"v{i['version']} - {i['timestamp']} ({i['autor']}): {i['comentario']}": i for i in reversed(historial)}
-                    v_sel_lbl = st.selectbox("Seleccione versión para inspeccionar / descargar:", list(opts_ver.keys()), key=f"select_hist_ver_{doc_sel}")
-                    it_sel = opts_ver[v_sel_lbl]
-                    c_snap = obtener_contenido_version(doc_sel, it_sel["archivo_snapshot"])
-                    ex_snap = it_sel.get("archivo_excel_snapshot")
-
-                    col_hv1, col_hv2 = st.columns(2)
-                    with col_hv1:
-                        if ex_snap:
-                            b_xl = obtener_bytes_snapshot(doc_sel, ex_snap)
-                            if b_xl:
-                                st.download_button(f"Descargar v{it_sel['version']} (.xlsx)", b_xl, sanitizar_nombre_descarga(doc_sel, it_sel['version'], ".xlsx"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch", key=f"btn_dl_x_h_{doc_sel}_{it_sel['version']}")
-                        else:
-                            st.download_button(f"Descargar v{it_sel['version']} (.md)", c_snap.encode("utf-8"), sanitizar_nombre_descarga(doc_sel, it_sel['version'], ".md"), "text/markdown", width="stretch", key=f"btn_dl_m_h_{doc_sel}_{it_sel['version']}")
-                    with col_hv2:
-                        st.caption(f"Snapshot generado el **{it_sel['timestamp']}** por **{it_sel['autor']}**.")
-
-                    if it_sel["version"] != u_ver:
-                        st.markdown("---")
-                        st.markdown(f"##### Revertir Documento a la Versión v{it_sel['version']} (Rollback)")
-                        col_ra, col_rm = st.columns([1, 2])
-                        with col_ra:
-                            aut_rb = st.text_input("Técnico que ejecuta Rollback (*)", key=f"author_rb_{doc_sel}_{it_sel['version']}")
-                        with col_rm:
-                            mot_rb = st.text_input("Justificación del Rollback (*)", key=f"motive_rb_{doc_sel}_{it_sel['version']}")
-                        if st.button(f"Confirmar Rollback a Versión v{it_sel['version']}", type="primary", key=f"btn_rb_{doc_sel}_{it_sel['version']}"):
-                            if not aut_rb.strip() or not mot_rb.strip():
-                                st.error("Error de Auditoría: Editor y Justificación son obligatorios.")
-                            else:
-                                if ex_snap and os.path.exists(os.path.join(HISTORY_DIR, doc_sel, ex_snap)):
-                                    shutil.copy2(os.path.join(HISTORY_DIR, doc_sel, ex_snap), os.path.join(DOCS_DIR, doc_sel))
-                                    nuevo_m = procesar_excel_limpio(os.path.join(DOCS_DIR, doc_sel))
-                                else:
-                                    nuevo_m = c_snap
-                                nv = guardar_nueva_version(doc_sel, nuevo_m, aut_rb.strip(), f"[Rollback a v{it_sel['version']}] {mot_rb.strip()}", st.session_state.doc_store)
-                                st.toast(f"Restaurado a v{it_sel['version']} (v{nv})")
-                                st.rerun()
-
-                    if len(historial) >= 2:
-                        with st.expander("Comparar diferencias de texto entre dos versiones (Diff)", expanded=False):
-                            c_d1, c_d2 = st.columns(2)
-                            n_vers = [f"v{i['version']} - {i['timestamp']} ({i['autor']})" for i in historial]
-                            map_v = {n_vers[idx]: historial[idx] for idx in range(len(historial))}
-                            with c_d1:
-                                v_base = st.selectbox("Versión Base:", n_vers, index=0, key=f"diff_base_{doc_sel}")
-                            with c_d2:
-                                v_comp = st.selectbox("Versión Comparada:", n_vers, index=len(n_vers)-1, key=f"diff_comp_{doc_sel}")
-                            st.code(generar_diff_texto(obtener_contenido_version(doc_sel, map_v[v_base]["archivo_snapshot"]), obtener_contenido_version(doc_sel, map_v[v_comp]["archivo_snapshot"]), v_base, v_comp), language="diff")
-
-                    with st.expander("Registro Central de Auditoría Global (Audit Log)", expanded=False):
-                        evs = obtener_todos_los_eventos_auditoria()
-                        if evs:
-                            df_aud = pd.DataFrame(evs)
-                            df_aud_disp = df_aud[df_aud["documento"] == doc_sel] if st.checkbox("Filtrar solo este documento", value=True, key=f"chk_aud_{doc_sel}") else df_aud
-                            st.dataframe(df_aud_disp.rename(columns={"timestamp": "Timestamp", "documento": "Documento", "accion": "Acción", "version_anterior": "Versión Ant.", "version_nueva": "Versión Nueva", "editor_responsable": "Editor", "motivo_justificacion": "Motivo"}), width="stretch", hide_index=True)
-
-        with subtab_editor:
-            doc_act_edit = st.session_state.get("tab4_doc_selector") or (docs_disp[0] if docs_disp else None)
-            if not doc_act_edit:
-                st.info("Seleccione un documento en la pestaña 'Visor y Explorador Documental' para editar.")
-            else:
-                doc_cont_e = st.session_state.doc_store.get(doc_act_edit, "")
-                historial_e = inicializar_version_inicial_si_no_existe(doc_act_edit, doc_cont_e)
-                u_ver_e = len(historial_e)
-
-                st.markdown(f"""
-                <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:6px;padding:8px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-                    <div><b>Documento Activo:</b> <span style="color:#6366F1;font-weight:600;">{normalizar_titulo_display(doc_act_edit)}</span> <span style="font-family:monospace;opacity:0.65;font-size:0.8rem;">({doc_act_edit})</span></div>
-                    <div><span class="badge-ok">Versión Activa: v{u_ver_e}</span></div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                es_x = doc_act_edit.lower().endswith(('.xlsx', '.xls')) and os.path.exists(os.path.join(DOCS_DIR, doc_act_edit))
-                if es_x:
-                    p_xl = os.path.join(DOCS_DIR, doc_act_edit)
-                    mt_xl = os.path.getmtime(p_xl) if os.path.exists(p_xl) else 0.0
-                    sheets_e = obtener_nombres_hojas_excel(p_xl, mt_xl)
-                    col_es1, col_es2 = st.columns([1.5, 2.5])
-                    with col_es1:
-                        hoja_e = st.selectbox("Seleccionar Hoja:", sheets_e or ["Hoja1"], key=f"edit_sheet_sel_{doc_act_edit}")
-                    with col_es2:
-                        col_ae1, col_ae2 = st.columns(2)
-                        with col_ae1:
-                            aut_e = st.text_input("Editor (*)", placeholder="Juan Pérez", key=f"author_input_grid_{doc_act_edit}")
-                        with col_ae2:
-                            mot_e = st.text_input("Motivo (*)", placeholder="Actualización de IP", key=f"motive_input_grid_{doc_act_edit}")
-
-                    tags_actuales_xl = obtener_tags_documento(doc_act_edit)
-                    cats_disp_xl = obtener_categorias_disponibles()
-                    col_tx1, col_tx2 = st.columns(2)
-                    with col_tx1:
-                        tags_xl_sel = st.multiselect("Categorías Asignadas:", options=sorted(list(set(cats_disp_xl + tags_actuales_xl))), default=tags_actuales_xl, key=f"ms_tags_edit_xl_{doc_act_edit}")
-                    with col_tx2:
-                        nueva_cat_xl = st.text_input("Agregar Nueva Categoría:", placeholder="ej: CMDB, Inventario...", key=f"input_new_cat_edit_xl_{doc_act_edit}")
-
-                    df_e = cargar_hoja_excel_dataframe(p_xl, hoja_e, mt_xl)
-                    df_mod = st.data_editor(df_e, width="stretch", num_rows="dynamic", height=450, key=f"grid_editor_{doc_act_edit}_{hoja_e}")
-                    if st.button(f"Guardar y Publicar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_grid_{doc_act_edit}"):
-                        if not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
-                            st.error("Error de Auditoría: Editor y Motivo son obligatorios.")
-                        else:
-                            nv = guardar_nueva_version_excel(doc_act_edit, hoja_e, df_mod, aut_e.strip(), mot_e.strip(), st.session_state.doc_store)
-                            tags_finales_xl = list(tags_xl_sel)
-                            if nueva_cat_xl.strip():
-                                tags_finales_xl.append(nueva_cat_xl.strip())
-                            if tags_finales_xl:
-                                asignar_tags_documento(doc_act_edit, tags_finales_xl, autor=aut_e.strip())
-                                limpiar_cache_consultas()
-                            st.toast(f"Versión v{nv} guardada exitosamente")
-                            st.rerun()
-                else:
-                    col_e1, col_e2 = st.columns([1, 2])
-                    with col_e1:
-                        aut_e = st.text_input("Editor (*)", placeholder="Juan Pérez", key=f"author_input_{doc_act_edit}")
-                    with col_e2:
-                        mot_e = st.text_input("Motivo (*)", placeholder="Actualización técnica", key=f"motive_input_{doc_act_edit}")
-
-                    tags_actuales_doc = obtener_tags_documento(doc_act_edit)
-                    cats_disp_e = obtener_categorias_disponibles()
-                    col_te1, col_te2 = st.columns(2)
-                    with col_te1:
-                        tags_e_sel = st.multiselect("Categorías Asignadas:", options=sorted(list(set(cats_disp_e + tags_actuales_doc))), default=tags_actuales_doc, key=f"ms_tags_edit_{doc_act_edit}")
-                    with col_te2:
-                        nueva_cat_e = st.text_input("Agregar Nueva Categoría:", placeholder="ej: Contingencias, Networking...", key=f"input_new_cat_edit_{doc_act_edit}")
-
-                    val_txt = doc_cont_e[:100_000] if len(doc_cont_e) > 100_000 else doc_cont_e
-                    txt_edit = st.text_area("Contenido (Markdown)", value=val_txt, height=450, key=f"textarea_edit_{doc_act_edit}")
-                    if st.button(f"Guardar y Publicar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_{doc_act_edit}"):
-                        if not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
-                            st.error("Error de Auditoría: Editor y Motivo son obligatorios.")
-                        else:
-                            nv = guardar_nueva_version(doc_act_edit, txt_edit, aut_e.strip(), mot_e.strip(), st.session_state.doc_store)
-                            tags_finales = list(tags_e_sel)
-                            if nueva_cat_e.strip():
-                                tags_finales.append(nueva_cat_e.strip())
-                            if tags_finales:
-                                asignar_tags_documento(doc_act_edit, tags_finales, autor=aut_e.strip())
-                                limpiar_cache_consultas()
-                            if nv == u_ver_e:
-                                st.toast(f"[OK] Categorías actualizadas para {doc_act_edit}")
-                                time.sleep(0.5)
-                                st.rerun()
-                            else:
-                                st.toast(f"[OK] Versión v{nv} publicada con éxito")
-                                st.rerun()
-
-        with subtab_lote:
-            st.markdown("#### Clasificación de Documentos en Lote")
-            st.caption("Asignación masiva de categorías y aplicación de sugerencias heurísticas a la base documental.")
-
-            if docs_pendientes:
-                st.warning(f"[PENDIENTE] Se detectaron {len(docs_pendientes)} documentos sin categoría asignada en el repositorio.")
-            else:
-                st.success(f"[OK] Todos los documentos ({len(todos_docs)}) cuentan con al menos una categoría asignada.")
-
-            col_bl_f, col_bl_s = st.columns([2.2, 1.8], vertical_alignment="bottom")
-            with col_bl_f:
-                filtro_lote = st.radio(
-                    "Alcance de clasificación:",
-                    options=[f"Solo pendientes ({len(docs_pendientes)})", f"Todos los documentos ({len(todos_docs)})"],
-                    index=0 if docs_pendientes else 1,
-                    horizontal=True,
-                    key="radio_batch_scope"
-                )
-            with col_bl_s:
-                col_bs1, col_bs2 = st.columns(2)
-                with col_bs1:
-                    if st.button("[Marcar Todos]", width="stretch", key="btn_batch_sel_all"):
-                        st.session_state["batch_select_default"] = True
-                        st.session_state["batch_tagger_ver"] = st.session_state.get("batch_tagger_ver", 0) + 1
-                        st.rerun()
-                with col_bs2:
-                    if st.button("[Deseleccionar Todos]", width="stretch", key="btn_batch_desel_all"):
-                        st.session_state["batch_select_default"] = False
-                        st.session_state["batch_tagger_ver"] = st.session_state.get("batch_tagger_ver", 0) + 1
-                        st.rerun()
-
-            docs_a_gestionar = docs_pendientes if filtro_lote.startswith("Solo pendientes") else todos_docs
-
-            if docs_a_gestionar:
-                default_sel = st.session_state.get("batch_select_default", False)
-                filas_lote = []
-                for d in docs_a_gestionar:
-                    tags_actuales = obtener_tags_documento(d)
-                    sug = sugerir_categoria_documento(d, st.session_state.doc_store.get(d, "")[:1500])
-                    filas_lote.append({
-                        "Seleccionar": bool(default_sel),
-                        "Documento": normalizar_titulo_display(d),
-                        "Sugerencia Heurística": sug,
-                        "Categoría Actual": ", ".join(tags_actuales) if tags_actuales else "[Sin Categoría]",
-                        "Archivo": d
-                    })
-                df_lote_base = pd.DataFrame(filas_lote)
-
-                tagger_ver = st.session_state.get("batch_tagger_ver", 0)
-                df_lote_edit = st.data_editor(
-                    df_lote_base,
-                    column_config={
-                        "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False),
-                        "Documento": st.column_config.TextColumn("Documento", disabled=True),
-                        "Sugerencia Heurística": st.column_config.TextColumn("Sugerencia Heurística", disabled=True),
-                        "Categoría Actual": st.column_config.TextColumn("Categoría Actual", disabled=True),
-                        "Archivo": st.column_config.TextColumn("Archivo", disabled=True),
-                    },
-                    hide_index=True,
-                    height=320,
-                    width="stretch",
-                    key=f"editor_batch_tagger_{tagger_ver}_{filtro_lote}"
-                )
-
-                col_ba1, col_ba2, col_ba3 = st.columns([2.0, 1.5, 1.5], vertical_alignment="bottom")
-                with col_ba1:
-                    opts_dest = ["[SUGERENCIA] Usar categoría sugerida de cada archivo"]
-                    if cats_disp_t3:
-                        opts_dest.extend(cats_disp_t3)
-                    opts_dest.append("[NUEVA] Crear una nueva categoría...")
-                    cat_dest_sel = st.selectbox("Categoría Destino para seleccionados:", opts_dest, key="batch_cat_dest_sel")
-
-                with col_ba2:
-                    nueva_cat_batch = ""
-                    if cat_dest_sel.startswith("[NUEVA]"):
-                        nueva_cat_batch = st.text_input("Nombre de nueva categoría (*):", placeholder="ej: Seguridad Perimetral", key="batch_new_cat_input")
-                    else:
-                        st.caption("Los documentos seleccionados recibirán la categoría seleccionada.")
-
-                with col_ba3:
-                    cant_marcados = len(df_lote_edit[df_lote_edit["Seleccionar"] == True]) if "Seleccionar" in df_lote_edit.columns else 0
-                    btn_label = f"[APLICAR] Clasificar Seleccionados ({cant_marcados})" if cant_marcados > 0 else "[APLICAR] Clasificar Seleccionados"
-                    if st.button(btn_label, type="primary", width="stretch", key="btn_apply_batch_tags"):
-                        df_sel = df_lote_edit[df_lote_edit["Seleccionar"] == True]
-                        if df_sel.empty:
-                            st.warning("[ALERTA] Debe marcar al menos un documento en la columna 'Seleccionar'.")
-                        else:
-                            doc_tags_map = {}
-                            if cat_dest_sel.startswith("[SUGERENCIA]"):
-                                for _, row in df_sel.iterrows():
-                                    doc_tags_map[row["Archivo"]] = [row["Sugerencia Heurística"]]
-                            elif cat_dest_sel.startswith("[NUEVA]"):
-                                if not nueva_cat_batch.strip():
-                                    st.error("[ERROR] Debe indicar el nombre de la nueva categoría.")
-                                    st.stop()
-                                for _, row in df_sel.iterrows():
-                                    doc_tags_map[row["Archivo"]] = [nueva_cat_batch.strip()]
-                            else:
-                                for _, row in df_sel.iterrows():
-                                    doc_tags_map[row["Archivo"]] = [cat_dest_sel]
-
-                            if doc_tags_map:
-                                n_act = asignar_tags_en_lote(doc_tags_map, autor="Operaciones")
-                                limpiar_cache_consultas()
-                                limpiar_cache_documentos()
-                                st.session_state["batch_select_default"] = False
-                                st.toast(f"[OK] Se categorizaron {n_act} documentos exitosamente.")
-                                st.success(f"[OK] Clasificación completada: {n_act} documentos actualizados.")
-                                time.sleep(0.8)
-                                st.rerun()
-            else:
-                st.info("[INFO] No hay documentos en el alcance seleccionado.")
-    else:
-        st.warning("No hay documentos indexados en el repositorio.")
+    renderizar_pestana_documentacion(st.session_state.doc_store)
 
 # ----------------- TAB 4: PLANTILLAS Y RUNBOOKS -----------------
 with tab_templates:
-    st.subheader("Generador Rápido de Documentación y Runbooks")
-    st.caption("Crea y publica procedimientos técnicos estandarizados o define nuevos tipos personalizados en 2 minutos.")
-
-    sac.steps(items=[sac.StepsItem(title="Paso 1", subtitle="Selección y Metadatos"), sac.StepsItem(title="Paso 2", subtitle="Parámetros Técnicos"), sac.StepsItem(title="Paso 3", subtitle="Previsualización y Publicación")], size="sm", return_index=False)
-    st.markdown("---")
-
-    col_t1, col_t2 = st.columns([1, 1], gap="large")
-    with col_t1:
-        st.markdown("#### 1. Configuración del Procedimiento")
-        tipo_sel = st.selectbox("Plantilla / Tipo de Procedimiento", obtener_todos_los_tipos_plantillas(), key="select_tipo_procedimiento_gen")
-        es_nuevo_t = "[+ Crear" in tipo_sel
-
-        if es_nuevo_t:
-            nuevo_t_nom = st.text_input("Nombre de la Plantilla (*)", placeholder="Ej: Auditoría de Accesos", key="input_nuevo_tipo_proc")
-            guardar_cat = st.checkbox("Guardar en catálogo permanente", value=True)
-            tipo_plantilla = nuevo_t_nom.strip() or "Procedimiento Personalizado"
-        else:
-            tipo_plantilla = tipo_sel.replace("[Plantilla]", "").replace("[Personalizado]", "").strip()
-            guardar_cat, nuevo_t_nom = False, ""
-
-        with st.expander("Explorar catálogo de plantillas base reservadas (Opcional)", expanded=False):
-            col_rs, col_rb = st.columns([3, 1])
-            with col_rs:
-                base_act = st.selectbox("Seleccionar plantilla base a activar:", PLANTILLAS_BASE_RESERVADAS, key="sel_plantilla_base_res")
-            with col_rb:
-                st.write("")
-                st.write("")
-                if st.button("[+ Activar]", key="btn_activar_plantilla_base", width="stretch"):
-                    guardar_plantilla_personalizada(base_act, f"Plantilla activada: {base_act}", ["criterio", "pasos", "verif"])
-                    st.toast(f"[OK] Plantilla '{base_act}' activada")
-                    st.rerun()
-
-        col_g1, col_g2 = st.columns(2)
-        with col_g1:
-            autor = st.text_input("Autor (*)", value="Developer / DevOps", key="proc_autor_input")
-            nombre_srv = st.text_input("Servicio (*)", value="Booking Core Engine", key="proc_srv_input")
-        with col_g2:
-            nivel_arq = st.selectbox("Nivel", ["L4 - Aplicación y Negocio", "L3 - Middleware e Integración", "L2 - Virtualización y Cómputo", "L1 - Hardware e Infraestructura Base"], key="proc_nivel_input")
-            ambiente = st.selectbox("Ambiente", ["Producción", "Staging / QA", "Desarrollo", "Datacenter DR", "Todos los Ambientes"], key="proc_amb_input")
-
-        col_g3, col_g4 = st.columns(2)
-        with col_g3:
-            criticidad = st.selectbox("Criticidad / SLA", ["Crítico 7x24 (P1)", "Alta (P2)", "Media (P3)", "Baja (P4)"], index=2, key="proc_crit_input")
-        with col_g4:
-            ventana = st.text_input("Ventana", value="02:00 a 04:00 AM (Horario no hábil)", key="proc_vent_input")
-
-        servidores = st.text_input("Servidores / VMs / IPs", value="BALANCER001, 10.24.0.125, VM-BOOKING-01", key="proc_srvs_input")
-
-        st.markdown("---")
-        st.markdown("##### Parámetros Específicos del Procedimiento")
-        params = {"ambiente": ambiente, "criticidad": criticidad, "ventana": ventana, "servidores": servidores}
-
-        if "Rollback" in tipo_plantilla:
-            params["criterio"] = st.text_area("Criterio de Activación", value="Latencia > 500ms o Error Rate > 2%")
-            params["pasos"] = st.text_area("Pasos de Reversión", value="1. Ejecutar pipeline rollback release-v2.4.1\n2. Revertir esquema BD\n3. redis-cli FLUSHDB")
-            params["verif"] = st.text_area("Verificación de Salud", value="curl -I https://api.booking.internal/health\nsystemctl status booking-service")
-        elif "Paso a Producción" in tipo_plantilla:
-            params["version"] = st.text_input("Versión / Tag", value="v2.5.0")
-            params["pipeline"] = st.text_input("Pipeline URL", value="https://dev.azure.com/smucorp/pipelines/142")
-            params["variables"] = st.text_area("Variables de Entorno", value="REDIS_HOST=10.24.0.126\nLOG_LEVEL=INFO")
-            params["smoke"] = st.text_area("Checklist Smoke Tests", value="- [ ] Endpoint /health HTTP 200\n- [ ] Cero alertas en Nagios")
-        elif "Postmortem" in tipo_plantilla:
-            params["incidente_id"] = st.text_input("Ticket ID", value="INC-88912")
-            params["impacto"] = st.text_area("Impacto", value="Indisponibilidad de 14 minutos. 120 transacciones rechazadas.")
-            params["causa"] = st.text_area("Causa Raíz (RCA)", value="Agotamiento de pool de conexiones JDBC.")
-            params["solucion"] = st.text_area("Solución Inmediata", value="Reinicio worker WSO2 y ampliación de maxConnections.")
-            params["preventiva"] = st.text_area("Medida Preventiva", value="Creación de índice y ajuste de timeout.")
-        elif "Microservicio" in tipo_plantilla:
-            params["endpoint"] = st.text_input("Endpoint Base", value="/api/v1/booking")
-            params["auth"] = st.text_input("Autenticación", value="OAuth2 Bearer Token (Redis Sentinel)")
-            params["dependencias"] = st.text_area("Dependencias", value="* VM: VM-BOOKING-01 (10.24.0.125)\n* DB: Postgres HA (10.24.0.130)")
-        elif "Parchado" in tipo_plantilla or "Mantenimiento de SO" in tipo_plantilla:
-            params["paquetes"] = st.text_area("Paquetes", value="Actualización mensual del kernel y OpenSSL.")
-            params["pasos_parchado"] = st.text_area("Pasos de Parchado", value="1. Snapshot en vCloud\n2. yum update -y\n3. Reboot nodo secundario")
-            params["rollback_parchado"] = st.text_area("Plan de Reversión", value="Revertir al snapshot de VM en vCloud.")
-        elif "Certificados" in tipo_plantilla or "SSL" in tipo_plantilla:
-            params["dominio"] = st.text_input("Dominio / CN", value="*.smucorp.internal")
-            params["ruta_cert"] = st.text_input("Ruta de Instalación", value="/etc/ssl/certs/api_smucorp.crt")
-            params["comandos_renov"] = st.text_area("Comandos Generación", value="openssl req -new -newkey rsa:2048 -nodes -keyout api.key -out api.csr")
-            params["validacion_ssl"] = st.text_area("Validación SSL", value="echo | openssl s_client -connect localhost:443 -servername api.smucorp.internal 2>/dev/null | openssl x509 -noout -dates")
-        elif "Disaster Recovery" in tipo_plantilla or "DRP" in tipo_plantilla:
-            params["rpo_rto"] = st.text_input("RPO / RTO", value="RPO: 15 min | RTO: 1 hora")
-            params["activacion_drp"] = st.text_area("Criterios Activación DRP", value="Indisponibilidad total del Datacenter Principal.")
-            params["pasos_drp"] = st.text_area("Pasos Conmutación", value="1. Conmutar DNS\n2. Promover réplica PostgreSQL\n3. Iniciar workers")
-        elif "Respaldo" in tipo_plantilla or "Base de Datos" in tipo_plantilla:
-            params["motor_bd"] = st.text_input("Motor de BD", value="PostgreSQL 15 HA")
-            params["comando_backup"] = st.text_area("Script Backup", value="pg_dump -h 10.24.0.130 -U admin -Fc db_booking > backup.dump")
-            params["comando_restore"] = st.text_area("Script Restore", value="pg_restore -h 10.24.0.130 -U admin -d db_booking backup.dump")
-        elif "Contingencia" in tipo_plantilla or "Failover" in tipo_plantilla:
-            params["sintoma"] = st.text_area("Síntoma de Falla", value="Host ESXi no responde o alerta CRITICAL en Nagios.")
-            params["pasos"] = st.text_area("Procedimiento Failover", value="1. Conmutar en HAProxy a BALANCER002\n2. Activar réplica en vCloud")
-        else:
-            params["objetivo"] = st.text_area("Objetivo y Alcance", value=f"Procedimiento para {tipo_plantilla} en {nombre_srv}.")
-            params["prerequisitos"] = st.text_area("Requisitos Previos", value="* Acceso SSH con sudo\n* Notificación a Operaciones\n* Snapshot preventivo")
-            params["pasos_custom"] = st.text_area("Pasos Detallados", value="1. Validar estado: systemctl status servicio\n2. Ejecutar script\n3. Verificar logs")
-            params["verificacion_custom"] = st.text_area("Validación", value="* Cero errores 5xx\n* Nagios check_http en OK")
-            params["rollback_custom"] = st.text_area("Plan de Contingencia", value="1. Detener script\n2. Restaurar backup\n3. Reiniciar servicio")
-
-        doc_gen_md, fname_sug = generar_doc_plantilla(tipo_plantilla, autor, nombre_srv, nivel_arq, params)
-
-    with col_t2:
-        st.markdown("#### 2. Previsualización en Vivo")
-        nom_f = st.text_input("Nombre de Archivo Final (.md)", value=fname_sug, key="input_nombre_archivo_proc_final")
-
-        # Asignación obligatoria de categoría para el nuevo runbook
-        cats_disp_rb = obtener_categorias_disponibles()
-        col_rb_c1, col_rb_c2 = st.columns([1.5, 1.5])
-        with col_rb_c1:
-            cat_rb_exist = st.selectbox("Categoría Existente (*):", ["(Crear Nueva)"] + cats_disp_rb, key="sb_cat_proc_exist") if cats_disp_rb else "(Crear Nueva)"
-        with col_rb_c2:
-            cat_rb_nueva = st.text_input("Nueva Categoría (*):" if cat_rb_exist == "(Crear Nueva)" else "O escribir otra categoría:", placeholder="ej: Procedimientos, Runbooks, DRP...", key="input_cat_proc_nueva")
-
-        with st.container(border=True):
-            st.markdown(doc_gen_md)
-
-        st.divider()
-        if st.button("Guardar y Publicar en Base de Conocimiento", type="primary", width="stretch", key="btn_guardar_doc_plantilla_final"):
-            cat_final_rb = cat_rb_nueva.strip() if cat_rb_nueva.strip() else (cat_rb_exist if cat_rb_exist != "(Crear Nueva)" else "")
-            if not cat_final_rb:
-                st.warning("[REQUERIDO] Debe asignar una categoría existente o escribir una nueva para publicar el procedimiento.")
-            else:
-                if not nom_f.endswith(".md"):
-                    nom_f += ".md"
-                if es_nuevo_t and guardar_cat and nuevo_t_nom.strip():
-                    guardar_plantilla_personalizada(nuevo_t_nom.strip(), f"Plantilla personalizada {nuevo_t_nom.strip()}", ["objetivo", "prerequisitos", "pasos_custom", "verificacion_custom", "rollback_custom"])
-
-                ruta_dest = os.path.join(DOCS_DIR, nom_f)
-                os.makedirs(DOCS_DIR, exist_ok=True)
-                with open(ruta_dest, "w", encoding="utf-8") as f_out:
-                    f_out.write(doc_gen_md)
-
-                st.session_state.doc_store[nom_f] = doc_gen_md
-                asignar_tags_documento(nom_f, [cat_final_rb], autor=autor)
-                inicializar_version_inicial_si_no_existe(nom_f, doc_gen_md, autor=autor, comentario=f"Creación mediante plantilla: {tipo_plantilla}")
-                limpiar_cache_consultas()
-                st.toast(f"Procedimiento guardado como {nom_f} bajo categoría [{cat_final_rb}]")
-                st.success(f"¡Procedimiento guardado e indexado como **{nom_f}** [Version v1]!")
-                st.rerun()
+    renderizar_pestana_plantillas(st.session_state.doc_store)

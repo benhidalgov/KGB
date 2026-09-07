@@ -9,6 +9,8 @@ from datetime import datetime
 import streamlit as st
 from excel_cleaner import procesar_excel_limpio
 from core.configuracion import DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR
+from core.tags import asignar_tags_documento
+from core.auditoria import guardar_nueva_version, inicializar_version_inicial_si_no_existe
 
 IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.svg', '.webp')
 OFFICE_EXTENSIONS = ('.docx', '.pdf', '.pptx', '.xlsx', '.xls')
@@ -318,3 +320,105 @@ def cargar_documentos_locales(doc_store: dict, force: bool = False) -> dict:
                         except Exception:
                             pass
     return doc_store
+ 
+
+def procesar_e_ingestar_binario(
+    clean_name: str,
+    buf: bytes,
+    doc_store: dict,
+    autor: str = "Técnico / Panel Lateral",
+    origen_detalle: str = "Carga en panel lateral",
+    tags: list[str] | None = None
+) -> tuple[str, str]:
+    """Procesa e ingesta un archivo binario, versionándolo, asignando tags y actualizando doc_store."""
+    ext = os.path.splitext(clean_name)[1].lower()
+    nuevo_hash = calcular_sha256(buf)
+
+    # 1. Preservar siempre en data/originals/
+    os.makedirs(ORIGINALS_DIR, exist_ok=True)
+    with open(os.path.join(ORIGINALS_DIR, clean_name), "wb") as f_orig:
+        f_orig.write(buf)
+
+    # 2. Imágenes y Diagramas
+    if ext in IMAGE_EXTENSIONS:
+        os.makedirs(ASSETS_DIR, exist_ok=True)
+        with open(os.path.join(ASSETS_DIR, clean_name), "wb") as f_asset:
+            f_asset.write(buf)
+
+        doc_md_name = f"DIAGRAMA__{clean_name}.md"
+        md_save_path = os.path.join(DOCS_DIR, doc_md_name)
+        ficha_content = generar_ficha_diagrama(
+            image_filename=clean_name,
+            orig_rel_path=f"assets/{clean_name}",
+            sha256_hash=nuevo_hash,
+            categoria=origen_detalle
+        )
+        if tags:
+            asignar_tags_documento(clean_name, tags, autor=autor)
+            asignar_tags_documento(doc_md_name, tags, autor=autor)
+
+        if os.path.exists(md_save_path):
+            with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
+                ex_content = f_ex.read()
+            if calcular_sha256(ex_content.encode("utf-8")) == calcular_sha256(ficha_content.encode("utf-8")):
+                return "sin_cambios", f"Diagrama '{clean_name}' ya registrado sin cambios."
+            with open(md_save_path, "w", encoding="utf-8") as f_out:
+                f_out.write(ficha_content)
+            doc_store[doc_md_name] = ficha_content
+            nueva_v = guardar_nueva_version(
+                doc_name=doc_md_name,
+                nuevo_contenido=ficha_content,
+                autor=autor,
+                comentario=f"Actualización de activo gráfico '{clean_name}'",
+                doc_store=doc_store
+            )
+            return "actualizado", f"Diagrama '{clean_name}' actualizado [Version v{nueva_v}]"
+        else:
+            with open(md_save_path, "w", encoding="utf-8") as f_out:
+                f_out.write(ficha_content)
+            doc_store[doc_md_name] = ficha_content
+            inicializar_version_inicial_si_no_existe(
+                doc_name=doc_md_name,
+                contenido_actual=ficha_content,
+                autor=autor,
+                comentario=f"Carga inicial de activo gráfico '{clean_name}'"
+            )
+            return "nuevo", f"Diagrama '{clean_name}' indexado como Version v1"
+
+    # 3. Documentos Ofimáticos, Excel, PDF y Texto
+    else:
+        if tags:
+            asignar_tags_documento(clean_name, tags, autor=autor)
+
+        os.makedirs(DOCS_DIR, exist_ok=True)
+        save_path = os.path.join(DOCS_DIR, clean_name)
+        if os.path.exists(save_path):
+            with open(save_path, "rb") as f:
+                existente_bytes = f.read()
+            if nuevo_hash == calcular_sha256(existente_bytes):
+                return "sin_cambios", f"Archivo '{clean_name}' ya indexado sin cambios."
+            with open(save_path, "wb") as f:
+                f.write(buf)
+            content = cargar_documento_individual(save_path)
+            doc_store[clean_name] = content
+            nueva_v = guardar_nueva_version(
+                doc_name=clean_name,
+                nuevo_contenido=content,
+                autor=autor,
+                comentario=f"Actualización de archivo '{clean_name}' ({origen_detalle})",
+                doc_store=doc_store
+            )
+            return "actualizado", f"Archivo '{clean_name}' actualizado [Version v{nueva_v}]"
+        else:
+            with open(save_path, "wb") as f:
+                f.write(buf)
+            content = cargar_documento_individual(save_path)
+            doc_store[clean_name] = content
+            inicializar_version_inicial_si_no_existe(
+                doc_name=clean_name,
+                contenido_actual=content,
+                autor=autor,
+                comentario=f"Carga inicial de archivo ({origen_detalle})"
+            )
+            return "nuevo", f"Documento '{clean_name}' indexado como Version v1"
+
