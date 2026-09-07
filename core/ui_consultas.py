@@ -19,21 +19,6 @@ from core.motor import (
 
 def renderizar_modulo_consultas(doc_store: dict):
     """Renderiza el módulo de búsqueda y asistente de IA."""
-    st.markdown("""
-    <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.22);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <span class="badge-info" style="font-size:0.68rem;padding:2px 6px;">[MÓDULO]</span>
-            <b style="color:#6366F1;font-size:0.9rem;">Consultas y Asistente Técnico Especializado</b>
-        </div>
-        <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
-            <b>¿Qué hace?</b> Permite localizar servidores, IPs y componentes de la CMDB en tiempo real con latencia en RAM (&lt; 2 ms) y responder dudas operativas complejas mediante el Asistente Técnico con contexto RAG inyectado.
-        </div>
-        <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
-            <b>¿Cómo se usa?</b> Ingrese un término (ej: <code>BALANCER001</code> o <code>10.24.0.125</code>) en <i>Búsqueda Textual</i> para coincidencias instantáneas, o formule una consulta técnica en lenguaje natural en la pestaña <i>Asistente Técnico</i>.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
     subtab_duckdb, subtab_asistente = st.tabs([
         "Búsqueda Textual (DuckDB & Docs)",
         "Asistente Técnico (Gemini RAG)"
@@ -41,8 +26,20 @@ def renderizar_modulo_consultas(doc_store: dict):
 
     # 1. Búsqueda Textual en CMDB y Documentos
     with subtab_duckdb:
-        st.markdown("#### Búsqueda Textual en Inventario CMDB y Documentación")
-        st.caption("Búsqueda indexada instantánea en memoria RAM (< 2 ms) sobre la CMDB y los documentos técnicos.")
+        st.markdown("""
+        <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.22);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span class="badge-info" style="font-size:0.68rem;padding:2px 6px;">[MOTOR DUCKDB]</span>
+                <b style="color:#6366F1;font-size:0.9rem;">Búsqueda Textual Instantánea en RAM (DuckDB &amp; Documentación)</b>
+            </div>
+            <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
+                <b>¿Qué hace?</b> Localización determinística de alta velocidad (&lt; 2 ms) para coincidencias exactas o parciales de IPs, hostnames, números de serie en la CMDB y fragmentos en la documentación técnica.
+            </div>
+            <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
+                <b>¿Cómo se usa?</b> Ingrese una IP (ej: <code>10.24.0.125</code>), servidor (ej: <code>BALANCER001</code>) o término técnico y presione <code>Buscar</code>. Si requiere correlación asistida por IA sobre los resultados, utilice el botón <code>&gt;_ Analizar con Asistente</code>.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         with st.form(key="form_duckdb_search", clear_on_submit=False):
             col_din, col_dbtn = st.columns([5, 1])
@@ -129,8 +126,20 @@ def renderizar_modulo_consultas(doc_store: dict):
 
     # 2. Asistente Técnico Especializado RAG
     with subtab_asistente:
-        st.markdown("#### Asistente de Infraestructura y Operaciones (Gemini RAG)")
-        st.caption("Asistente técnico especializado con inyección contextual RAG (CMDB + Documentación).")
+        st.markdown("""
+        <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.22);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span class="badge-ok" style="font-size:0.68rem;padding:2px 6px;">[IA / VECTORIAL]</span>
+                <b style="color:#6366F1;font-size:0.9rem;">Asistente Técnico con Recuperación Contextual y Vectorial (Gemini RAG)</b>
+            </div>
+            <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
+                <b>¿Qué hace?</b> Motor de inteligencia artificial que recupera contextualmente la CMDB y los documentos técnicos mediante análisis semántico/vectorial para resolver dudas operativas, diagnosticar incidencias y correlacionar dependencias de servicios.
+            </div>
+            <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
+                <b>¿Cómo se usa?</b> Escriba su consulta técnica en lenguaje natural (ej: <i>"Explícame el procedimiento de failover de Redis y sus dependencias"</i>) y presione <code>Consultar Asistente</code> para generar una respuesta fundamentada en la evidencia.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         with st.form(key="top_asistente_form", clear_on_submit=True):
             col_cin, col_cbtn = st.columns([5, 1])
