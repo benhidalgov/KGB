@@ -1485,3 +1485,86 @@ div[data-testid="stPills"] button[data-checked="true"] {
     color: #6366F1 !important;
     box-shadow: 0 1px 3px rgba(99, 102, 241, 0.12);
 }
+
+/* ==========================================================================
+   Pestañas como Botones Ejecutivos (Tabs as High-Contrast Buttons)
+   ========================================================================== */
+div[data-testid="stTabs"] {
+    margin-top: 4px;
+    margin-bottom: 12px;
+}
+
+div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
+    display: flex !important;
+    gap: 10px !important;
+    background: transparent !important;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.18) !important;
+    padding: 2px 0 10px 0 !important;
+}
+
+/* Ocultar la línea roja plana por defecto de Streamlit */
+div[data-testid="stTabs"] div[data-baseweb="tab-highlight"],
+div[data-testid="stTabs"] div[data-baseweb="tab-border"] {
+    display: none !important;
+    height: 0 !important;
+    opacity: 0 !important;
+}
+
+/* Estilo individual de cada pestaña como Botón */
+div[data-testid="stTabs"] button[data-baseweb="tab"] {
+    background: rgba(128, 128, 128, 0.08) !important;
+    border: 1px solid rgba(128, 128, 128, 0.22) !important;
+    border-radius: 7px !important;
+    padding: 8px 18px !important;
+    font-size: 0.84rem !important;
+    font-weight: 600 !important;
+    color: inherit !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
+    background: rgba(99, 102, 241, 0.12) !important;
+    border-color: rgba(99, 102, 241, 0.45) !important;
+    color: #6366F1 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.18) !important;
+}
+
+/* Pestaña Activa / Seleccionada (Botón Primario Índigo) */
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+    background: #6366F1 !important;
+    border-color: #4F46E5 !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4) !important;
+}
+
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p,
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] span,
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] div {
+    color: #FFFFFF !important;
+}
+
+/* Soporte para Segmented Control y Pills */
+div[data-testid="stSegmentedControl"] button,
+div[data-testid="stPills"] button {
+    border-radius: 7px !important;
+    font-size: 0.83rem !important;
+    font-weight: 600 !important;
+    padding: 6px 16px !important;
+    border: 1px solid rgba(128, 128, 128, 0.22) !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-testid="stSegmentedControl"] button[aria-checked="true"],
+div[data-testid="stPills"] button[aria-checked="true"] {
+    background: #6366F1 !important;
+    color: #FFFFFF !important;
+    border-color: #6366F1 !important;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35) !important;
+}

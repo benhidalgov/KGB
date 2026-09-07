@@ -20,8 +20,8 @@ from core.motor import (
 def renderizar_modulo_consultas(doc_store: dict):
     """Renderiza el módulo de búsqueda y asistente de IA."""
     subtab_duckdb, subtab_asistente = st.tabs([
-        "Búsqueda Textual (DuckDB & Docs)",
-        "Asistente Técnico (Gemini RAG)"
+        ">_ Búsqueda Textual (DuckDB & Docs)",
+        ">_ Asistente Técnico (Gemini RAG)"
     ])
 
     # 1. Búsqueda Textual en CMDB y Documentos
