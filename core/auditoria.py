@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 from excel_cleaner import procesar_excel_limpio
 from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR
+from core.db import es_postgres_disponible, insertar_evento_auditoria_pg, obtener_eventos_auditoria_pg
 
 
 def calcular_sha256_texto(texto: str) -> str:
@@ -78,7 +79,22 @@ def obtener_fecha_carga_documento(doc_name: str):
 
 
 def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, version_nueva: int, autor: str, motivo: str):
-    """Registra un evento inmutable de trazabilidad en el log central de auditoría."""
+    """Registra un evento inmutable de trazabilidad en PostgreSQL y/o en el log central de auditoría."""
+    # 1. Registro transaccional en PostgreSQL si está disponible
+    if es_postgres_disponible():
+        try:
+            insertar_evento_auditoria_pg(
+                documento=doc_name,
+                accion=accion,
+                version_ant=version_ant,
+                version_nueva=version_nueva,
+                autor=autor.strip() if autor and autor.strip() else "Desconocido",
+                motivo=motivo.strip() if motivo and motivo.strip() else "Sin justificación"
+            )
+        except Exception:
+            pass
+
+    # 2. Espejado y persistencia en archivo local audit_log.json
     eventos = []
     if os.path.exists(AUDIT_LOG_PATH):
         try:
@@ -380,7 +396,15 @@ def _obtener_todos_los_eventos_auditoria_cached(mtime: float) -> list:
 
 
 def obtener_todos_los_eventos_auditoria() -> list:
-    """Recupera todos los eventos registrados en el log global de auditoría en orden cronológico inverso."""
+    """Recupera todos los eventos registrados en PostgreSQL o en el log global de auditoría en orden cronológico inverso."""
+    if es_postgres_disponible():
+        try:
+            evs_pg = obtener_eventos_auditoria_pg()
+            if evs_pg:
+                return evs_pg
+        except Exception:
+            pass
+
     mtime = os.path.getmtime(AUDIT_LOG_PATH) if os.path.exists(AUDIT_LOG_PATH) else 0.0
     return list(_obtener_todos_los_eventos_auditoria_cached(mtime))
 

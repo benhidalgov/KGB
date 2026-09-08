@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 import streamlit as st
 from core.auditoria import registrar_evento_auditoria
 from core.manual import activar_manual_en_inicio, renderizar_manual_lanzamiento
+from core.db import es_postgres_disponible, obtener_usuarios_pg, actualizar_ultimo_login_pg
 
 AUTH_USERS_PATH = os.path.join("data", "users.json")
 DEFAULT_SALT = "infra_console_security_salt_2026"
@@ -56,7 +57,7 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
 
 
 def verificar_credenciales(username_input: str, password_input: str) -> Optional[Dict[str, Any]]:
-    """Valida el usuario y contraseña contra el almacen o secrets."""
+    """Valida el usuario y contraseña contra PostgreSQL, almacén local o secrets."""
     u, p = username_input.strip().lower(), password_input.strip()
     if not u or not p:
         return None
@@ -67,6 +68,23 @@ def verificar_credenciales(username_input: str, password_input: str) -> Optional
     except Exception:
         pass
 
+    # 1. Verificación primaria contra PostgreSQL si está disponible
+    if es_postgres_disponible():
+        try:
+            usuarios_pg = obtener_usuarios_pg()
+            if u in usuarios_pg and usuarios_pg[u].get("activo", True):
+                if generar_hash_password(p) == usuarios_pg[u].get("hash"):
+                    actualizar_ultimo_login_pg(u)
+                    return {
+                        "username": u,
+                        "nombre": usuarios_pg[u].get("nombre", u),
+                        "rol": usuarios_pg[u].get("rol", "Operador"),
+                        "activo": True
+                    }
+        except Exception:
+            pass
+
+    # 2. Fallback automático a archivo local users.json
     usuarios = inicializar_almacen_usuarios()
     if u in usuarios and usuarios[u].get("activo", True):
         if generar_hash_password(p) == usuarios[u].get("hash"):

@@ -8,6 +8,7 @@ from core.configuracion import CSV_PATH
 from core.procesador import normalizar_titulo_display
 from core.vault import obtener_secreto
 from core.tags import obtener_tags_documento
+from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
 
 _DUCKDB_CON = None
 _DUCKDB_LAST_MTIME = -1.0
@@ -25,13 +26,36 @@ def limpiar_cache_consultas():
 
 
 def _obtener_conexion_duckdb():
-    """Mantiene una conexión y tabla en memoria persistente en DuckDB con recarga automática."""
+    """Mantiene una conexión y tabla en memoria persistente en DuckDB con recarga automática desde PostgreSQL o CSV."""
     global _DUCKDB_CON, _DUCKDB_LAST_MTIME
     current_mtime = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
     if _DUCKDB_CON is None or current_mtime != _DUCKDB_LAST_MTIME:
         _DUCKDB_CON = duckdb.connect(database=':memory:')
-        if os.path.exists(CSV_PATH):
+        cargado = False
+
+        # 1. Intentar cargar desde PostgreSQL si está disponible
+        if es_postgres_disponible():
+            try:
+                df_pg = obtener_mantenimientos_pg_df()
+                if not df_pg.empty:
+                    _DUCKDB_CON.register("df_pg_temp", df_pg)
+                    _DUCKDB_CON.execute("CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM df_pg_temp")
+                    cargado = True
+            except Exception:
+                cargado = False
+
+        # 2. Fallback a archivo CSV local
+        if not cargado and os.path.exists(CSV_PATH):
             _DUCKDB_CON.execute(f"CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM read_csv_auto('{CSV_PATH}')")
+        elif not cargado:
+            _DUCKDB_CON.execute("""
+                CREATE OR REPLACE TABLE mantenimientos (
+                    servidor_id VARCHAR, numero_serie VARCHAR, ip VARCHAR, vcloud_vm VARCHAR,
+                    nivel_arquitectura VARCHAR, componente VARCHAR, fecha VARCHAR,
+                    tipo_mantenimiento VARCHAR, tecnico VARCHAR, descripcion VARCHAR,
+                    estado VARCHAR, nagios_check VARCHAR
+                )
+            """)
         _DUCKDB_LAST_MTIME = current_mtime
     return _DUCKDB_CON
 

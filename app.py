@@ -40,7 +40,16 @@ from core.ui_plantillas import renderizar_pestana_plantillas
 
 @st.cache_data(show_spinner=False)
 def obtener_dataframe_mantenimientos(mtime: float) -> pd.DataFrame:
-    """Carga en caché el CSV de mantenimientos de la CMDB indexado por mtime."""
+    """Carga en caché los mantenimientos de la CMDB desde PostgreSQL o CSV local."""
+    from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
+    if es_postgres_disponible():
+        try:
+            df_pg = obtener_mantenimientos_pg_df()
+            if not df_pg.empty:
+                return df_pg
+        except Exception:
+            pass
+
     if os.path.exists(CSV_PATH):
         try:
             return pd.read_csv(CSV_PATH)

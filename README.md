@@ -81,6 +81,29 @@ streamlit run app.py
 | `operador` | Operador | `operador2026` | Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado e Ingesta |
 | `auditor` | Auditor | `auditor2026` | Solo lectura (Búsqueda DuckDB y Visor Documental) |
 
+### Despliegue con Docker y PostgreSQL
+
+La plataforma incluye orquestación multinodo mediante Docker Compose con PostgreSQL 16:
+
+```bash
+# 1. Construir e iniciar los servicios (Base de datos y Aplicación Web)
+docker compose up --build -d
+
+# 2. Verificar el estado de los contenedores
+docker compose ps
+
+# 3. Consultar registros de ejecución en tiempo real
+docker compose logs -f copilot_app
+
+# 4. Detener los servicios preservando los volúmenes de datos
+docker compose down
+```
+
+* **Acceso a la Consola Web:** `http://localhost:8501`
+* **Acceso a PostgreSQL:** `localhost:5432` (Base de datos: `infra_copilot`, Usuario: `infra_admin`)
+* **Inicialización Automática:** El directorio `docker/init-db/` ejecuta automáticamente los scripts DDL y de seed en el primer arranque.
+* **Resiliencia / Fallback:** Si se ejecuta localmente sin Docker, la aplicación conmuta de forma transparente al almacenamiento en archivos locales (`data/`).
+
 ---
 
 ## 4. Despliegue en la Nube (Streamlit Community Cloud)

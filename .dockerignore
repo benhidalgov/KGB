@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+.git/
+.gitignore
+.devcontainer/
+*.bat
+*.ps1
+.vault.enc
+.vault.key

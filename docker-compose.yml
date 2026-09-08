@@ -1,0 +1,57 @@
+services:
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: infra_copilot_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: infra_copilot
+      POSTGRES_USER: infra_admin
+      POSTGRES_PASSWORD: infra_secure_password_2026
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-db:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infra_admin -d infra_copilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - red_infraestructura
+
+  copilot_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: infra_copilot_web
+    restart: unless-stopped
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://infra_admin:infra_secure_password_2026@postgres_db:5432/infra_copilot
+      - DB_HOST=postgres_db
+      - DB_PORT=5432
+      - DB_NAME=infra_copilot
+      - DB_USER=infra_admin
+      - DB_PASSWORD=infra_secure_password_2026
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - ./data/docs:/app/data/docs
+      - ./data/history:/app/data/history
+      - ./data/originals:/app/data/originals
+      - ./data/inbox:/app/data/inbox
+    ports:
+      - "8501:8501"
+    networks:
+      - red_infraestructura
+
+volumes:
+  pgdata:
+    name: infra_copilot_pgdata
+
+networks:
+  red_infraestructura:
+    name: red_infraestructura_copilot
+    driver: bridge
