@@ -28,10 +28,14 @@ Plataforma corporativa de asistencia técnica, gestión documental de infraestru
 ```text
 C:\Prototipo\
 ├── app.py                             # Aplicación principal Streamlit (Navbar, Login y 4 Pestañas)
+├── desktop_app.py                     # Punto de entrada para aplicación nativa de escritorio (PyWebView)
+├── desktop_app.spec                   # Especificación de compilación con PyInstaller
+├── build_exe.bat / build_exe.ps1      # Compilación automatizada de la aplicación .exe en 1 clic
 ├── batch_ingest.py                    # Ingesta masiva multihilo con caché SHA-256
 ├── excel_cleaner.py                   # Extractor y normalizador de libros Excel
-├── run_app.bat / run_app.ps1          # Lanzadores de ejecución en Windows
+├── run_app.bat / run_app.ps1          # Lanzadores locales de desarrollo en Windows
 ├── requirements.txt                   # Dependencias Python
+├── dist/ConsolaOperaciones/           # Distribución ejecutable portátil (.exe autocontenido)
 ├── .python-version                    # Fijación de runtime oficial (Python 3.12 LTS)
 ├── README.md                          # Manual de uso y puesta en marcha
 ├── ARQUITECTURA_COPILOT_INFRAESTRUCTURA.md # Especificación técnica y arquitectura
@@ -49,6 +53,11 @@ C:\Prototipo\
 │   ├── plantillas.py                  # Generador de procedimientos y runbooks
 │   ├── procesador.py                  # Normalización documental, extracción limpia y sanitización
 │   ├── topologia.py                   # Diagramas arquitectónicos Mermaid (L1-L4)
+│   ├── ui_consultas.py                # Interfaz de consultas textuales y asistente técnico
+│   ├── ui_documentos.py               # Visor documental, categorización y editor
+│   ├── ui_mantenimientos.py           # Historial de mantenimientos y motor SQL DuckDB
+│   ├── ui_plantillas.py               # Módulo interactivo de plantillas y runbooks
+│   ├── ui_sidebar.py                  # Panel lateral de navegación, usuario y vault
 │   ├── vault.py                       # Bóveda de credenciales con cifrado AES-256
 │   └── visor.py                       # Visor Lado a Lado y renderizador protegido
 └── data/                              # Repositorio de datos (CMDB, docs, history, originals, auditoría)
@@ -58,7 +67,20 @@ C:\Prototipo\
 
 ## 3. Instalación y Puesta en Marcha
 
-### Ejecución en Entorno Local (Windows / Linux / macOS)
+### Ejecución como Aplicación de Escritorio (.exe)
+
+La consola dispone de una distribución nativa para Windows empaquetada que no requiere navegador web ni terminal:
+
+1. Ingrese al directorio de la aplicación compilada:
+   ```cmd
+   cd dist\ConsolaOperaciones
+   ```
+2. Ejecute **`ConsolaOperaciones.exe`**.
+3. La aplicación se abrirá en su ventana nativa de escritorio independiente (Edge WebView2) con aceleración por hardware y fondo Obsidian `#0F172A`.
+
+> **Recompilar el ejecutable:** Si realiza modificaciones en el código fuente, simplemente ejecute `build_exe.bat` (o `build_exe.ps1`) para generar una nueva versión de la aplicación de escritorio en `dist\ConsolaOperaciones`.
+
+### Ejecución en Entorno Local (Desarrollo Web)
 
 ```cmd
 # 1. Crear y activar entorno virtual
@@ -148,6 +170,7 @@ docker compose down
 | **Ingesta Batch ZIP** | Python `zipfile` + `io.BytesIO` | Descompresión e ingesta masiva en memoria de paquetes `.zip` directamente desde la web |
 | **Auditoría e Integridad** | Python `hashlib` (SHA-256) + `difflib` | Versionado inmutable, Diff y bitácora de auditoría en `audit_log.json` |
 | **Diagramas de Topología** | Mermaid.js | Visualización interactiva de arquitectura en 4 niveles |
+| **Empaquetado de Escritorio** | PyInstaller + PyWebView (WebView2) | Aplicación nativa de escritorio (.exe) independiente, sin navegador y con persistencia local |
 
 ---
 

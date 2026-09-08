@@ -21,7 +21,7 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
     <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.22);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
             <span class="badge-info" style="font-size:0.68rem;padding:2px 6px;">[MÓDULO]</span>
-            <b style="color:#6366F1;font-size:0.9rem;">Observabilidad de Infraestructura e Historial CMDB</b>
+            <b style="color:#6366F1;font-size:0.9rem;">Observabilidad de Infraestructura e Historial de Mantenimientos</b>
         </div>
         <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
             <b>¿Qué hace?</b> Permite consultar el inventario con ejecución de sentencias SQL instantáneas sobre DuckDB.

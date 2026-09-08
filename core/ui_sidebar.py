@@ -68,7 +68,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         cant_docs = len(doc_store)
         opciones_nav = [
             "Consultas y Búsqueda",
-            f"Historial CMDB ({total_srvs})",
+            f"Historial de Mantenimientos ({total_srvs})",
             f"Documentación Técnica ({cant_docs})",
             "Plantillas y Runbooks",
             "Zen Studio (Modo Lectura)",

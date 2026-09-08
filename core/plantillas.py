@@ -4,7 +4,7 @@ Plantillas oficiales de documentacion tecnica, generadores de Runbooks y gestion
 import os
 import json
 
-PLANTILLAS_CUSTOM_PATH = os.path.join("data", "plantillas_custom.json")
+from core.configuracion import PLANTILLAS_CUSTOM_PATH
 
 PLANTILLAS_BASE_RESERVADAS = [
     "Procedimiento de Rollback de Emergencia",

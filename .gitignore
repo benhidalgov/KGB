@@ -41,3 +41,12 @@ data/.vault*
 *.swo
 .DS_Store
 Thumbs.db
+
+# Compilaciones PyInstaller y Escritorio
+dist/
+build/
+*.spec.bak
+.webview_cache/
+data/.webview_cache/
+
+

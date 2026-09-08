@@ -8,7 +8,7 @@ from core.auditoria import registrar_evento_auditoria
 from core.manual import activar_manual_en_inicio, renderizar_manual_lanzamiento
 from core.db import es_postgres_disponible, obtener_usuarios_pg, actualizar_ultimo_login_pg
 
-AUTH_USERS_PATH = os.path.join("data", "users.json")
+from core.configuracion import USERS_PATH as AUTH_USERS_PATH
 DEFAULT_SALT = "infra_console_security_salt_2026"
 
 ROLES_PERMISOS = {

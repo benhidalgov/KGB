@@ -10,3 +10,13 @@ env/
 *.ps1
 .vault.enc
 .vault.key
+
+# Compilaciones de escritorio y PyInstaller
+dist/
+build/
+*.spec
+*.spec.bak
+desktop_app.py
+.webview_cache/
+data/.webview_cache/
+
