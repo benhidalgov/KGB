@@ -95,13 +95,17 @@ streamlit run app.py
 ```
 *Acceso local:* `http://localhost:8501`
 
-### Cuentas Iniciales Preconfiguradas
+### Cuentas y Credenciales
 
-| Usuario | Rol Asignado | Contraseña Inicial | Nivel de Acceso |
-| :--- | :--- | :--- | :--- |
-| `admin` | Administrador | `admin2026` | Acceso total (Bóveda `[VAULT]`, Ingesta Batch, Edición, Rollback) |
-| `operador` | Operador | `operador2026` | Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado e Ingesta |
-| `auditor` | Auditor | `auditor2026` | Solo lectura (Búsqueda DuckDB y Visor Documental) |
+Las credenciales de acceso se gestionan mediante variables de entorno (archivo `.env`, véase `.env.example`). Se recomienda definir siempre contraseñas maestras para producción:
+
+| Variable | Rol Asignado | Descripción |
+| :--- | :--- | :--- |
+| `ADMIN_PASSWORD` | Administrador | Acceso total (Bóveda `[VAULT]`, Ingesta Batch, Edición, Rollback) |
+| `OPERADOR_PASSWORD` | Operador | Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado e Ingesta |
+| `AUDITOR_PASSWORD` | Auditor | Solo lectura (Búsqueda DuckDB y Visor Documental) |
+
+> Si no se definen estas variables, la aplicación genera cuentas locales de desarrollo (`admin2026`, `operador2026`, `auditor2026`) solo en `data/users.json`. No utilice estas credenciales en producción.
 
 ### Despliegue con Docker y PostgreSQL
 

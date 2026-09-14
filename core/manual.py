@@ -61,10 +61,12 @@ def renderizar_manual_lanzamiento():
 
     st.markdown("""
     ##### 1. Cómo iniciar sesión y seleccionar rol
-    Elija una de las cuentas configuradas en la matriz de acceso:
-    * **`admin`** / `admin2026` (Acceso total: Bóveda `[VAULT]`, Ingesta, Edición y Rollback auditado).
-    * **`operador`** / `operador2026` (Operación: Búsqueda DuckDB, Asistente RAG, Visor Lado a Lado y Edición).
-    * **`auditor`** / `auditor2026` (Cumplimiento: Solo lectura de CMDB, documentos y bitácora SHA-256).
+    Utilice las credenciales corporativas asignadas por el administrador de infraestructura:
+    * **`admin`** (Administrador): Acceso total, Bóveda `[VAULT]`, Ingesta, Edición y Rollback auditado.
+    * **`operador`** (Operador): Búsqueda DuckDB, Asistente RAG, Visor Lado a Lado y Edición.
+    * **`auditor`** (Auditor): Solo lectura de CMDB, documentos y bitácora SHA-256.
+
+    Las contraseñas se configuran mediante variables de entorno (`ADMIN_PASSWORD`, `OPERADOR_PASSWORD`, `AUDITOR_PASSWORD`). Consulte al responsable del despliegue si desconoce sus credenciales.
 
     ##### 2. Qué hacer una vez autenticado
     1. Se desplegará el **Manual Detallado en 8 Módulos** con el funcionamiento interno y paso a paso exacto.

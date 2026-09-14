@@ -30,7 +30,7 @@ def _obtener_database_url() -> Optional[str]:
         port = os.environ.get("DB_PORT", "5432")
         name = os.environ.get("DB_NAME", "infra_copilot")
         user = os.environ.get("DB_USER", "infra_admin")
-        pwd = os.environ.get("DB_PASSWORD", "infra_secure_password_2026")
+        pwd = os.environ.get("DB_PASSWORD", "")
         return f"postgresql://{user}:{pwd}@{host}:{port}/{name}"
 
     return None

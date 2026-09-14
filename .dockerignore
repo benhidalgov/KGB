@@ -8,8 +8,12 @@ env/
 .devcontainer/
 *.bat
 *.ps1
+.env
+.env.*
+!.env.example
 .vault.enc
 .vault.key
+data/
 
 # Compilaciones de escritorio y PyInstaller
 dist/

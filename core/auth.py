@@ -11,6 +11,26 @@ from core.db import es_postgres_disponible, obtener_usuarios_pg, actualizar_ulti
 from core.configuracion import USERS_PATH as AUTH_USERS_PATH
 DEFAULT_SALT = "infra_console_security_salt_2026"
 
+_ROLES_MAESTROS = {"admin": "Administrador", "operador": "Operador", "auditor": "Auditor"}
+_NOMBRES_MAESTROS = {"admin": "Administrador Principal", "operador": "Operador de Infraestructura", "auditor": "Auditor de Seguridad"}
+
+
+def _obtener_password_maestra(usuario: str) -> str:
+    """Resuelve la contrasena maestra inyectada por entorno (Docker / Cloud) para el usuario indicado."""
+    claves = {"admin": "ADMIN_PASSWORD", "operador": "OPERADOR_PASSWORD", "auditor": "AUDITOR_PASSWORD"}
+    clave = claves.get(usuario)
+    if not clave:
+        return ""
+    valor = os.environ.get(clave, "").strip()
+    if not valor:
+        try:
+            if hasattr(st, "secrets") and clave in st.secrets:
+                valor = str(st.secrets[clave]).strip()
+        except Exception:
+            pass
+    return valor
+
+
 ROLES_PERMISOS = {
     "Administrador": {
         "descripcion": "Acceso total: Consultas al Asistente, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
@@ -41,10 +61,14 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
         except Exception:
             pass
 
+    admin_pwd = _obtener_password_maestra("admin") or "admin2026"
+    operador_pwd = _obtener_password_maestra("operador") or "operador2026"
+    auditor_pwd = _obtener_password_maestra("auditor") or "auditor2026"
+
     usuarios_base = {
-        "admin": {"nombre": "Administrador Principal", "rol": "Administrador", "hash": generar_hash_password("admin2026"), "activo": True},
-        "operador": {"nombre": "Operador de Infraestructura", "rol": "Operador", "hash": generar_hash_password("operador2026"), "activo": True},
-        "auditor": {"nombre": "Auditor de Seguridad", "rol": "Auditor", "hash": generar_hash_password("auditor2026"), "activo": True}
+        "admin": {"nombre": "Administrador Principal", "rol": "Administrador", "hash": generar_hash_password(admin_pwd), "activo": True},
+        "operador": {"nombre": "Operador de Infraestructura", "rol": "Operador", "hash": generar_hash_password(operador_pwd), "activo": True},
+        "auditor": {"nombre": "Auditor de Seguridad", "rol": "Auditor", "hash": generar_hash_password(auditor_pwd), "activo": True}
     }
 
     try:
@@ -62,11 +86,10 @@ def verificar_credenciales(username_input: str, password_input: str) -> Optional
     if not u or not p:
         return None
 
-    try:
-        if hasattr(st, "secrets") and u == "admin" and "ADMIN_PASSWORD" in st.secrets and p == str(st.secrets["ADMIN_PASSWORD"]).strip():
-            return {"username": "admin", "nombre": "Administrador (Cloud Secrets)", "rol": "Administrador", "activo": True}
-    except Exception:
-        pass
+    # 0. Contraseñas maestras inyectadas por entorno (Docker / Streamlit Cloud)
+    master = _obtener_password_maestra(u)
+    if master and p == master:
+        return {"username": u, "nombre": _NOMBRES_MAESTROS.get(u, u.capitalize()), "rol": _ROLES_MAESTROS.get(u, "Operador"), "activo": True}
 
     # 1. Verificación primaria contra PostgreSQL si está disponible
     if es_postgres_disponible():
@@ -167,16 +190,6 @@ def renderizar_pantalla_login():
                 else:
                     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_FALLIDO", version_ant=1, version_nueva=1, autor=username_in.strip() or "desconocido", motivo="Credenciales inválidas.")
                     st.error("[ERROR] Credenciales no válidas. Verifique su usuario y contraseña.")
-
-            st.markdown("---")
-            with st.expander("Cuentas preconfiguradas para pruebas", expanded=False):
-                st.markdown("""
-                | Usuario | Rol Asignado | Clave Inicial | Nivel de Acceso |
-                | :--- | :--- | :--- | :--- |
-                | `admin` | Administrador | `admin2026` | Acceso total (Bóveda, Ingesta, Edición, Rollback) |
-                | `operador` | Operador | `operador2026` | Consultas al Asistente, Búsqueda DuckDB, Ingesta |
-                | `auditor` | Auditor | `auditor2026` | Solo lectura (Búsqueda y Visor) |
-                """)
 
     with col_manual:
         with st.container(border=True):
