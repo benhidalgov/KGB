@@ -14,8 +14,8 @@ from core.motor import ejecutar_consulta_sql
 
 def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
     """Renderiza el módulo analítico y de mantenimiento de infraestructura."""
-    st.subheader("Motor SQL DuckDB - Historial de Mantenimientos e Inventario")
-    st.caption("Consultas analíticas estructuradas con filtrado multidimensional por fecha, nivel, estado y técnico.")
+    st.subheader("Historial de Mantenimientos e Inventario")
+    st.caption("Filtra por fecha, nivel, estado y técnico, o escribe tu propia consulta SQL.")
 
     min_date, max_date = datetime.date(2026, 1, 1), datetime.date(2026, 12, 31)
     if not df_mantenimientos_cache.empty and 'fecha' in df_mantenimientos_cache.columns:
@@ -30,16 +30,16 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
 
     col_f1, col_f2, col_f3, col_f4 = st.columns([1.2, 1.1, 1.2, 1.5], gap="small")
     with col_f1:
-        filtro_nivel = st.selectbox("Nivel de Arquitectura", ["Todos", "L1 - Hardware", "L2 - Virtualización", "L3 - Middleware", "L4 - Aplicación"])
+        filtro_nivel = st.selectbox("Nivel", ["Todos", "L1 - Hardware", "L2 - Virtualización", "L3 - Middleware", "L4 - Aplicación"])
     with col_f2:
-        filtro_estado = st.selectbox("Estado Operativo", ["Todos", "Operativo", "En Revision", "Critico"])
+        filtro_estado = st.selectbox("Estado", ["Todos", "Operativo", "En Revision", "Critico"])
     with col_f3:
-        filtro_tec = st.text_input("Filtrar por Técnico")
+        filtro_tec = st.text_input("Técnico")
     with col_f4:
         rango_fechas = st.date_input("Rango de Fechas:", value=(min_date, max_date), min_value=min_date, max_value=max_date, key="filtro_rango_fechas_mantenimientos")
 
     if not os.path.exists(CSV_PATH):
-        st.warning("[WARN] El archivo data/mantenimientos.csv no existe en el entorno actual.")
+        st.warning("No se encontró data/mantenimientos.csv.")
     else:
         conds = ["1=1"]
         if filtro_nivel != "Todos":
@@ -56,14 +56,14 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
         try:
             df_filtrado = duckdb.sql(f"SELECT * FROM read_csv_auto('{CSV_PATH}') WHERE {' AND '.join(conds)} ORDER BY fecha DESC").df()
         except Exception as e_sql:
-            st.error(f"[CRIT] Error al ejecutar consulta SQL: {e_sql}")
+            st.error(f"Error al ejecutar la consulta: {e_sql}")
             df_filtrado = pd.DataFrame()
 
         total_reg = len(df_filtrado)
-        st.markdown(f"<div style='font-size:0.85rem;margin-bottom:8px;font-weight:500;'><span class='badge-info'>{total_reg} registros coincidentes</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:0.85rem;margin-bottom:8px;font-weight:500;'><span class='badge-info'>{total_reg} registros encontrados</span></div>", unsafe_allow_html=True)
         st.dataframe(df_filtrado, width="stretch", hide_index=True)
 
-    with st.expander("Ejecutar Consulta SQL Personalizada"):
-        custom_sql = st.text_area("Sentencia SQL", value=f"SELECT nivel_arquitectura, count(*) as total_mantenimientos FROM read_csv_auto('{CSV_PATH}') GROUP BY nivel_arquitectura")
+    with st.expander("Escribir Consulta SQL"):
+        custom_sql = st.text_area("Consulta SQL", value=f"SELECT nivel_arquitectura, count(*) as total_mantenimientos FROM read_csv_auto('{CSV_PATH}') GROUP BY nivel_arquitectura")
         if st.button("Ejecutar") and os.path.exists(CSV_PATH):
             st.dataframe(ejecutar_consulta_sql(custom_sql), width="stretch")

@@ -50,7 +50,7 @@ def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
             st.markdown(f"""
             <div style="padding: 14px 16px; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; margin-bottom: 12px;">
                 <div style="font-weight: 700; font-size: 0.88rem; color: #6366F1; margin-bottom: 4px;">Documento PDF ({size_mb:.1f} MB)</div>
-                <div style="font-size: 0.78rem; opacity: 0.85; margin-bottom: 10px; line-height: 1.4;">Visualice mediante descarga directa o visor del sistema para proteger la memoria del navegador.</div>
+                <div style="font-size: 0.78rem; opacity: 0.85; margin-bottom: 10px; line-height: 1.4;">Descárgalo para verlo sin recargar el navegador.</div>
             </div>
             """, unsafe_allow_html=True)
             st.download_button(label=f"Descargar PDF Original ({fname})", data=pdf_bytes, file_name=fname, mime="application/pdf", width="stretch", key=f"dl_heavy_pdf_{fname}")
@@ -59,7 +59,7 @@ def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
         b64 = base64.b64encode(pdf_bytes).decode("utf-8")
         st.markdown(f'<iframe src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0" width="100%" height="{height}px" type="application/pdf" style="border:1px solid rgba(128,128,128,0.25); border-radius:6px; background-color:#ffffff;"></iframe>', unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"No fue posible renderizar el PDF: {str(e)}")
+        st.error(f"No se pudo mostrar el PDF: {str(e)}")
 
 
 def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: str, ultima_version: int = 1, ultimo_editor: str = "Técnico Responsable", ultimo_timestamp: str = "N/A", key_suffix: str = ""):
@@ -71,7 +71,7 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
 
     st.markdown(f"""
     <div style="background-color: rgba(128, 128, 128, 0.06); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 6px; padding: 8px 14px; margin-bottom: 12px; font-size: 0.84rem; display: flex; justify-content: space-between; align-items: center;">
-        <div><b>Activo Gráfico:</b> <code style="color: #38BDF8;">{fname}</code></div>
+        <div><b>Archivo:</b> <code style="color: #38BDF8;">{fname}</code></div>
         <div><b>Formato:</b> <span class="badge-ok">{ext.upper().replace('.', '')}</span></div>
         <div><b>Tamaño:</b> <code>{size_kb:.1f} KB</code></div>
         <div><b>Versión:</b> <span class="badge-ok">v{ultima_version}</span></div>
@@ -83,23 +83,23 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
         st.image(ruta_original, caption=caption_actual, width="stretch")
 
     st.markdown("---")
-    st.markdown("##### Gestión y Edición del Pie de Imagen (Caption)")
-    st.caption("Modifique la descripción técnica del diagrama registrando el responsable de la modificación para trazabilidad.")
+    st.markdown("##### Editar Descripción del Diagrama")
+    st.caption("Cambia la descripción del diagrama. Guarda tu nombre para dejar registro.")
 
     col_e1, col_e2 = st.columns([1.2, 2])
     with col_e1:
-        autor_caption = st.text_input("Editor / Técnico Responsable (*)", key=f"input_author_caption_{doc_name}_{key_suffix}")
-        motivo_caption = st.text_input("Motivo de Edición", key=f"input_motive_caption_{doc_name}_{key_suffix}")
+        autor_caption = st.text_input("Tu nombre (*)", key=f"input_author_caption_{doc_name}_{key_suffix}")
+        motivo_caption = st.text_input("Motivo", key=f"input_motive_caption_{doc_name}_{key_suffix}")
     with col_e2:
-        nuevo_caption_input = st.text_area("Descripción Técnica del Diagrama (Pie de Imagen / Caption) (*)", value=caption_actual, height=108, key=f"textarea_caption_{doc_name}_{key_suffix}")
+        nuevo_caption_input = st.text_area("Descripción del Diagrama (*)", value=caption_actual, height=108, key=f"textarea_caption_{doc_name}_{key_suffix}")
 
     col_btn_save, col_btn_info = st.columns([2, 3])
     with col_btn_save:
-        if st.button(f"Guardar Caption y Publicar Versión v{ultima_version + 1}", type="primary", width="stretch", key=f"btn_save_caption_{doc_name}_{key_suffix}"):
+        if st.button(f"Guardar Descripción (v{ultima_version + 1})", type="primary", width="stretch", key=f"btn_save_caption_{doc_name}_{key_suffix}"):
             if not autor_caption or not autor_caption.strip():
-                st.error("Error de Auditoría: Debe ingresar el Editor / Técnico Responsable.")
+                st.error("Escribe tu nombre.")
             elif not nuevo_caption_input or not nuevo_caption_input.strip():
-                st.error("Error de Validación: El texto del pie de imagen no puede estar vacío.")
+                st.error("La descripción no puede estar vacía.")
             else:
                 md_actualizado = actualizar_caption_en_markdown(md_content, nuevo_caption_input.strip())
                 doc_path = os.path.join(DOCS_DIR, doc_name)
@@ -116,12 +116,12 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
                     comentario=motivo_caption.strip() or f"Actualización de pie de imagen: '{nuevo_caption_input.strip()}'",
                     doc_store=st.session_state.get("doc_store")
                 )
-                st.toast(f"Pie de imagen actualizado (Versión v{nueva_v})")
-                st.success(f"¡Versión [Version v{nueva_v}] guardada con éxito! Editor: {autor_caption.strip()}.")
+                st.toast(f"Descripción actualizada (v{nueva_v})")
+                st.success(f"Versión v{nueva_v} guardada. Editor: {autor_caption.strip()}.")
                 st.rerun()
 
     with col_btn_info:
-        st.caption(f"*Al guardar, se generará la versión **v{ultima_version + 1}** con registro inmutable en el historial.*")
+        st.caption(f"*Al guardar se creará la versión **v{ultima_version + 1}** y quedará en el historial.*")
 
     st.markdown("---")
     with open(ruta_original, "rb") as f_img:
@@ -129,14 +129,14 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
     mime_type = MIME_MAP.get(ext, "image/png")
     st.download_button(label=f"Descargar Imagen Original ({fname})", data=bytes_img, file_name=fname, mime=mime_type, width="stretch", key=f"dl_btn_diag_direct_{fname}_{key_suffix}")
 
-    with st.expander("Ver Especificación Técnica e Indexación (Texto Interno)", expanded=False):
+    with st.expander("Ver Texto Interno (Markdown)", expanded=False):
         st.code(md_content, language="markdown")
 
 
 def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content: str = "", height: int = 480, key_suffix: str = ""):
     """Renderiza el documento fuente original de forma adaptativa según su tipo de formato binario."""
     if not ruta_original or not os.path.exists(ruta_original):
-        st.info("[INFORMACIÓN] El documento no dispone de un archivo binario original adjunto en disco.")
+        st.info("Este documento no tiene un archivo original adjunto.")
         return
 
     ext = os.path.splitext(ruta_original)[1].lower()
@@ -167,7 +167,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
         st.markdown(f"""
         <div class="visor-office-notice-card">
             <div class="visor-office-title">Documento Ofimático: {fname}</div>
-            <div class="visor-office-desc">El contenido estructurado y tablas se encuentran normalizados e indexados en la columna izquierda.</div>
+            <div class="visor-office-desc">El texto y las tablas están en la columna izquierda.</div>
         </div>
         """, unsafe_allow_html=True)
     elif ext in (".txt", ".csv", ".json", ".sql", ".py", ".md"):
@@ -186,7 +186,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
 def renderizar_codigo_seguro(md_content: str):
     """Renderiza código Markdown protegiendo el DOM si el texto es muy extenso (> 50 KB)."""
     if len(md_content) > 50_000:
-        st.info(f"[INFO] Documento extenso ({len(md_content)/1024:.1f} KB). Mostrando primeros 50 KB.")
+        st.info(f"Documento largo ({len(md_content)/1024:.1f} KB). Se muestran los primeros 50 KB.")
         st.code(md_content[:50_000] + "\n\n... [Truncado en visor de código]", language="markdown")
     else:
         st.code(md_content, language="markdown")
@@ -221,7 +221,7 @@ def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | 
         badge = '<span class="badge-ok" style="font-size:0.72rem;padding:2px 7px;">Fuente Disponible</span>' if (ruta_original and os.path.exists(ruta_original)) else '<span class="badge-warn" style="font-size:0.72rem;padding:2px 7px;">Nativo Markdown</span>'
         st.markdown(f'<div style="text-align:center;font-size:0.78rem;opacity:0.9;"><b>Estado:</b> {badge}</div>', unsafe_allow_html=True)
     with col_zen:
-        if st.button(">_ Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el entorno inmersivo de lectura a pantalla completa con índice interactivo y buscador interno."):
+        if st.button(">_ Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el modo de lectura a pantalla completa."):
             st.session_state["zen_studio_activo"] = True
             st.session_state["zen_doc_sel"] = doc_name
             st.rerun()
@@ -232,10 +232,10 @@ def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | 
     if modo_vista == "[Lado a Lado]":
         col_md, col_orig = st.columns(2, gap="medium")
         with col_md:
-            st.markdown("##### [Versión Markdown Normalizada]")
+            st.markdown("##### [Texto]")
             _render_md_tabs(md_content, doc_name, ruta_original)
         with col_orig:
-            st.markdown("##### [Documento Fuente Original]")
+            st.markdown("##### [Archivo Original]")
             with st.container(border=True):
                 renderizar_original_adaptativo(ruta_original, doc_name, md_content=md_content, height=alt_visores, key_suffix=f"side_{key_suffix}")
     elif modo_vista == "[Solo Markdown]":
@@ -354,14 +354,14 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     col_toc, col_canvas = st.columns([1.1, 3.4], gap="medium")
 
     with col_toc:
-        st.markdown("##### [Índice de Secciones]")
+        st.markdown("##### [Índice]")
         toc_items = extraer_tabla_de_contenidos(md_content)
         palabras = len(md_content.split())
         minutos_lectura = max(1, palabras // 200)
 
         if toc_items:
             with st.container(border=True):
-                st.caption(f"**{len(toc_items)} secciones identificadas**:")
+                st.caption(f"**{len(toc_items)} secciones**:")
                 opciones_seccion = ["Documento Completo"] + [f"{'—' * (it['nivel'] - 1)} {it['titulo']}" for it in toc_items]
                 seccion_sel = st.selectbox("Saltar a Sección:", opciones_seccion, key="zen_section_jump_sel")
 
@@ -372,15 +372,15 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
                     toc_html_list.append(f"<div class='zen-toc-item' style='margin-left:{indent}px;'>{badge_h} {it['titulo']}</div>")
                 st.markdown(f"<div class='zen-toc-card'>{''.join(toc_html_list)}</div>", unsafe_allow_html=True)
         else:
-            st.info("[INFO] Documento plano sin encabezados jerárquicos.")
+            st.info("Este documento no tiene secciones.")
             seccion_sel = "Documento Completo"
 
         st.markdown(f"""
         <div class="zen-stats-card">
-            <div style="font-weight:700;color:#6366F1;margin-bottom:6px;">Métricas del Documento</div>
+            <div style="font-weight:700;color:#6366F1;margin-bottom:6px;">Detalles del Documento</div>
             <div><b>Palabras:</b> {palabras:,}</div>
-            <div><b>Tiempo Lectura:</b> ~{minutos_lectura} min</div>
-            <div><b>Último Editor:</b> {u_edit}</div>
+            <div><b>Lectura:</b> ~{minutos_lectura} min</div>
+            <div><b>Editor:</b> {u_edit}</div>
             <div><b>Actualizado:</b> {u_time}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -416,7 +416,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
 
         tiene_orig = ruta_original and os.path.exists(ruta_original)
         if tiene_orig:
-            tab_z_fmt, tab_z_orig, tab_z_side = st.tabs(["Lector Markdown", "Documento Original", "Lado a Lado (50/50)"])
+            tab_z_fmt, tab_z_orig, tab_z_side = st.tabs(["Texto", "Original", "Lado a Lado"])
             with tab_z_fmt:
                 st.markdown(f"<div class='zen-reader-canvas'>{html_resaltado}</div>", unsafe_allow_html=True)
             with tab_z_orig:

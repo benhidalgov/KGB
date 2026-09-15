@@ -63,7 +63,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
         # 3. Navegación Principal (Módulos de Trabajo)
-        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin-bottom:6px;">Navegación / Módulos</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin-bottom:6px;">Menú</div>', unsafe_allow_html=True)
 
         cant_docs = len(doc_store)
         opciones_nav = [
@@ -84,14 +84,14 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
             label_visibility="collapsed"
         )
 
-        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin:14px 0 6px 0;">Herramientas del Sistema</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin:14px 0 6px 0;">Herramientas</div>', unsafe_allow_html=True)
 
         # 4. Ingesta de Archivos
         st.session_state.setdefault("uploader_key_ver", 0)
-        with st.expander("Ingesta de Archivos (Batch & Lotes)", expanded=False):
+        with st.expander("Subir Archivos", expanded=False):
             st.markdown('<div class="sidebar-format-tags" style="margin-bottom:8px;"><span class="sidebar-format-tag">[ZIP]</span><span class="sidebar-format-tag">[PDF]</span><span class="sidebar-format-tag">[DOCX]</span><span class="sidebar-format-tag">[XLSX]</span><span class="sidebar-format-tag">[DIAGRAMAS]</span><span class="sidebar-format-tag">[MD]</span></div>', unsafe_allow_html=True)
             uploaded_files = st.file_uploader(
-                "Arrastra archivos o paquetes ZIP en lote:",
+                "Arrastra archivos o un paquete .zip:",
                 type=["pdf", "docx", "xlsx", "xls", "csv", "txt", "md", "pptx", "png", "jpg", "jpeg", "svg", "webp", "zip"],
                 accept_multiple_files=True,
                 label_visibility="collapsed",
@@ -100,8 +100,8 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
             if uploaded_files:
                 st.markdown(f"""
                 <div style="background:rgba(99,102,241,0.07);border:1px solid #6366F1;border-radius:6px;padding:8px 10px;margin:8px 0 6px 0;font-size:0.8rem;">
-                    <span class="badge-info">[CATEGORIZACIÓN OBLIGATORIA]</span>
-                    <div style="margin-top:4px;opacity:0.9;">Documentos a subir: <b>{len(uploaded_files)} archivo(s)</b>.</div>
+                    <span class="badge-info">[Elegir Categoría]</span>
+                    <div style="margin-top:4px;opacity:0.9;">Archivos a subir: <b>{len(uploaded_files)} archivo(s)</b>.</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -109,7 +109,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                 cat_seleccionadas = []
 
                 if not cats_disp:
-                    st.caption("No existen categorías registradas en el catálogo. Ingrese la categoría para clasificar el/los documento(s):")
+                    st.caption("Aún no hay categorías. Escribe una para clasificar el/los documento(s):")
                     nueva_cat_input = st.text_input("Nueva Categoría (*):", key=f"sb_nueva_cat_ini_{st.session_state.uploader_key_ver}")
                     if nueva_cat_input.strip():
                         cat_seleccionadas = [nueva_cat_input.strip()]
@@ -124,7 +124,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
 
                 col_conf_up, col_canc_up = st.columns([2.4, 1.1])
                 with col_conf_up:
-                    btn_confirmar_subida = st.button(">_ Confirmar e Ingestar", type="primary", width="stretch", key="btn_confirmar_ingesta_tags")
+                    btn_confirmar_subida = st.button(">_ Subir y Clasificar", type="primary", width="stretch", key="btn_confirmar_ingesta_tags")
                 with col_canc_up:
                     if st.button("Cancelar", width="stretch", key="btn_cancelar_ingesta"):
                         st.session_state["uploader_key_ver"] += 1
@@ -132,7 +132,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
 
                 if btn_confirmar_subida:
                     if not cat_seleccionadas:
-                        st.warning("[REQUERIDO] Debe seleccionar al menos una categoría existente o crear una nueva para continuar.")
+                        st.warning("Elige una categoría existente o escribe una nueva para continuar.")
                     else:
                         autor_act = f"{user_act.get('username', 'Técnico')} ({user_act.get('rol', 'Operador')})"
                         proc_cnt, new_cnt, upd_cnt = 0, 0, 0
@@ -162,9 +162,9 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                                     new_cnt += 1
                                                 elif st_res == "actualizado":
                                                     upd_cnt += 1
-                                        st.toast(f"[OK] ZIP '{c_name}': {zip_cnt} archivos indexados.")
+                                        st.toast(f"ZIP '{c_name}': {zip_cnt} archivos cargados.")
                                 except Exception as e_z:
-                                    st.error(f"[ERROR] Error al procesar ZIP '{c_name}': {str(e_z)}")
+                                    st.error(f"No se pudo procesar el ZIP '{c_name}': {str(e_z)}")
                             else:
                                 st_res, msg = procesar_e_ingestar_binario(
                                     c_name, buf, doc_store,
@@ -174,30 +174,30 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                 proc_cnt += 1
                                 if st_res == "nuevo":
                                     new_cnt += 1
-                                    st.toast(f"[OK] {msg}")
+                                    st.toast(f"{msg}")
                                 elif st_res == "actualizado":
                                     upd_cnt += 1
-                                    st.toast(f"[OK] {msg}")
+                                    st.toast(f"{msg}")
                                 elif st_res == "sin_cambios":
                                     asignar_tags_documento(c_name, cat_seleccionadas, autor=autor_act)
-                                    st.toast(f"[INFO] Tags actualizados: {c_name}")
+                                    st.toast(f"Categorías actualizadas: {c_name}")
 
                         limpiar_cache_consultas()
                         st.session_state["uploader_key_ver"] += 1
-                        st.toast(f"[OK] {proc_cnt} archivo(s) clasificados bajo: {', '.join(cat_seleccionadas)}")
+                        st.toast(f"{proc_cnt} archivo(s) clasificados en: {', '.join(cat_seleccionadas)}")
                         st.rerun()
         # 5. Herramientas del Sistema y Bóveda
-        with st.expander("Herramientas del Sistema y Bóveda", expanded=False):
-            if st.button(">_ Reindexar Base Documental", help="Recarga todos los documentos desde data/docs/", width="stretch", key="btn_sidebar_reindexar"):
+        with st.expander("Herramientas y Bóveda", expanded=False):
+            if st.button(">_ Recargar Documentos", help="Recarga todos los documentos de data/docs/", width="stretch", key="btn_sidebar_reindexar"):
                 limpiar_cache_documentos()
                 cargar_documentos_locales(doc_store, force=True)
                 limpiar_cache_consultas()
-                st.toast("[OK] Base documental reindexada con éxito")
+                st.toast("Documentos recargados.")
                 st.rerun()
 
             if tiene_permiso("puede_ver_vault"):
                 st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-                st.markdown("<b style='font-size:0.78rem;'>Bóveda de Credenciales [AES-256]:</b>", unsafe_allow_html=True)
+                st.markdown("<b style='font-size:0.78rem;'>Credenciales (Bóveda):</b>", unsafe_allow_html=True)
                 sec_list = listar_secretos_disponibles()
                 cfg_cnt = sum(1 for s in sec_list if s["estado"] == "[CONFIGURADO]")
                 st.markdown(f"<div style='font-size:0.72rem;margin-bottom:8px;opacity:0.8;'>Estado: <b>{cfg_cnt} configurada(s)</b>.</div>", unsafe_allow_html=True)
@@ -206,28 +206,28 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                     prev_s = f"({s['vista_previa']})" if s['vista_previa'] != '-' else ""
                     st.markdown(f"<div style='font-size:0.72rem;padding:3px 0;display:flex;justify-content:space-between;align-items:center;'><span style='font-family:monospace;font-weight:600;'>{s['clave']}</span>{badge_s}</div><div style='font-size:0.64rem;opacity:0.6;margin-bottom:4px;'>Origen: {s['origen']} {prev_s}</div>", unsafe_allow_html=True)
 
-                st.markdown("<b style='font-size:0.75rem;'>Guardar o Actualizar Clave:</b>", unsafe_allow_html=True)
+                st.markdown("<b style='font-size:0.75rem;'>Guardar Clave:</b>", unsafe_allow_html=True)
                 sel_k = st.selectbox("Seleccionar Llave:", [s["clave"] for s in sec_list] + ["OTRA_CLAVE_PERSONALIZADA"], key="sb_vault_sel_key", label_visibility="collapsed")
                 k_final = st.text_input("Nombre de la Clave:", value="", key="sb_vault_custom_key") if sel_k == "OTRA_CLAVE_PERSONALIZADA" else sel_k
                 if "vault_input_version" not in st.session_state:
                     st.session_state.vault_input_version = 0
 
-                v_val = st.text_input("Valor Seguro:", type="password", key=f"sb_vault_val_{st.session_state.vault_input_version}")
+                v_val = st.text_input("Valor:", type="password", key=f"sb_vault_val_{st.session_state.vault_input_version}")
                 col_vs, col_vd = st.columns([2, 1])
                 with col_vs:
                     if st.button("Guardar Llave", width="stretch", type="primary", key="sb_btn_guardar_key"):
                         if k_final and v_val:
                             if guardar_secreto(k_final.strip().upper(), v_val.strip()):
-                                st.toast(f"[OK] Clave '{k_final.strip().upper()}' almacenada con cifrado AES-256")
+                                st.toast(f"Clave '{k_final.strip().upper()}' guardada.")
                                 st.session_state.vault_input_version += 1
                                 st.rerun()
                         else:
-                            st.error("Indique nombre y valor.")
+                            st.error("Escribe un nombre y un valor.")
                 with col_vd:
                     if st.button("Eliminar", width="stretch", key="sb_btn_eliminar_key", help="Elimina la clave de la bóveda"):
                         if k_final and k_final != "OTRA_CLAVE_PERSONALIZADA":
                             if eliminar_secreto(k_final.strip().upper()):
-                                st.toast(f"[INFO] Clave '{k_final.strip().upper()}' eliminada de la bóveda")
+                                st.toast(f"Clave '{k_final.strip().upper()}' eliminada.")
                                 st.rerun()
 
         return seccion_sel

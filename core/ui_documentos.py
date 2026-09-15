@@ -74,11 +74,11 @@ def _renderizar_boton_descarga(doc_name: str, version: int, contenido_md: str = 
 
 def renderizar_pestana_documentacion(doc_store: dict):
     """Renderiza la pestaña completa de Documentación Técnica estructurada en 3 subpestañas."""
-    st.subheader("Repositorio de Documentación Técnica y Diagramas")
-    st.caption("Visor interactivo Lado a Lado, control de cambios inmutable (SHA-256), editor activo y gestión taxonómica.")
+    st.subheader("Documentos y Diagramas")
+    st.caption("Ve el documento y su archivo original, edita y revisa el historial de cambios.")
 
     if not doc_store:
-        st.warning("No hay documentos indexados en el repositorio.")
+        st.warning("No hay documentos todavía.")
         return
 
     todos_docs = sorted(list(doc_store.keys()))
@@ -87,8 +87,8 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
     lbl_lote = f"Clasificación en Lote ({len(docs_pendientes)} pendientes)" if docs_pendientes else "Clasificación en Lote"
     subtab_visor, subtab_editor, subtab_lote = st.tabs([
-        "Visor y Explorador Documental",
-        "Editar Documento Activo",
+        "Ver Documentos",
+        "Editar Documento",
         lbl_lote
     ])
 
@@ -192,15 +192,15 @@ def renderizar_pestana_documentacion(doc_store: dict):
             with col_dli:
                 st.caption(f"Descarga la versión activa actual (**v{u_ver}**).")
 
-            with st.expander(f"Historial de Revisiones y Control de Cambios ({u_ver} versiones)", expanded=False):
+            with st.expander(f"Historial de Cambios ({u_ver} versiones)", expanded=False):
                 df_h = pd.DataFrame(historial)
                 cols_h = [c for c in ["version", "timestamp", "autor", "comentario", "caracteres", "sha256"] if c in df_h.columns]
-                df_h = df_h[cols_h].rename(columns={"version": "Versión", "timestamp": "Fecha y Hora", "autor": "Editor / Responsable", "comentario": "Motivo del Cambio", "caracteres": "Caracteres", "sha256": "Firma SHA-256"})
+                df_h = df_h[cols_h].rename(columns={"version": "Versión", "timestamp": "Fecha y Hora", "autor": "Editor", "comentario": "Motivo", "caracteres": "Caracteres", "sha256": "Firma"})
                 st.dataframe(df_h, width="stretch", hide_index=True)
 
                 st.markdown("---")
                 opts_ver = {f"v{i['version']} - {i['timestamp']} ({i['autor']}): {i['comentario']}": i for i in reversed(historial)}
-                v_sel_lbl = st.selectbox("Seleccione versión para inspeccionar / descargar:", list(opts_ver.keys()), key=f"select_hist_ver_{doc_sel}")
+                v_sel_lbl = st.selectbox("Elige una versión para ver o descargar:", list(opts_ver.keys()), key=f"select_hist_ver_{doc_sel}")
                 it_sel = opts_ver[v_sel_lbl]
                 c_snap = obtener_contenido_version(doc_sel, it_sel["archivo_snapshot"])
                 ex_snap = it_sel.get("archivo_excel_snapshot")
@@ -209,19 +209,19 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 with col_hv1:
                     _renderizar_boton_descarga(doc_sel, it_sel["version"], c_snap, ex_snap, key=f"btn_dl_h_{doc_sel}_{it_sel['version']}")
                 with col_hv2:
-                    st.caption(f"Snapshot generado el **{it_sel['timestamp']}** por **{it_sel['autor']}**.")
+                    st.caption(f"Guardado el **{it_sel['timestamp']}** por **{it_sel['autor']}**.")
 
                 if it_sel["version"] != u_ver:
                     st.markdown("---")
-                    st.markdown(f"##### Revertir Documento a la Versión v{it_sel['version']} (Rollback)")
+                    st.markdown(f"##### Volver a la Versión v{it_sel['version']}")
                     col_ra, col_rm = st.columns([1, 2])
                     with col_ra:
-                        aut_rb = st.text_input("Técnico que ejecuta Rollback (*)", key=f"author_rb_{doc_sel}_{it_sel['version']}")
+                        aut_rb = st.text_input("Tu nombre (*)", key=f"author_rb_{doc_sel}_{it_sel['version']}")
                     with col_rm:
-                        mot_rb = st.text_input("Justificación del Rollback (*)", key=f"motive_rb_{doc_sel}_{it_sel['version']}")
-                    if st.button(f"Confirmar Rollback a Versión v{it_sel['version']}", type="primary", key=f"btn_rb_{doc_sel}_{it_sel['version']}"):
+                        mot_rb = st.text_input("Motivo (*)", key=f"motive_rb_{doc_sel}_{it_sel['version']}")
+                    if st.button(f"Volver a la Versión v{it_sel['version']}", type="primary", key=f"btn_rb_{doc_sel}_{it_sel['version']}"):
                         if not aut_rb.strip() or not mot_rb.strip():
-                            st.error("Error de Auditoría: Editor y Justificación son obligatorios.")
+                            st.error("Escribe tu nombre y el motivo.")
                         else:
                             if ex_snap and os.path.exists(os.path.join(HISTORY_DIR, doc_sel, ex_snap)):
                                 shutil.copy2(os.path.join(HISTORY_DIR, doc_sel, ex_snap), os.path.join(DOCS_DIR, doc_sel))
@@ -233,7 +233,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             st.rerun()
 
                 if len(historial) >= 2:
-                    with st.expander("Comparar diferencias de texto entre dos versiones (Diff)", expanded=False):
+                    with st.expander("Comparar dos versiones (Diff)", expanded=False):
                         c_d1, c_d2 = st.columns(2)
                         n_vers = [f"v{i['version']} - {i['timestamp']} ({i['autor']})" for i in historial]
                         map_v = {n_vers[idx]: historial[idx] for idx in range(len(historial))}
@@ -243,7 +243,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             v_comp = st.selectbox("Versión Comparada:", n_vers, index=len(n_vers)-1, key=f"diff_comp_{doc_sel}")
                         st.code(generar_diff_texto(obtener_contenido_version(doc_sel, map_v[v_base]["archivo_snapshot"]), obtener_contenido_version(doc_sel, map_v[v_comp]["archivo_snapshot"]), v_base, v_comp), language="diff")
 
-                with st.expander("Registro Central de Auditoría Global (Audit Log)", expanded=False):
+                with st.expander("Registro de Actividad", expanded=False):
                     evs = obtener_todos_los_eventos_auditoria()
                     if evs:
                         df_aud = pd.DataFrame(evs)
@@ -256,7 +256,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
     with subtab_editor:
         doc_act_edit = st.session_state.get("tab4_doc_selector") or (docs_disp[0] if docs_disp else None)
         if not doc_act_edit:
-            st.info("Seleccione un documento en la pestaña 'Visor y Explorador Documental' para editar.")
+            st.info("Selecciona un documento en 'Ver Documentos' para editarlo.")
         else:
             doc_cont_e = doc_store.get(doc_act_edit, "")
             historial_e = inicializar_version_inicial_si_no_existe(doc_act_edit, doc_cont_e)
@@ -294,9 +294,9 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
                 df_e = cargar_hoja_excel_dataframe(p_xl, hoja_e, mt_xl)
                 df_mod = st.data_editor(df_e, width="stretch", num_rows="dynamic", height=450, key=f"grid_editor_{doc_act_edit}_{hoja_e}")
-                if st.button(f"Guardar y Publicar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_grid_{doc_act_edit}"):
+                if st.button(f"Guardar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_grid_{doc_act_edit}"):
                     if not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
-                        st.error("Error de Auditoría: Editor y Motivo son obligatorios.")
+                        st.error("Escribe tu nombre y el motivo.")
                     else:
                         nv = guardar_nueva_version_excel(doc_act_edit, hoja_e, df_mod, aut_e.strip(), mot_e.strip(), doc_store)
                         tags_finales_xl = list(tags_xl_sel)
@@ -305,7 +305,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                         if tags_finales_xl:
                             asignar_tags_documento(doc_act_edit, tags_finales_xl, autor=aut_e.strip())
                             limpiar_cache_consultas()
-                        st.toast(f"Versión v{nv} guardada exitosamente")
+                        st.toast(f"Versión v{nv} guardada.")
                         st.rerun()
             else:
                 col_e1, col_e2 = st.columns([1, 2])
@@ -324,9 +324,9 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
                 val_txt = doc_cont_e[:100_000] if len(doc_cont_e) > 100_000 else doc_cont_e
                 txt_edit = st.text_area("Contenido (Markdown)", value=val_txt, height=450, key=f"textarea_edit_{doc_act_edit}")
-                if st.button(f"Guardar y Publicar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_{doc_act_edit}"):
+                if st.button(f"Guardar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_{doc_act_edit}"):
                     if not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
-                        st.error("Error de Auditoría: Editor y Motivo son obligatorios.")
+                        st.error("Escribe tu nombre y el motivo.")
                     else:
                         nv = guardar_nueva_version(doc_act_edit, txt_edit, aut_e.strip(), mot_e.strip(), doc_store)
                         tags_finales = list(tags_e_sel)
@@ -336,24 +336,24 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             asignar_tags_documento(doc_act_edit, tags_finales, autor=aut_e.strip())
                             limpiar_cache_consultas()
                         if nv == u_ver_e:
-                            st.toast(f"[OK] Categorías actualizadas para {doc_act_edit}")
+                            st.toast(f"Categorías actualizadas para {doc_act_edit}")
                             time.sleep(0.5)
                             st.rerun()
                         else:
-                            st.toast(f"[OK] Versión v{nv} publicada con éxito")
+                            st.toast(f"Versión v{nv} guardada.")
                             st.rerun()
 
     # -------------------------------------------------------------
     # SUBPESTAÑA 3: CLASIFICACIÓN EN LOTE
     # -------------------------------------------------------------
     with subtab_lote:
-        st.markdown("#### Clasificación de Documentos en Lote")
-        st.caption("Asignación masiva de categorías y aplicación de sugerencias heurísticas a la base documental.")
+        st.markdown("#### Clasificar Documentos")
+        st.caption("Asigna categorías a varios documentos a la vez o usa las sugerencias.")
 
         if docs_pendientes:
-            st.warning(f"[PENDIENTE] Se detectaron {len(docs_pendientes)} documentos sin categoría asignada en el repositorio.")
+            st.warning(f"Hay {len(docs_pendientes)} documentos sin categoría.")
         else:
-            st.success(f"[OK] Todos los documentos ({len(todos_docs)}) cuentan con al menos una categoría asignada.")
+            st.success(f"Todos los documentos ({len(todos_docs)}) ya tienen categoría.")
 
         col_bl_f, col_bl_s = st.columns([2.2, 1.8], vertical_alignment="bottom")
         with col_bl_f:
@@ -388,7 +388,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 filas_lote.append({
                     "Seleccionar": bool(default_sel),
                     "Documento": normalizar_titulo_display(d),
-                    "Sugerencia Heurística": sug,
+                    "Sugerencia": sug,
                     "Categoría Actual": ", ".join(tags_actuales) if tags_actuales else "[Sin Categoría]",
                     "Archivo": d
                 })
@@ -400,7 +400,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 column_config={
                     "Seleccionar": st.column_config.CheckboxColumn("Seleccionar", default=False),
                     "Documento": st.column_config.TextColumn("Documento", disabled=True),
-                    "Sugerencia Heurística": st.column_config.TextColumn("Sugerencia Heurística", disabled=True),
+                    "Sugerencia": st.column_config.TextColumn("Sugerencia", disabled=True),
                     "Categoría Actual": st.column_config.TextColumn("Categoría Actual", disabled=True),
                     "Archivo": st.column_config.TextColumn("Archivo", disabled=True),
                 },
@@ -412,34 +412,34 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
             col_ba1, col_ba2, col_ba3 = st.columns([2.0, 1.5, 1.5], vertical_alignment="bottom")
             with col_ba1:
-                opts_dest = ["[SUGERENCIA] Usar categoría sugerida de cada archivo"]
+                opts_dest = ["[Usar Sugerencia] Usar la categoría sugerida de cada archivo"]
                 if cats_disp_t3:
                     opts_dest.extend(cats_disp_t3)
                 opts_dest.append("[NUEVA] Crear una nueva categoría...")
-                cat_dest_sel = st.selectbox("Categoría Destino para seleccionados:", opts_dest, key="batch_cat_dest_sel")
+                cat_dest_sel = st.selectbox("Categoría para los seleccionados:", opts_dest, key="batch_cat_dest_sel")
 
             with col_ba2:
                 nueva_cat_batch = ""
                 if cat_dest_sel.startswith("[NUEVA]"):
                     nueva_cat_batch = st.text_input("Nombre de nueva categoría (*):", key="batch_new_cat_input")
                 else:
-                    st.caption("Los documentos seleccionados recibirán la categoría seleccionada.")
+                    st.caption("Los seleccionados recibirán esta categoría.")
 
             with col_ba3:
                 cant_marcados = len(df_lote_edit[df_lote_edit["Seleccionar"] == True]) if "Seleccionar" in df_lote_edit.columns else 0
-                btn_label = f"[APLICAR] Clasificar Seleccionados ({cant_marcados})" if cant_marcados > 0 else "[APLICAR] Clasificar Seleccionados"
+                btn_label = f"Clasificar Seleccionados ({cant_marcados})" if cant_marcados > 0 else "Clasificar Seleccionados"
                 if st.button(btn_label, type="primary", width="stretch", key="btn_apply_batch_tags"):
                     df_sel = df_lote_edit[df_lote_edit["Seleccionar"] == True]
                     if df_sel.empty:
-                        st.warning("[ALERTA] Debe marcar al menos un documento en la columna 'Seleccionar'.")
+                        st.warning("Marca al menos un documento en la columna 'Seleccionar'.")
                     else:
                         doc_tags_map = {}
-                        if cat_dest_sel.startswith("[SUGERENCIA]"):
+                        if cat_dest_sel.startswith("[Usar Sugerencia]"):
                             for _, row in df_sel.iterrows():
-                                doc_tags_map[row["Archivo"]] = [row["Sugerencia Heurística"]]
+                                doc_tags_map[row["Archivo"]] = [row["Sugerencia"]]
                         elif cat_dest_sel.startswith("[NUEVA]"):
                             if not nueva_cat_batch.strip():
-                                st.error("[ERROR] Debe indicar el nombre de la nueva categoría.")
+                                st.error("Escribe el nombre de la nueva categoría.")
                                 st.stop()
                             for _, row in df_sel.iterrows():
                                 doc_tags_map[row["Archivo"]] = [nueva_cat_batch.strip()]
@@ -452,9 +452,9 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             limpiar_cache_consultas()
                             limpiar_cache_documentos()
                             st.session_state["batch_select_default"] = False
-                            st.toast(f"[OK] Se categorizaron {n_act} documentos exitosamente.")
-                            st.success(f"[OK] Clasificación completada: {n_act} documentos actualizados.")
+                            st.toast(f"{n_act} documentos clasificados.")
+                            st.success(f"Listo: {n_act} documentos actualizados.")
                             time.sleep(0.8)
                             st.rerun()
         else:
-            st.info("[INFO] No hay documentos en el alcance seleccionado.")
+            st.info("No hay documentos en este rango.")

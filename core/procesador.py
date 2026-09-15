@@ -361,7 +361,7 @@ def procesar_e_ingestar_binario(
             with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
                 ex_content = f_ex.read()
             if calcular_sha256(ex_content.encode("utf-8")) == calcular_sha256(ficha_content.encode("utf-8")):
-                return "sin_cambios", f"Diagrama '{clean_name}' ya registrado sin cambios."
+                return "sin_cambios", f"Diagrama '{clean_name}' sin cambios."
             with open(md_save_path, "w", encoding="utf-8") as f_out:
                 f_out.write(ficha_content)
             doc_store[doc_md_name] = ficha_content
@@ -372,7 +372,7 @@ def procesar_e_ingestar_binario(
                 comentario=f"Actualización de activo gráfico '{clean_name}'",
                 doc_store=doc_store
             )
-            return "actualizado", f"Diagrama '{clean_name}' actualizado [Version v{nueva_v}]"
+            return "actualizado", f"Diagrama '{clean_name}' actualizado (v{nueva_v})."
         else:
             with open(md_save_path, "w", encoding="utf-8") as f_out:
                 f_out.write(ficha_content)
@@ -383,7 +383,7 @@ def procesar_e_ingestar_binario(
                 autor=autor,
                 comentario=f"Carga inicial de activo gráfico '{clean_name}'"
             )
-            return "nuevo", f"Diagrama '{clean_name}' indexado como Version v1"
+            return "nuevo", f"Diagrama '{clean_name}' agregado (v1)."
 
     # 3. Documentos Ofimáticos, Excel, PDF y Texto
     else:
@@ -396,7 +396,7 @@ def procesar_e_ingestar_binario(
             with open(save_path, "rb") as f:
                 existente_bytes = f.read()
             if nuevo_hash == calcular_sha256(existente_bytes):
-                return "sin_cambios", f"Archivo '{clean_name}' ya indexado sin cambios."
+                return "sin_cambios", f"Archivo '{clean_name}' sin cambios."
             with open(save_path, "wb") as f:
                 f.write(buf)
             content = cargar_documento_individual(save_path)
@@ -408,7 +408,7 @@ def procesar_e_ingestar_binario(
                 comentario=f"Actualización de archivo '{clean_name}' ({origen_detalle})",
                 doc_store=doc_store
             )
-            return "actualizado", f"Archivo '{clean_name}' actualizado [Version v{nueva_v}]"
+            return "actualizado", f"Archivo '{clean_name}' actualizado (v{nueva_v})."
         else:
             with open(save_path, "wb") as f:
                 f.write(buf)
@@ -420,5 +420,5 @@ def procesar_e_ingestar_binario(
                 autor=autor,
                 comentario=f"Carga inicial de archivo ({origen_detalle})"
             )
-            return "nuevo", f"Documento '{clean_name}' indexado como Version v1"
+            return "nuevo", f"Documento '{clean_name}' agregado (v1)."
 

@@ -137,7 +137,7 @@ def cerrar_sesion():
     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGOUT", version_ant=1, version_nueva=1, autor=user, motivo="Cierre voluntario de sesión en consola web.")
     st.session_state["auth_activa"] = False
     st.session_state["usuario_actual"] = None
-    st.toast("[INFO] Sesión cerrada correctamente.")
+    st.toast("Sesión cerrada.")
     st.rerun()
 
 
@@ -162,7 +162,7 @@ def renderizar_pantalla_login():
             <span class="badge-info">[INICIO]</span>
         </div>
         <div style="font-size: 0.84rem; opacity: 0.85; margin-top: 6px;">
-            Acceso restringido al inventario CMDB y a la base documental. Consulte el manual a la derecha e inicie sesión para continuar.
+            Inicia sesión para ver el inventario y los documentos. A la derecha tienes una guía rápida.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -183,11 +183,11 @@ def renderizar_pantalla_login():
             <div style="margin-bottom: 10px;">
                 <span class="badge-info">[ACCESO]</span>
                 <div style="font-size: 1.05rem; font-weight: 700; margin-top: 8px;">Inicio de sesión</div>
-                <div style="font-size: 0.82rem; opacity: 0.8;">Credenciales corporativas · RBAC</div>
+                <div style="font-size: 0.82rem; opacity: 0.8;">Escribe tu usuario y contraseña</div>
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown("<div style='font-size:0.75rem;opacity:0.75;margin-bottom:4px;'>Autocompletar usuario de prueba:</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size:0.75rem;opacity:0.75;margin-bottom:4px;'>Cuentas de prueba:</div>", unsafe_allow_html=True)
             col_q1, col_q2, col_q3 = st.columns(3, gap="small")
             with col_q1:
                 st.button("admin", key="btn_fill_admin", width="stretch", help="Rol: Administrador", on_click=_cb_autocompletar_cuenta_auth, args=("admin",))
@@ -211,11 +211,11 @@ def renderizar_pantalla_login():
                     st.session_state["usuario_actual"] = user_info
                     activar_manual_en_inicio()
                     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_EXITOSO", version_ant=1, version_nueva=1, autor=user_info["username"], motivo=f"Inicio exitoso [{user_info['rol']}].")
-                    st.toast(f"[OK] Sesión iniciada como {user_info['nombre']} [{user_info['rol']}]")
+                    st.toast(f"Bienvenido, {user_info['nombre']}.")
                     st.rerun()
                 else:
                     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_FALLIDO", version_ant=1, version_nueva=1, autor=username_in.strip() or "desconocido", motivo="Credenciales inválidas.")
-                    st.error("[ERROR] Credenciales no válidas. Verifique su usuario y contraseña.")
+                    st.error("Usuario o contraseña incorrectos.")
 
     with col_manual:
         with st.container(border=True):

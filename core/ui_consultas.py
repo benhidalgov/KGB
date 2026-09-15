@@ -20,8 +20,8 @@ from core.motor import (
 def renderizar_modulo_consultas(doc_store: dict):
     """Renderiza el módulo de búsqueda y asistente de IA."""
     subtab_duckdb, subtab_asistente = st.tabs([
-        ">_ Búsqueda Textual (DuckDB & Docs)",
-        ">_ Asistente Técnico (Gemini RAG)"
+        ">_ Buscar Documentos",
+        ">_ Asistente Técnico"
     ])
 
     # 1. Búsqueda Textual en CMDB y Documentos
@@ -44,8 +44,8 @@ def renderizar_modulo_consultas(doc_store: dict):
             st.markdown("""
             <div class="empty-state-container">
                 <div class="empty-state-console-icon">&gt;_ Buscador :1</div>
-                <div class="empty-state-title">Motor de Búsqueda Textual en RAM</div>
-                <div class="empty-state-subtitle">Búsqueda ultrarrápida indexada directamente sobre los documentos técnicos locales.</div>
+                <div class="empty-state-title">Búsqueda de documentos</div>
+                <div class="empty-state-subtitle">Escribe un término para buscar entre tus documentos técnicos.</div>
             </div>""", unsafe_allow_html=True)
         else:
             t0_d = time.perf_counter()
@@ -56,12 +56,12 @@ def renderizar_modulo_consultas(doc_store: dict):
             st.markdown(f"""
             <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:6px;padding:8px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                 <div><b>Término:</b> <code>{active_duck_term}</code></div>
-                <div><b>Servidores CMDB:</b> <span class="badge-ok">{len(df_srv_found)}</span></div>
+                <div><b>Servidores:</b> <span class="badge-ok">{len(df_srv_found)}</span></div>
                 <div><b>Documentos:</b> <span class="badge-info">{len(doc_matches_found)}</span></div>
-                <div><b>Tiempo:</b> <span class="badge-tag">{t_ms:.2f} ms [RAM]</span></div>
+                <div><b>Tiempo:</b> <span class="badge-tag">{t_ms:.2f} ms</span></div>
             </div>""", unsafe_allow_html=True)
 
-            st.markdown(f"##### Servidores Coincidentes en CMDB ({len(df_srv_found)})")
+            st.markdown(f"##### Servidores Encontrados ({len(df_srv_found)})")
             if not df_srv_found.empty:
                 cols_s = [c for c in ["servidor_id", "ip", "numero_serie", "vcloud_vm", "nivel_arquitectura", "componente", "estado", "nagios_check"] if c in df_srv_found.columns]
                 st.dataframe(
@@ -79,9 +79,9 @@ def renderizar_modulo_consultas(doc_store: dict):
                     hide_index=True
                 )
             else:
-                st.info(f"No se registraron servidores para '{active_duck_term}' en la CMDB.")
+                st.info(f"No hay servidores que coincidan con '{active_duck_term}'.")
 
-            st.markdown(f"##### Documentación Técnica Coincidente ({len(doc_matches_found)})")
+            st.markdown(f"##### Documentos Encontrados ({len(doc_matches_found)})")
             if doc_matches_found:
                 for doc_n, cont, sc in doc_matches_found[:5]:
                     snip = resaltar_terminos_en_html(html.escape(extraer_fragmento_relevante(cont, active_duck_term, max_chars=350)), active_duck_term)
@@ -91,15 +91,15 @@ def renderizar_modulo_consultas(doc_store: dict):
                         <div style="font-size:0.83rem;line-height:1.5;opacity:0.9;background:rgba(128,128,128,0.05);padding:8px 10px;border-radius:4px;border-left:3px solid #6366F1;">{snip}</div>
                     </div>""", unsafe_allow_html=True)
             else:
-                st.info(f"No se encontraron coincidencias en la documentación para '{active_duck_term}'.")
+                st.info(f"No se encontraron documentos para '{active_duck_term}'.")
 
             st.markdown("---")
             col_bt, col_bb = st.columns([3.5, 1.5], vertical_alignment="center")
             with col_bt:
-                st.caption("¿Deseas un análisis técnico y diagnóstico asistido con IA?")
+                st.caption("¿Quieres que el asistente analice este término?")
             with col_bb:
                 if st.button(">_ Analizar con Asistente", width="stretch", type="primary", key="btn_bridge_to_asistente"):
-                    with st.spinner("Generando análisis..."):
+                    with st.spinner("Analizando..."):
                         resp_c = generar_respuesta_asistente(active_duck_term, doc_store)
                         st.session_state.historial_busquedas.insert(0, {
                             "query": active_duck_term,
@@ -122,7 +122,7 @@ def renderizar_modulo_consultas(doc_store: dict):
 
         query_c_exec = query_asistente_in.strip() if sub_asistente and query_asistente_in.strip() else None
         if query_c_exec:
-            with st.spinner("Analizando infraestructura..."):
+            with st.spinner("Analizando..."):
                 resp = generar_respuesta_asistente(query_c_exec, doc_store)
                 st.session_state.historial_busquedas.insert(0, {
                     "query": query_c_exec,
@@ -136,21 +136,21 @@ def renderizar_modulo_consultas(doc_store: dict):
             st.markdown("""
             <div class="empty-state-container">
                 <div class="empty-state-console-icon">&gt;_ infra::rag_engine</div>
-                <div class="empty-state-title">Asistente de Infraestructura y Operaciones</div>
-                <div class="empty-state-subtitle">Realiza preguntas analíticas y operativas fundamentadas estrictamente en la evidencia técnica.</div>
+                <div class="empty-state-title">Asistente de Operaciones</div>
+                <div class="empty-state-subtitle">Haz preguntas sobre tu infraestructura y documentos.</div>
             </div>""", unsafe_allow_html=True)
         else:
             col_rt, col_rb = st.columns([4, 1])
             with col_rt:
-                st.markdown(f"<div style='font-size:0.95rem;font-weight:600;'>Historial de Consultas ({len(st.session_state.historial_busquedas)}):</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:0.95rem;font-weight:600;'>Historial ({len(st.session_state.historial_busquedas)}):</div>", unsafe_allow_html=True)
             with col_rb:
                 if st.button(">_ Limpiar Chat", width="stretch", key="btn_clear_search_history"):
                     st.session_state.historial_busquedas = []
                     st.session_state.messages = []
-                    st.toast("[INFO] Historial reiniciado")
+                    st.toast("Historial borrado.")
                     st.rerun()
 
             for idx, it in enumerate(st.session_state.historial_busquedas):
-                badge_o = '<span class="badge-ok">[ÚLTIMA CONSULTA]</span>' if idx == 0 else f'<span class="badge-tag">[{it["timestamp"]}]</span>'
+                badge_o = '<span class="badge-ok">[Reciente]</span>' if idx == 0 else f'<span class="badge-tag">[{it["timestamp"]}]</span>'
                 st.markdown(f'<div style="margin-top:12px;margin-bottom:4px;font-size:0.9rem;">{badge_o} <span style="font-weight:600;margin-left:6px;">Consulta:</span> <code>{it["query"]}</code></div>', unsafe_allow_html=True)
                 st.markdown(it["response"], unsafe_allow_html=True)

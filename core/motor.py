@@ -182,7 +182,7 @@ def construir_contexto_rag(prompt_usuario: str, df_srv: pd.DataFrame, doc_matche
     """Compila la evidencia técnica recuperada de DuckDB y de la base documental para inyección en Gemini."""
     secciones = []
     if df_srv is not None and not df_srv.empty:
-        lineas = ["### EVIDENCIA DE INVENTARIO Y MANTENIMIENTOS (DuckDB CMDB):"]
+        lineas = ["### INVENTARIO Y MANTENIMIENTOS:"]
         for _, row in df_srv.head(4).iterrows():
             lineas.append(
                 f"- Servidor: {row.get('servidor_id', '-')} | IP: {row.get('ip', '-')} | VM: {row.get('vcloud_vm', '-')} | "
@@ -193,13 +193,13 @@ def construir_contexto_rag(prompt_usuario: str, df_srv: pd.DataFrame, doc_matche
         secciones.append("\n".join(lineas))
 
     if doc_matches:
-        lineas_docs = ["### EVIDENCIA DE BASE DE CONOCIMIENTO TÉCNICA:"]
+        lineas_docs = ["### DOCUMENTOS:"]
         for doc_name, content, score in doc_matches[:3]:
             frag = extraer_fragmento_relevante(content, prompt_usuario, max_chars=600)
             lineas_docs.append(f"**Documento [{doc_name}] (Score {score} pts):**\n{frag}\n")
         secciones.append("\n".join(lineas_docs))
 
-    return "\n\n".join(secciones) or "No se encontraron coincidencias directas en la CMDB ni en los documentos técnicos locales."
+    return "\n\n".join(secciones) or "No hay información disponible."
 
 
 def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -> tuple[bool, str, str]:
@@ -210,15 +210,15 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
 
         client = genai.Client(api_key=api_key.strip())
         instruccion = (
-            "Eres el Asistente de Infraestructura y Operaciones, un Ingeniero Principal de Infraestructura senior corporativo.\n"
-            "DIRECTRICES ESTRICTAS:\n"
-            "1. PROHIBICION TOTAL DE EMOJIS: Queda estrictamente prohibido incluir cualquier emoji o icono visual Unicode.\n"
-            "2. TERMINOLOGIA EXCLUSIVA: Utiliza exclusivamente terminos formales como 'Operaciones', 'Infraestructura' o 'Consola de Operaciones'.\n"
-            "3. ZERO HALLUCINATIONS: Basa tus respuestas unicamente en la evidencia provista en el contexto.\n"
-            "4. ESTILO CORPORATIVO: Sobrio, formal, tablas Markdown y bloques de configuracion cuando sea pertinente."
+            "Eres el asistente de esta consola de operaciones. Ayudas a quien usa la aplicación.\n"
+            "Reglas:\n"
+            "1. Sin emojis ni iconos visuales.\n"
+            "2. Usa un lenguaje claro, simple y cercano. Evita tecnicismos innecesarios.\n"
+            "3. Responde solo con la informacion que aparece en el contexto. Si un dato no esta ahi, dilo con claridad.\n"
+            "4. Usa tablas o listas de pasos cuando ayude a explicar mejor."
         )
 
-        prompt_full = f"CONSULTA DEL OPERADOR:\n{prompt_usuario}\n\nCONTEXTO TÉCNICO RECUPERADO (CMDB Y DOCUMENTOS):\n{contexto_rag}\n\nInstrucción: Proporciona una respuesta técnica completa y estructurada basándote en el contexto."
+        prompt_full = f"PREGUNTA:\n{prompt_usuario}\n\nINFORMACION DISPONIBLE (inventario y documentos):\n{contexto_rag}\n\nResponde basándote en la información disponible."
 
         ultimo_error = ""
         for modelo in ["gemini-2.5-flash", "gemini-flash-latest"]:
@@ -259,26 +259,26 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
 
         html_out = f"""<div class="search-result-card" style="border-left: 3.5px solid #10B981;">
     <div class="search-header-row">
-        <div><span class="badge-info">[Inventario CMDB]</span><span class="search-doc-title" style="margin-left: 8px;">{row['servidor_id']}</span></div>
+        <div><span class="badge-info">[Inventario]</span><span class="search-doc-title" style="margin-left: 8px;">{row['servidor_id']}</span></div>
         <div><span class="{st_badge}">[{row['estado'].upper()}]</span><span class="badge-tag" style="margin-left: 6px;">{row['nivel_arquitectura']}</span></div>
     </div>
 
-| Atributo Técnico | Detalle Registrado |
+| Dato | Valor |
 | :--- | :--- |
-| **Identificador Servidor** | `{row['servidor_id']}` |
-| **Número de Serie** | `{row['numero_serie']}` |
-| **Dirección IP / VM vCloud** | `{row['ip']}` ({row['vcloud_vm']}) |
-| **Componente de Arquitectura** | {row['componente']} |
-| **Fecha de Última Intervención** | {row['fecha']} |
-| **Tipo de Mantenimiento** | {row['tipo_mantenimiento']} |
-| **Técnico Responsable** | `{row['tecnico']}` |
-| **Monitoreo Nagios / APM** | `{row['nagios_check']}` |
+| **Servidor** | `{row['servidor_id']}` |
+| **N° Serie** | `{row['numero_serie']}` |
+| **IP / VM** | `{row['ip']}` ({row['vcloud_vm']}) |
+| **Componente** | {row['componente']} |
+| **Fecha** | {row['fecha']} |
+| **Mantenimiento** | {row['tipo_mantenimiento']} |
+| **Técnico** | `{row['tecnico']}` |
+| **Monitoreo** | `{row['nagios_check']}` |
 
-<div style="margin-top: 12px; font-size: 0.88rem; line-height: 1.5;"><b>Descripción de la Intervención:</b><br/>{desc}</div>
-<div class="search-meta-footer"><span>Motor: Local Autónomo | DuckDB + MarkItDown</span><span>{total} registro(s) encontrado(s)</span></div>
+<div style="margin-top: 12px; font-size: 0.88rem; line-height: 1.5;"><b>Descripción:</b><br/>{desc}</div>
+<div class="search-meta-footer"><span>Respuesta generada desde tus datos.</span><span>{total} registro(s)</span></div>
 </div>"""
         if total > 1:
-            html_out += f"\n\n*Nota: Existen {total - 1} registro(s) adicionales coincidentes. Consulte la pestaña Historial de Mantenimientos.*"
+            html_out += f"\n\n*Hay {total - 1} registro(s) más. Revisa la pestaña Historial de Mantenimientos.*"
         return html_out
 
     if doc_matches:
@@ -292,14 +292,14 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         html_out = f"""<div class="search-result-card" style="border-left: 3.5px solid #6366F1;">
     <div class="search-header-row">
         <div><span class="badge-info">{tipo_badge}</span>{tag_badge0}<span class="search-doc-title" style="margin-left: 8px;">{normalizar_titulo_display(doc_name)}</span><span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65; margin-left: 6px;">({doc_name})</span></div>
-        <div><span class="badge-ok">Relevancia: {score_label} ({score} pts)</span></div>
+        <div><span class="badge-ok">Coincidencia: {score_label}</span></div>
     </div>
-    <div style="font-size: 0.82rem; font-weight: 600; opacity: 0.85; margin-bottom: 6px;">Fragmento Recuperado:</div>
+    <div style="font-size: 0.82rem; font-weight: 600; opacity: 0.85; margin-bottom: 6px;">Fragmento:</div>
     <div class="search-snippet-content">{frag}</div>
-    <div class="search-meta-footer"><span>Motor: Local Autónomo | DuckDB + MarkItDown</span><span>Consulte el archivo en la pestaña <b>Documentación Técnica</b></span></div>
+    <div class="search-meta-footer"><span>Respuesta desde tus documentos.</span><span>Abre el archivo en <b>Documentación Técnica</b></span></div>
 </div>"""
         if len(doc_matches) > 1:
-            html_out += f"\n\n**Otros documentos coincidentes ({len(doc_matches) - 1}):**\n"
+            html_out += f"\n\n**Otros documentos ({len(doc_matches) - 1}):**\n"
             for sec_name, sec_content, sec_score in doc_matches[1:3]:
                 sec_tags = obtener_tags_documento(sec_name)
                 sec_tag_b = f'<span class="badge-tag" style="margin-left: 6px;">[{sec_tags[0]}]</span>' if sec_tags else ""
@@ -308,16 +308,16 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
                 html_out += f"""\n<div style="background-color: rgba(128, 128, 128, 0.03); border: 1px solid rgba(128, 128, 128, 0.18); border-radius: 6px; padding: 10px; margin-top: 8px; font-size: 0.85rem;">
     <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
         <span><b>{sec_b} {normalizar_titulo_display(sec_name)}</b>{sec_tag_b} <span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65;">({sec_name})</span></span>
-        <span class="badge-tag">Score: {sec_score} pts</span>
+        <span class="badge-tag">Puntos: {sec_score}</span>
     </div>
     <div style="font-size: 0.82rem; opacity: 0.9; line-height: 1.4;">{sec_frag}</div>
 </div>"""
         return html_out
 
     return f"""<div class="search-result-card" style="border-left: 3.5px solid #D97706;">
-    <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;"><span class="badge-warn">[SIN COINCIDENCIAS]</span> No se encontraron registros para: <code>{prompt_usuario}</code></div>
-    <div style="font-size: 0.85rem; opacity: 0.85; line-height: 1.5;">Verifique el término. Puede buscar por Servidor (<code>BALANCER001</code>), N° Serie (<code>SN-8842-A</code>), IP (<code>10.24.0.125</code>) o Concepto (<code>JWT</code>, <code>Failover</code>).</div>
-    <div class="search-meta-footer"><span>Motor: Local Autónomo | DuckDB + MarkItDown</span><span>0 registros</span></div>
+    <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;"><span class="badge-warn">[Sin resultados]</span> No encontré nada para: <code>{prompt_usuario}</code></div>
+    <div style="font-size: 0.85rem; opacity: 0.85; line-height: 1.5;">Prueba con un servidor (<code>BALANCER001</code>), una serie (<code>SN-8842-A</code>), una IP (<code>10.24.0.125</code>) o un término como <code>JWT</code> o <code>Failover</code>.</div>
+    <div class="search-meta-footer"><span>Respuesta generada desde tus datos.</span><span>0 registros</span></div>
 </div>"""
 
 
@@ -344,15 +344,15 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
         if ok_gemini:
             resultado = f"""<div class="search-result-card" style="border-left: 3.5px solid #10B981;">
     <div class="search-header-row">
-        <div><span class="badge-ok">[OK]</span><span class="badge-info" style="margin-left: 6px;">[RAG CONTEXTUAL]</span><span class="search-doc-title" style="margin-left: 8px;">Análisis de Infraestructura</span></div>
-        <div><span class="badge-tag">Gemini Inferencia</span></div>
+        <div><span class="badge-ok">[OK]</span><span class="search-doc-title" style="margin-left: 8px;">Respuesta</span></div>
+        <div><span class="badge-tag">Asistente</span></div>
     </div>
 {resp_texto}
-<div class="search-meta-footer"><span>Motor: Google {modelo} | RAG Contextual</span><span>Evidencia: {len(df_srv)} CMDB + {len(doc_matches)} docs</span></div>
+<div class="search-meta-footer"><span>Respuesta del asistente.</span><span>Fuentes: {len(df_srv)} inventario + {len(doc_matches)} documentos</span></div>
 </div>"""
         else:
             resp_local = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
-            resultado = f'<div style="font-size:0.75rem; background-color: rgba(217, 119, 6, 0.08); border: 1px solid #D97706; border-radius: 4px; padding: 6px 10px; margin-bottom: 8px;"><span class="badge-warn">[FALLBACK LOCAL]</span> Servicio Gemini no disponible ({resp_texto}). Conmutando a motor local autónomo.</div>' + resp_local
+            resultado = f'<div style="font-size:0.75rem; background-color: rgba(217, 119, 6, 0.08); border: 1px solid #D97706; border-radius: 4px; padding: 6px 10px; margin-bottom: 8px;"><span class="badge-warn">[Aviso]</span> No pude conectar con el asistente en línea ({resp_texto}). Te muestro la respuesta local.</div>' + resp_local
     else:
         resultado = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
 

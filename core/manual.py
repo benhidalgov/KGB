@@ -70,58 +70,58 @@ def renderizar_manual_lanzamiento():
     <div class="search-result-card" style="border-left: 3.5px solid #6366F1; margin-bottom: 12px;">
         <div class="search-header-row">
             <div>
-                <span class="badge-info">[GUÍA DETALLADA]</span>
-                <span class="search-doc-title" style="margin-left: 8px;">Manual Completo de Operación del Sistema</span>
+                <span class="badge-info">[Guía rápida]</span>
+                <span class="search-doc-title" style="margin-left: 8px;">Cómo usar el sistema</span>
             </div>
-            <span class="badge-tag">Arquitectura y Uso</span>
+            <span class="badge-tag">Primeros pasos</span>
         </div>
         <div style="font-size: 0.86rem; line-height: 1.55; opacity: 0.92; margin-top: 4px;">
-            Consola centralizada de inventario CMDB (DuckDB en RAM), RAG con Gemini 2.5 Flash, control de versiones inmutable (SHA-256) y visor multimodal Zen Studio.
+            Busca, consulta y organiza tus documentos e inventario, todo en un solo lugar.
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    ##### 1. Cómo iniciar sesión y seleccionar rol
-    Utilice las credenciales corporativas asignadas por el administrador de infraestructura:
-    * **`admin`** (Administrador): Acceso total, Bóveda `[VAULT]`, Ingesta, Edición y Rollback auditado.
-    * **`operador`** (Operador): Búsqueda DuckDB, Asistente RAG, Visor Lado a Lado y Edición.
-    * **`auditor`** (Auditor): Solo lectura de CMDB, documentos y bitácora SHA-256.
+    ##### 1. Cómo iniciar sesión
+    Usa las credenciales que te dio el administrador:
+    * **`admin`** (Administrador): acceso completo.
+    * **`operador`** (Operador): buscar, consultar el asistente y editar.
+    * **`auditor`** (Auditor): solo lectura.
 
-    Las contraseñas se configuran mediante variables de entorno (`ADMIN_PASSWORD`, `OPERADOR_PASSWORD`, `AUDITOR_PASSWORD`). Consulte al responsable del despliegue si desconoce sus credenciales.
+    Las contraseñas las define el administrador. Si no las conoces, pregunta a quien te dio acceso.
 
-    ##### 2. Qué hacer una vez autenticado
-    1. Se desplegará el **Manual Detallado en 8 Módulos** con el funcionamiento interno y paso a paso exacto.
-    2. Presione **`>_ Ir a la Consola`** para comenzar a operar o consulte el manual en cualquier momento.
-    3. Puede abrir el manual en una pestaña independiente del navegador con el botón inferior.
+    ##### 2. Qué hacer al entrar
+    1. Verás un **manual en 8 pasos** con todo el funcionamiento.
+    2. Toca **`>_ Ir a la Consola`** para empezar, o lee el manual cuando quieras.
+    3. También puedes abrir el manual en una pestaña aparte con el botón de abajo.
     """)
 
     st.markdown("""
     <div style="margin-top: 10px; margin-bottom: 8px;">
-        <a href="?view=manual" target="_blank" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:0.82rem; color:#6366F1; border:1px solid rgba(99,102,241,0.3); padding:6px 14px; border-radius:6px; background:rgba(99,102,241,0.06);">>_ Abrir Manual Completo en Nueva Pestaña ↗</a>
+        <a href="?view=manual" target="_blank" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:0.82rem; color:#6366F1; border:1px solid rgba(99,102,241,0.3); padding:6px 14px; border-radius:6px; background:rgba(99,102,241,0.06);">>_ Abrir el Manual en una Pestaña Nueva ↗</a>
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("Autocompletar Cuentas de Prueba (RBAC)", expanded=True):
+    with st.expander("Cuentas de Prueba", expanded=True):
         st.markdown("""
         <div style="font-size: 0.82rem; opacity: 0.88; margin-bottom: 8px;">
-            Seleccione una cuenta corporativa para autocompletar usuario y contraseña en el formulario de acceso:
+            Elige una cuenta para rellenar usuario y contraseña:
         </div>
         """, unsafe_allow_html=True)
 
         col_u1, col_u2, col_u3 = st.columns(3, gap="small")
         with col_u1:
-            st.button("admin", key="btn_quick_admin", width="stretch", help="Administrador: Control total y Bóveda", on_click=_cb_autocompletar_cuenta_manual, args=("admin",))
+            st.button("admin", key="btn_quick_admin", width="stretch", help="Administrador", on_click=_cb_autocompletar_cuenta_manual, args=("admin",))
         with col_u2:
-            st.button("operador", key="btn_quick_operador", width="stretch", help="Operador: Consultas, RAG y Visor", on_click=_cb_autocompletar_cuenta_manual, args=("operador",))
+            st.button("operador", key="btn_quick_operador", width="stretch", help="Operador", on_click=_cb_autocompletar_cuenta_manual, args=("operador",))
         with col_u3:
-            st.button("auditor", key="btn_quick_auditor", width="stretch", help="Auditor: Solo lectura y Auditoría", on_click=_cb_autocompletar_cuenta_manual, args=("auditor",))
+            st.button("auditor", key="btn_quick_auditor", width="stretch", help="Auditor", on_click=_cb_autocompletar_cuenta_manual, args=("auditor",))
 
         st.markdown("""
         <div style="font-size: 0.74rem; opacity: 0.72; margin-top: 8px; line-height: 1.45;">
-            * <b>admin:</b> Acceso total a Bóveda <code>[VAULT]</code>, Ingesta Batch, Edición y Rollbacks.<br>
-            * <b>operador:</b> Búsqueda en DuckDB, Asistente RAG, Visor Lado a Lado y Edición.<br>
-            * <b>auditor:</b> Modo solo lectura (verificación de CMDB y bitácora de auditoría).
+            * <b>admin:</b> acceso completo.<br>
+            * <b>operador:</b> buscar, consultar y editar.<br>
+            * <b>auditor:</b> solo lectura.
         </div>
         """, unsafe_allow_html=True)
 
@@ -130,31 +130,31 @@ def renderizar_manual_usuario():
     """Renderiza el manual exhaustivo y detallado estructurado en 8 módulos técnicos y operativos."""
     es_inicio = bool(st.session_state.get("manual_lanzamiento"))
 
-    st.markdown('<p class="main-title" style="margin-bottom:2px;">Manual Técnico y Guía de Operación Detallada</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title" style="margin-bottom:2px;">Manual de Uso</p>', unsafe_allow_html=True)
 
     if es_inicio:
-        st.caption("Guía exhaustiva del sistema. Revise los módulos paso a paso o ingrese directamente a la consola.")
+        st.caption("Guía del sistema. Revisa los pasos o entra directo a la consola.")
         col_cta, col_hint = st.columns([1.2, 2.8], gap="small", vertical_alignment="center")
         with col_cta:
             renderizar_boton_entrar_consola("btn_manual_ir_consola", 0, label=">_ Ir a la Consola")
         with col_hint:
-            st.caption("Puede alternar en cualquier momento entre Consola | Zen Studio | Manual de Uso desde la barra superior.")
+            st.caption("Puedes cambiar entre Consola, Zen Studio y este manual desde la barra superior.")
         st.markdown("---")
     else:
-        st.caption("Especificación técnica de cada componente y procedimiento operativo paso a paso.")
+        st.caption("Explicación de cada parte y cómo usarla.")
 
     if "manual_paso_actual" not in st.session_state:
         st.session_state["manual_paso_actual"] = 1
 
     modulos_titulos = [
-        "1. Autenticación y Bóveda [VAULT]",
-        "2. Búsqueda DuckDB y Scoring",
-        "3. Asistente RAG (Gemini 2.5)",
-        "4. Inventario y Consola SQL",
-        "5. Visor Lado a Lado",
-        "6. Lector Zen Studio (TOC)",
-        "7. Edición, Diff y Rollback",
-        "8. Ingesta ZIP y Runbooks"
+        "1. Acceso y Bóveda",
+        "2. Búsqueda",
+        "3. Asistente",
+        "4. Inventario y SQL",
+        "5. Visor de Documentos",
+        "6. Zen Studio",
+        "7. Editar y Versionar",
+        "8. Subir Archivos y Runbooks"
     ]
 
     def al_cambiar_stepper():

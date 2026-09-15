@@ -147,4 +147,4 @@ elif "Zen" in seccion_activa:
         st.session_state["zen_doc_sel"] = doc_zen_def
         st.rerun()
     else:
-        st.warning("No hay documentos indexados para previsualizar en Zen Studio.")
+        st.warning("No hay documentos para previsualizar en Zen Studio.")
