@@ -58,6 +58,12 @@ def renderizar_boton_entrar_consola(key_prefix: str, paso_num: int, label: str =
             st.rerun()
 
 
+def _cb_autocompletar_cuenta_manual(usuario: str):
+    """Callback seguro previo a la instanciación de widgets para autocompletar credenciales."""
+    st.session_state["login_username_val"] = usuario
+    st.session_state["login_password_val"] = st.session_state.get(f"_pwd_{usuario}", f"{usuario}2026")
+
+
 def renderizar_manual_lanzamiento():
     """Guía de inicio rápido en la pantalla de login antes de autenticar."""
     st.markdown("""
@@ -105,20 +111,11 @@ def renderizar_manual_lanzamiento():
 
         col_u1, col_u2, col_u3 = st.columns(3, gap="small")
         with col_u1:
-            if st.button("admin", key="btn_quick_admin", width="stretch", help="Administrador: Control total y Bóveda"):
-                st.session_state["login_username_val"] = "admin"
-                st.session_state["login_password_val"] = st.session_state.get("_pwd_admin", "admin2026")
-                st.rerun()
+            st.button("admin", key="btn_quick_admin", width="stretch", help="Administrador: Control total y Bóveda", on_click=_cb_autocompletar_cuenta_manual, args=("admin",))
         with col_u2:
-            if st.button("operador", key="btn_quick_operador", width="stretch", help="Operador: Consultas, RAG y Visor"):
-                st.session_state["login_username_val"] = "operador"
-                st.session_state["login_password_val"] = st.session_state.get("_pwd_operador", "operador2026")
-                st.rerun()
+            st.button("operador", key="btn_quick_operador", width="stretch", help="Operador: Consultas, RAG y Visor", on_click=_cb_autocompletar_cuenta_manual, args=("operador",))
         with col_u3:
-            if st.button("auditor", key="btn_quick_auditor", width="stretch", help="Auditor: Solo lectura y Auditoría"):
-                st.session_state["login_username_val"] = "auditor"
-                st.session_state["login_password_val"] = st.session_state.get("_pwd_auditor", "auditor2026")
-                st.rerun()
+            st.button("auditor", key="btn_quick_auditor", width="stretch", help="Auditor: Solo lectura y Auditoría", on_click=_cb_autocompletar_cuenta_manual, args=("auditor",))
 
         st.markdown("""
         <div style="font-size: 0.74rem; opacity: 0.72; margin-top: 8px; line-height: 1.45;">

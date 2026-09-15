@@ -141,8 +141,14 @@ def cerrar_sesion():
     st.rerun()
 
 
+def _cb_autocompletar_cuenta_auth(usuario: str):
+    """Callback seguro previo a la instanciación de widgets para autocompletar credenciales."""
+    st.session_state["login_username_val"] = usuario
+    st.session_state["login_password_val"] = st.session_state.get(f"_pwd_{usuario}", f"{usuario}2026")
+
+
 def renderizar_pantalla_login():
-    """Renderiza la pantalla corporativa de inicio de sesión junto al manual de usuario."""
+    """Renderiza la pantalla corporativa dividida: formulario a la izquierda y manual a la derecha."""
     st.markdown("""
     <style>
     [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
@@ -184,20 +190,11 @@ def renderizar_pantalla_login():
             st.markdown("<div style='font-size:0.75rem;opacity:0.75;margin-bottom:4px;'>Autocompletar usuario de prueba:</div>", unsafe_allow_html=True)
             col_q1, col_q2, col_q3 = st.columns(3, gap="small")
             with col_q1:
-                if st.button("admin", key="btn_fill_admin", width="stretch", help="Rol: Administrador"):
-                    st.session_state["login_username_val"] = "admin"
-                    st.session_state["login_password_val"] = st.session_state["_pwd_admin"]
-                    st.rerun()
+                st.button("admin", key="btn_fill_admin", width="stretch", help="Rol: Administrador", on_click=_cb_autocompletar_cuenta_auth, args=("admin",))
             with col_q2:
-                if st.button("operador", key="btn_fill_operador", width="stretch", help="Rol: Operador"):
-                    st.session_state["login_username_val"] = "operador"
-                    st.session_state["login_password_val"] = st.session_state["_pwd_operador"]
-                    st.rerun()
+                st.button("operador", key="btn_fill_operador", width="stretch", help="Rol: Operador", on_click=_cb_autocompletar_cuenta_auth, args=("operador",))
             with col_q3:
-                if st.button("auditor", key="btn_fill_auditor", width="stretch", help="Rol: Auditor"):
-                    st.session_state["login_username_val"] = "auditor"
-                    st.session_state["login_password_val"] = st.session_state["_pwd_auditor"]
-                    st.rerun()
+                st.button("auditor", key="btn_fill_auditor", width="stretch", help="Rol: Auditor", on_click=_cb_autocompletar_cuenta_auth, args=("auditor",))
 
             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
