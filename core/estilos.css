@@ -4,18 +4,20 @@
    Compatibilidad: Tema Claro (Light) y Tema Oscuro (Dark) - Theme-Safe
    ========================================================================== */
 
-/* 0. Tipografia Corporativa: Inter + JetBrains Mono */
+/* 1. Tipografia Corporativa: Inter + JetBrains Mono */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* Aplicar Inter como fuente base de herencia sin romper componentes internos */
 :root {
     --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    --color-indigo: #6366F1;
+    --color-indigo-hover: #4F46E5;
+    --color-ok: #10B981;
+    --color-warn: #D97706;
+    --color-crit: rgb(106, 57, 123);
 }
 
-/* Aplicar solo a selectores seguros de Streamlit */
-.stApp,
-.stMarkdown,
+.stApp, .stMarkdown,
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stTextArea > div > div > textarea,
@@ -24,9 +26,7 @@
 [data-testid="stSidebar"],
 [data-testid="stMetricLabel"],
 [data-testid="stMetricValue"],
-.main-title, .sub-title,
-.search-result-card, .badge-ok, .badge-warn, .badge-crit, .badge-info, .badge-tag,
-.navbar-stat-chip, .navbar-stat-label {
+.main-title {
     font-family: var(--font-inter) !important;
 }
 
@@ -35,1425 +35,213 @@ code, pre, .stCode, kbd,
     font-family: var(--font-mono) !important;
 }
 
-/* Fix especifico: file uploader - ocultar icono duplicado */
+/* 2. Fixes de Seguridad e Interfaz Base */
 [data-testid="stFileUploaderDropzoneInput"] + div > span:first-child,
 [data-testid="stFileUploader"] button > svg + span:not(:last-child) {
     display: none !important;
 }
 
-/* Seguridad Estricta: Ocultar boton revelador (ojo) en inputs de contrasena / credenciales */
 [data-testid="stTextInputRootElement"] button,
 [data-testid="stTextInputRootElement"] button *,
 div[data-testid="stTextInput"]:has(input[type="password"]) button,
 div[data-testid="stTextInput"]:has(input[type="password"]) button *,
 div[data-testid="stTextInput"] button[aria-label*="password" i],
 div[data-testid="stTextInput"] button[aria-label*="contraseña" i],
-div[data-testid="stTextInput"] button[title*="password" i],
 button[aria-label="Show password"],
-button[aria-label="Hide password"],
-button[aria-label*="password" i],
-button[aria-label*="password" i] * {
+button[aria-label="Hide password"] {
     display: none !important;
     visibility: hidden !important;
     width: 0 !important;
     height: 0 !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
     border: none !important;
-    opacity: 0 !important;
     pointer-events: none !important;
 }
 
-/* 0a. Estilos de Expanders Corporativos */
-[data-testid="stExpander"] {
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    border-radius: 8px !important;
-    background: rgba(128, 128, 128, 0.03) !important;
-    margin-bottom: 8px !important;
-}
-[data-testid="stExpander"] summary {
-    cursor: pointer !important;
-    font-weight: 600 !important;
-    padding: 6px 10px !important;
-    transition: color 0.15s ease, background 0.15s ease !important;
-}
-[data-testid="stExpander"] summary:hover {
-    color: #6366F1 !important;
-    background: rgba(99, 102, 241, 0.05) !important;
+/* 3. Barra de Acento Superior */
+.accent-top-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #6366F1 0%, #818CF8 50%, #10B981 100%);
+    border-radius: 2px;
+    margin-bottom: 12px;
+    opacity: 0.9;
 }
 
-
-/* 0b. Animaciones Globales */
-@keyframes slideInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-14px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes pulse-ring {
-    0% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55);
-    }
-    70% {
-        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-    }
-}
-
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-
-
-/* 1. Tipografía y Títulos Adaptables */
 .main-title {
-    font-size: clamp(1.4rem, 2.5vw, 2.2rem);
-    font-weight: 700;
-    color: inherit;
-    margin-bottom: 2px;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-}
-
-.sub-title {
-    font-size: clamp(0.85rem, 1.2vw, 1rem);
-    opacity: 0.8;
-    margin-bottom: 15px;
-    line-height: 1.4;
-}
-
-/* 2. Pestañas de Navegación Estilizadas (Streamlit Tabs) */
-button[data-baseweb="tab"] {
-    font-size: 0.88rem !important;
-    font-weight: 500 !important;
-    padding: 8px 16px !important;
-    border-radius: 8px 8px 0 0 !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    border-bottom: none !important;
-}
-
-button[data-baseweb="tab"]:hover {
-    background-color: rgba(106, 57, 123, 0.08) !important;
-    color: rgb(106, 57, 123) !important;
-}
-
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: rgb(106, 57, 123) !important;
+    font-size: 1.4rem !important;
     font-weight: 700 !important;
-    background-color: rgba(106, 57, 123, 0.10) !important;
+    letter-spacing: -0.02em !important;
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
 }
 
-/* 3. Badges de Estado Corporativos (Obsidian & Indigo) */
-.badge-ok {
-    background-color: rgba(16, 185, 129, 0.15);
-    color: #10B981;
-    border: 1px solid rgba(16, 185, 129, 0.35);
+/* 4. Badges Corporativos Estandarizados */
+.badge-ok, .badge-warn, .badge-crit, .badge-info, .badge-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 2px 8px;
     border-radius: 4px;
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+
+.badge-ok {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .badge-warn {
-    background-color: rgba(217, 119, 6, 0.15);
+    background-color: rgba(217, 119, 6, 0.12);
     color: #D97706;
-    border: 1px solid rgba(217, 119, 6, 0.35);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    border: 1px solid rgba(217, 119, 6, 0.3);
 }
 
 .badge-crit {
     background-color: rgba(106, 57, 123, 0.15);
     color: rgb(106, 57, 123);
-    border: 1px solid rgba(106, 57, 123, 0.45);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    border: 1px solid rgba(106, 57, 123, 0.35);
 }
 
 .badge-info {
-    background-color: rgba(99, 102, 241, 0.15);
+    background-color: rgba(99, 102, 241, 0.12);
     color: #6366F1;
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
 .badge-tag {
-    background-color: rgba(128, 128, 128, 0.12);
+    background-color: rgba(128, 128, 128, 0.1);
     color: inherit;
-    border: 1px solid rgba(128, 128, 128, 0.25);
+    opacity: 0.85;
+    border: 1px solid rgba(128, 128, 128, 0.22);
+}
+
+.badge-pulse-online {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #10B981;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+.pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: #10B981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.navbar-brand-badge {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #6366F1;
+    font-size: 0.75rem;
+    font-weight: 600;
     padding: 2px 7px;
     border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    text-transform: uppercase;
 }
 
-/* 4. Tarjetas de Métricas (KPI Cards) */
-div[data-testid="stMetric"] {
-    background-color: rgba(128, 128, 128, 0.05);
-    border: 1px solid rgba(128, 128, 128, 0.18);
-    border-radius: 8px;
-    padding: 10px 14px;
-    transition: all 0.2s ease;
-}
-
-div[data-testid="stMetric"]:hover {
-    border-color: rgba(99, 102, 241, 0.4);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
-    transform: translateY(-1px);
-}
-
-div[data-testid="stMetricLabel"] {
-    font-size: 0.8rem !important;
-    font-weight: 500 !important;
-    opacity: 0.85;
-}
-
-div[data-testid="stMetricValue"] {
-    font-size: 1.35rem !important;
-    font-weight: 700 !important;
-}
-
-/* 5. Tarjetas de Resultado del Chat y Busqueda */
+/* 5. Tarjetas de Resultado de Busqueda */
 .search-result-card {
-    background-color: rgba(128, 128, 128, 0.04);
-    border: 1px solid rgba(128, 128, 128, 0.18);
-    border-left: 3px solid #6366F1;
-    border-radius: 0 10px 10px 0;
-    padding: 16px 18px;
-    margin: 10px 0 16px 0;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
-    animation: fadeInUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    background: rgba(128, 128, 128, 0.04);
+    border: 1px solid rgba(128, 128, 128, 0.15);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    transition: border-color 0.15s ease;
 }
 
 .search-result-card:hover {
-    border-color: rgba(99, 102, 241, 0.50);
-    border-left-color: #818cf8;
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.10);
-    transform: translateX(2px);
-}
-
-/* Variantes de acento segun tipo */
-.search-result-card.acento-ok {
-    border-left-color: #10B981;
-}
-.search-result-card.acento-warn {
-    border-left-color: #D97706;
-}
-.search-result-card.acento-crit {
-    border-left-color: rgb(106, 57, 123);
+    border-color: rgba(99, 102, 241, 0.35);
 }
 
 .search-header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 10px;
-    margin-bottom: 12px;
     flex-wrap: wrap;
     gap: 8px;
-    background: linear-gradient(to bottom, rgba(99, 102, 241, 0.04), transparent);
-    border-bottom: 1px solid rgba(99, 102, 241, 0.12);
-    margin-left: -18px;
-    margin-right: -18px;
-    padding-left: 18px;
-    padding-right: 18px;
-    border-radius: 0 10px 0 0;
+    margin-bottom: 6px;
 }
 
 .search-doc-title {
-    font-size: 1.0rem;
     font-weight: 600;
-    color: inherit;
-    letter-spacing: -0.01em;
+    font-size: 0.92rem;
 }
 
 .search-snippet-content {
-    font-size: 0.91rem;
-    line-height: 1.65;
-    margin-bottom: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: inherit;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    opacity: 0.88;
+    margin: 6px 0;
 }
 
 .search-highlight {
-    background-color: rgba(99, 102, 241, 0.18);
+    background-color: rgba(99, 102, 241, 0.2);
     color: inherit;
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    padding: 1px 5px;
-    border-radius: 3px;
     font-weight: 600;
+    padding: 1px 3px;
+    border-radius: 3px;
 }
 
 .search-meta-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-top: 1px solid rgba(128, 128, 128, 0.10);
-    padding-top: 8px;
-    margin-top: 8px;
-    font-size: 0.78rem;
-    opacity: 0.75;
-    background: linear-gradient(to top, rgba(128,128,128,0.02), transparent);
-}
-
-/* 6. Panel Lateral (Sidebar) Adaptable */
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg,
-        rgba(99, 102, 241, 0.04) 0%,
-        rgba(0, 0, 0, 0) 35%) !important;
-    border-right: 1px solid rgba(99, 102, 241, 0.14) !important;
-}
-
-/* Encabezados de seccion con acento indigo */
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] h4 {
-    font-size: 0.78rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.07em !important;
-    text-transform: uppercase !important;
-    padding-left: 10px !important;
-    border-left: 3px solid #6366F1 !important;
-    margin-top: 14px !important;
-    margin-bottom: 8px !important;
-    opacity: 0.9;
-}
-
-/* Separadores del sidebar */
-[data-testid="stSidebar"] hr {
-    border: none !important;
-    height: 1px !important;
-    background: linear-gradient(
-        to right,
-        rgba(99, 102, 241, 0.0),
-        rgba(99, 102, 241, 0.3) 40%,
-        rgba(99, 102, 241, 0.0)
-    ) !important;
-    margin: 10px 0 !important;
-}
-
-/* File uploader */
-[data-testid="stSidebar"] div[data-testid="stFileUploader"] {
-    border: 1.5px dashed rgba(99, 102, 241, 0.28);
-    border-radius: 10px;
-    padding: 8px;
-    transition: all 0.25s ease;
-    background: rgba(99, 102, 241, 0.02);
-}
-
-[data-testid="stSidebar"] div[data-testid="stFileUploader"]:hover {
-    border-color: #6366F1;
-    background-color: rgba(99, 102, 241, 0.06);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
-}
-
-/* Botones del sidebar */
-[data-testid="stSidebar"] .stButton button {
-    border-radius: 8px !important;
-    font-size: 0.82rem !important;
-    font-weight: 500 !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-[data-testid="stSidebar"] .stButton button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15) !important;
-    border-color: rgba(99, 102, 241, 0.55) !important;
-}
-
-/* 7. Botones y Microinteracciones */
-.stButton button {
-    border-radius: 6px !important;
-    font-weight: 500 !important;
-    border: 1px solid rgba(128, 128, 128, 0.25) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-.stButton button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-    border-color: rgba(99, 102, 241, 0.5) !important;
-}
-
-/* Botones de Descarga */
-div[data-testid="stDownloadButton"] button {
-    border-radius: 6px !important;
-    font-weight: 500 !important;
-    border: 1px solid rgba(16, 185, 129, 0.35) !important;
-    transition: all 0.2s ease !important;
-}
-
-div[data-testid="stDownloadButton"] button:hover {
-    border-color: #10B981 !important;
-    background-color: rgba(16, 185, 129, 0.08) !important;
-    transform: translateY(-1px);
-}
-
-/* 8. Desplegables y Expansores */
-div[data-testid="stExpander"] {
-    border: 1px solid rgba(128, 128, 128, 0.2) !important;
-    border-radius: 8px !important;
-    transition: border-color 0.2s ease;
-}
-
-div[data-testid="stExpander"]:hover {
-    border-color: rgba(99, 102, 241, 0.35) !important;
-}
-
-/* 9. Tablas Responsivas y Adaptables */
-.stMarkdown table {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto !important;
-    white-space: nowrap !important;
-    border-collapse: collapse !important;
-    margin: 12px 0 !important;
-    -webkit-overflow-scrolling: touch;
-    border-radius: 6px;
-}
-
-.stMarkdown th,
-.stMarkdown td {
-    padding: 7px 12px !important;
-    border: 1px solid rgba(128, 128, 128, 0.2) !important;
-    font-size: 0.85rem !important;
-}
-
-.stMarkdown th {
-    background-color: rgba(128, 128, 128, 0.1) !important;
-    font-weight: 600 !important;
-    position: sticky;
-    top: 0;
-}
-
-.stMarkdown tr:nth-child(even) {
-    background-color: rgba(128, 128, 128, 0.04) !important;
-}
-
-.stMarkdown tr:hover {
-    background-color: rgba(128, 128, 128, 0.08) !important;
-    transition: background-color 0.15s ease;
-}
-
-/* 10. Tipografía Monoespaciada Técnica */
-code, pre {
-    font-family: "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace !important;
-    font-size: 0.86rem !important;
-}
-
-/* 11. Scrollbars Discretas */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(128, 128, 128, 0.3);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(128, 128, 128, 0.5);
-}
-
-/* 12. Comparador Diff Lado a Lado (Split View) */
-.diff-container {
-    border: 1px solid rgba(128, 128, 128, 0.25);
-    border-radius: 8px;
-    overflow: hidden;
-    margin: 12px 0;
-    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
-    font-size: 0.82rem;
-    background-color: rgba(128, 128, 128, 0.02);
-}
-
-.diff-stats-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 14px;
-    background-color: rgba(128, 128, 128, 0.08);
-    border-bottom: 1px solid rgba(128, 128, 128, 0.2);
-    font-size: 0.85rem;
-    font-weight: 500;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.diff-stat-group {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.diff-header-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    background-color: rgba(128, 128, 128, 0.06);
-    border-bottom: 1px solid rgba(128, 128, 128, 0.18);
-    font-weight: 600;
-    font-size: 0.82rem;
-}
-
-.diff-header-col {
-    padding: 6px 12px;
-    border-right: 1px solid rgba(128, 128, 128, 0.18);
-}
-.diff-header-col:last-child {
-    border-right: none;
-}
-
-.diff-body {
-    max-height: 520px;
-    overflow-y: auto;
-    overflow-x: auto;
-}
-
-.diff-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-bottom: 1px solid rgba(128, 128, 128, 0.08);
-    min-height: 22px;
-    line-height: 1.45;
-}
-
-.diff-cell {
-    display: flex;
-    padding: 2px 8px;
-    border-right: 1px solid rgba(128, 128, 128, 0.15);
-    white-space: pre-wrap;
-    word-break: break-all;
-}
-.diff-cell:last-child {
-    border-right: none;
-}
-
-.diff-num {
-    min-width: 32px;
-    width: 32px;
-    color: rgba(128, 128, 128, 0.6);
-    user-select: none;
-    text-align: right;
-    padding-right: 8px;
-    font-size: 0.75rem;
-}
-
-.diff-text {
-    flex: 1;
-}
-
-.diff-del {
-    background-color: rgba(106, 57, 123, 0.16);
-    color: inherit;
-}
-.diff-del .diff-num {
-    color: #c480d4;
-}
-
-.diff-add {
-    background-color: rgba(16, 185, 129, 0.12);
-    color: inherit;
-}
-.diff-add .diff-num {
-    color: #10B981;
-}
-
-.diff-empty {
-    background-color: rgba(128, 128, 128, 0.03);
-}
-
-/* 13. Timeline de Versiones */
-.version-timeline-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin: 16px 0;
-    padding-left: 12px;
-    border-left: 2px solid rgba(99, 102, 241, 0.35);
-}
-
-.version-timeline-card {
-    background-color: rgba(128, 128, 128, 0.04);
-    border: 1px solid rgba(128, 128, 128, 0.2);
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-left: 8px;
-    position: relative;
-    transition: all 0.2s ease;
-}
-
-.version-timeline-card:hover {
-    border-color: rgba(99, 102, 241, 0.45);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-/* 14. Navbar Hero Card con Glassmorphism + Animacion de Entrada */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor) {
-    background: linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.08) 0%,
-        rgba(99, 102, 241, 0.03) 50%,
-        rgba(16, 185, 129, 0.03) 100%
-    ) !important;
-    backdrop-filter: blur(12px) saturate(1.4) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(1.4) !important;
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    border-radius: 12px !important;
-    padding: 6px 12px !important;
-    margin-bottom: 12px !important;
-    box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.12),
-        0 1px 0 rgba(255, 255, 255, 0.06) inset,
-        0 0 0 1px rgba(99, 102, 241, 0.08) inset !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    animation: slideInDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) both !important;
-    position: relative !important;
-    overflow: hidden !important;
-}
-
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor)::before {
-    content: '' !important;
-    position: absolute !important;
-    inset: 0 !important;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(99, 102, 241, 0.04) 50%,
-        transparent 100%
-    ) !important;
-    background-size: 200% 100% !important;
-    pointer-events: none !important;
-}
-
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.navbar-anchor):hover {
-    border-color: rgba(99, 102, 241, 0.45) !important;
-    box-shadow:
-        0 6px 24px rgba(99, 102, 241, 0.15),
-        0 1px 0 rgba(255, 255, 255, 0.08) inset,
-        0 0 0 1px rgba(99, 102, 241, 0.12) inset !important;
-    transform: translateY(-1px) !important;
-}
-
-.navbar-brand-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    row-gap: 2px;
-}
-
-.navbar-brand-badge {
-    font-family: var(--font-mono);
-    background: rgba(99, 102, 241, 0.15);
-    color: #6366F1;
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    border-radius: 4px;
-    padding: 1px 6px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    user-select: none;
-}
-
-.navbar-brand-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    white-space: nowrap;
-}
-
-.navbar-brand-badges {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-.badge-pulse-online {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background-color: rgba(16, 185, 129, 0.18);
-    color: #10B981;
-    border: 1px solid rgba(16, 185, 129, 0.4);
-    padding: 1px 6px;
-    border-radius: 20px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
-}
-
-.pulse-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #10B981;
-    display: inline-block;
-    animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.navbar-stats-container {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    flex-wrap: wrap;
-    row-gap: 4px;
-}
-
-.navbar-stat-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background-color: rgba(128, 128, 128, 0.07);
-    border: 1px solid rgba(128, 128, 128, 0.20);
-    border-radius: 5px;
-    padding: 2px 6px;
     font-size: 0.76rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    flex-shrink: 0;
+    opacity: 0.7;
+    margin-top: 6px;
 }
 
-.navbar-stat-chip:hover {
-    border-color: rgba(99, 102, 241, 0.45);
-    background-color: rgba(99, 102, 241, 0.05);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.navbar-stat-label {
-    opacity: 0.85;
-    font-size: 0.74rem;
-    font-weight: 500;
-}
-
-.navbar-stat-value-ok {
-    background-color: rgba(16, 185, 129, 0.18);
-    color: #10B981;
-    border: 1px solid rgba(16, 185, 129, 0.35);
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-size: 0.78rem;
-    font-weight: 700;
-}
-
-.navbar-stat-value-info {
-    background-color: rgba(99, 102, 241, 0.18);
-    color: #6366F1;
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-size: 0.78rem;
-    font-weight: 700;
-}
-
-.navbar-divider {
-    border-bottom: 1px solid rgba(128, 128, 128, 0.18);
-    margin: 8px 0 16px 0;
-}
-
-/* 15. Reglas Responsivas */
-@media (max-width: 992px) {
-    .main-title {
-        font-size: 1.3rem !important;
-    }
-    .sub-title {
-        font-size: 0.85rem !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .main-title {
-        font-size: 1.15rem !important;
-    }
-    .sub-title {
-        font-size: 0.8rem !important;
-    }
-    .diff-header-row,
-    .diff-row {
-        grid-template-columns: 1fr;
-    }
-    .diff-cell {
-        border-right: none;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.1);
-    }
-    div[data-testid="column"] {
-        width: 100% !important;
-        flex: 1 1 100% !important;
-        margin-bottom: 8px;
-    }
-}
-
-/* ========================================================================
-   16. LINEA DE ACENTO SUPERIOR (Gradiente Indigo -> Verde Menta)
-   ======================================================================== */
-.accent-top-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(
-        90deg,
-        #6366F1 0%,
-        #818cf8 35%,
-        #34d399 75%,
-        #10B981 100%
-    );
-    z-index: 9999;
-    pointer-events: none;
-}
-
-/* Fallback via ::before en el body para apps que no admiten fixed */
-[data-testid="stApp"]::before {
-    content: '';
-    display: block;
-    height: 3px;
-    background: linear-gradient(
-        90deg,
-        #6366F1 0%,
-        #818cf8 35%,
-        #34d399 75%,
-        #10B981 100%
-    );
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 9999;
-}
-
-/* ==========================================================================
-   Estilos Visuales Corporativos - Consola de Infraestructura y Operaciones
-   ========================================================================== */
-
-/* Contenedor del form de busqueda */
-[data-testid="stForm"] {
-    background: rgba(99, 102, 241, 0.03) !important;
-    border: 1px solid rgba(99, 102, 241, 0.20) !important;
-    border-radius: 12px !important;
-    padding: 10px 14px !important;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
-}
-
-[data-testid="stForm"]:focus-within {
-    border-color: rgba(99, 102, 241, 0.55) !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.10), 0 4px 16px rgba(99, 102, 241, 0.08) !important;
-}
-
-/* Input de busqueda */
-[data-testid="stForm"] input[type="text"],
-[data-testid="stForm"] input[type="search"] {
-    font-size: 0.95rem !important;
-    border-radius: 8px !important;
-    border: 1px solid rgba(99, 102, 241, 0.22) !important;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
-    background: transparent !important;
-}
-
-[data-testid="stForm"] input[type="text"]:focus,
-[data-testid="stForm"] input[type="search"]:focus {
-    border-color: #6366F1 !important;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15) !important;
-    outline: none !important;
-}
-
-/* Boton Buscar integrado */
-[data-testid="stForm"] [data-testid="stFormSubmitButton"] button {
-    background: linear-gradient(135deg, #6366F1 0%, #818cf8 100%) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.02em !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.30) !important;
-}
-
-[data-testid="stForm"] [data-testid="stFormSubmitButton"] button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45) !important;
-    background: linear-gradient(135deg, #4f52e0 0%, #6366F1 100%) !important;
-}
-
-/* ========================================================================
-   18. QUICK-QUERY CHIPS ESTILO TERMINAL
-   ======================================================================== */
-.quick-chip-row .stButton > button {
-    font-family: var(--font-mono) !important;
-    font-size: 0.78rem !important;
-    font-weight: 500 !important;
-    background: rgba(99, 102, 241, 0.06) !important;
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    border-radius: 20px !important;
-    color: #6366F1 !important;
-    padding: 4px 12px !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-.quick-chip-row .stButton > button:hover {
-    background: rgba(99, 102, 241, 0.15) !important;
-    border-color: #6366F1 !important;
-    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.20) !important;
-    transform: translateY(-2px) !important;
-}
-
-.quick-chip-row .stButton > button:active {
-    transform: translateY(0) !important;
-    background: rgba(99, 102, 241, 0.22) !important;
-}
-
-/* ========================================================================
-   19. TABS: ESTILIZADO COMPLETO CON TEMA rgb(106, 57, 123)
-   ======================================================================== */
-
-/* Tab list container */
-[data-baseweb="tab-list"] {
-    gap: 4px !important;
-    padding-bottom: 2px !important;
-    border-bottom: 1px solid rgba(128, 128, 128, 0.18) !important;
-    background-color: transparent !important;
-}
-
-/* Barra resaltada debajo del tab activo (BaseWeb Highlight Bar) */
-[data-baseweb="tab-highlight"] {
-    background-color: rgb(106, 57, 123) !important;
-    background: linear-gradient(90deg, rgb(106, 57, 123) 0%, #8b4fa1 100%) !important;
-    height: 3px !important;
-    border-radius: 3px 3px 0 0 !important;
-}
-
-[data-baseweb="tab-border"] {
-    background-color: transparent !important;
-}
-
-/* Todos los tabs */
-button[data-baseweb="tab"] {
-    font-size: 0.88rem !important;
-    font-weight: 500 !important;
-    padding: 8px 16px !important;
-    border-radius: 8px 8px 0 0 !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    position: relative !important;
-    border-bottom: none !important;
-    letter-spacing: -0.01em !important;
-    color: inherit !important;
-    background-color: transparent !important;
-}
-
-button[data-baseweb="tab"] * {
-    color: inherit !important;
-}
-
-button[data-baseweb="tab"]:hover {
-    background-color: rgba(106, 57, 123, 0.08) !important;
-    color: rgb(106, 57, 123) !important;
-}
-
-button[data-baseweb="tab"]:hover * {
-    color: rgb(106, 57, 123) !important;
-}
-
-/* Tab activo */
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: rgb(106, 57, 123) !important;
-    font-weight: 700 !important;
-    background-color: rgba(106, 57, 123, 0.10) !important;
-    border-bottom: none !important;
-}
-
-button[data-baseweb="tab"][aria-selected="true"] * {
-    color: rgb(106, 57, 123) !important;
-    font-weight: 700 !important;
-}
-
-/* Punto indicador sutil debajo del tab activo */
-button[data-baseweb="tab"][aria-selected="true"]::after {
-    content: '' !important;
-    position: absolute !important;
-    bottom: -6px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: 6px !important;
-    height: 6px !important;
-    border-radius: 50%;
-    background-color: rgb(106, 57, 123) !important;
-    box-shadow: 0 0 8px rgba(106, 57, 123, 0.8) !important;
-}
-
-/* ========================================================================
-   20. EMPTY STATE DEL TAB DE BUSQUEDA
-   ======================================================================== */
+/* Empty states */
 .empty-state-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     text-align: center;
-    padding: 32px 20px 28px;
-    animation: fadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    padding: 36px 16px;
+    border: 1px dashed rgba(128, 128, 128, 0.25);
+    border-radius: 8px;
+    margin: 16px 0;
 }
 
 .empty-state-console-icon {
     font-family: var(--font-mono);
-    font-size: 2.2rem;
-    font-weight: 700;
+    font-size: 1.8rem;
     color: #6366F1;
-    opacity: 0.75;
-    letter-spacing: -0.04em;
-    margin-bottom: 12px;
-    background: linear-gradient(135deg, #6366F1 0%, #10B981 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.empty-state-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    margin-bottom: 6px;
-}
-
-.empty-state-subtitle {
-    font-size: 0.85rem;
-    opacity: 0.65;
-    margin-bottom: 24px;
-    max-width: 520px;
-    line-height: 1.55;
-}
-
-.empty-state-caps-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    width: 100%;
-    max-width: 720px;
-    margin-top: 4px;
-}
-
-.empty-cap-card {
-    border-radius: 10px;
-    padding: 14px 16px;
-    text-align: left;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.empty-cap-card:hover {
-    transform: translateY(-2px);
-}
-
-.empty-cap-card-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 5px;
-}
-
-.empty-cap-card-title {
-    font-size: 0.88rem;
-    font-weight: 600;
-    margin-bottom: 4px;
-    line-height: 1.3;
-}
-
-.empty-cap-card-desc {
-    font-size: 0.78rem;
-    line-height: 1.5;
-    opacity: 0.72;
-}
-
-/* ========================================================================
-   21. SIDEBAR FOOTER
-   ======================================================================== */
-.sidebar-footer {
-    border-top: 1px solid rgba(99, 102, 241, 0.15);
-    padding: 10px 4px 6px;
-    margin-top: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.sidebar-footer-version {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #6366F1;
-    background: rgba(99, 102, 241, 0.10);
-    border: 1px solid rgba(99, 102, 241, 0.22);
-    padding: 2px 7px;
-    border-radius: 4px;
-    letter-spacing: 0.02em;
-}
-
-.sidebar-footer-ts {
-    font-size: 0.68rem;
-    opacity: 0.55;
-    font-family: var(--font-mono);
-}
-
-/* ========================================================================
-   22. SEGMENTED CONTROL THEME-SAFE (Obsidian & Indigo)
-   ======================================================================== */
-div[data-testid="stSegmentedControl"] {
-    background-color: rgba(128, 128, 128, 0.08) !important;
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    border-radius: 8px !important;
-    padding: 2px !important;
-    display: flex !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    justify-content: center !important;
-    box-sizing: border-box !important;
-    margin: 0 !important;
-}
-
-div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] {
-    display: flex !important;
-    width: 100% !important;
-    min-width: 0 !important;
-}
-
-div[data-testid="stSegmentedControl"] button {
-    flex: 1 1 0px !important;
-    min-width: 0 !important;
-    border-radius: 6px !important;
-    font-size: 0.78rem !important;
-    font-weight: 500 !important;
-    padding: 3px 8px !important;
-    border: none !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    color: inherit !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    white-space: nowrap !important;
-    text-align: center !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-div[data-testid="stSegmentedControl"] button:hover {
-    background-color: rgba(99, 102, 241, 0.12) !important;
-    color: #6366F1 !important;
-}
-
-div[data-testid="stSegmentedControl"] button[aria-checked="true"],
-div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
-div[data-testid="stSegmentedControl"] button[aria-selected="true"],
-div[data-testid="stSegmentedControl"] button[data-checked="true"] {
-    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
-    color: #ffffff !important;
-    font-weight: 600 !important;
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35) !important;
-}
-
-/* ========================================================================
-   23. PILLS NATIVAS THEME-SAFE (Obsidian & Indigo)
-   ======================================================================== */
-div[data-testid="stPills"] {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-    margin-bottom: 8px !important;
-}
-
-div[data-testid="stPills"] button {
-    font-family: var(--font-mono) !important;
-    background-color: rgba(128, 128, 128, 0.08) !important;
-    border: 1px solid rgba(99, 102, 241, 0.22) !important;
-    border-radius: 20px !important;
-    padding: 3px 11px !important;
-    font-size: 0.76rem !important;
-    font-weight: 500 !important;
-    color: inherit !important;
-    letter-spacing: -0.01em !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: none !important;
-}
-
-div[data-testid="stPills"] button:hover {
-    background-color: rgba(99, 102, 241, 0.14) !important;
-    border-color: #6366F1 !important;
-    color: #6366F1 !important;
-    transform: translateY(-1px) !important;
-}
-
-div[data-testid="stPills"] button[aria-checked="true"],
-div[data-testid="stPills"] button[aria-pressed="true"],
-div[data-testid="stPills"] button[aria-selected="true"],
-div[data-testid="stPills"] button[data-checked="true"] {
-    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
-    color: #ffffff !important;
-    border-color: #6366F1 !important;
-    font-weight: 600 !important;
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35) !important;
-}
-
-/* ========================================================================
-   24. COMPONENTES DEL SIDEBAR CORPORATIVO (Obsidian & Indigo)
-   ======================================================================== */
-
-/* Cabecera del Sidebar */
-.sidebar-header-card {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.10) 0%, rgba(99, 102, 241, 0.03) 100%);
-    border: 1px solid rgba(99, 102, 241, 0.25);
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-bottom: 10px;
-}
-
-.sidebar-header-title-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 3px;
-}
-
-.sidebar-header-title {
-    font-size: 0.90rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: inherit;
-}
-
-.sidebar-header-sub {
-    font-size: 0.74rem;
-    color: inherit;
-    opacity: 0.85;
-    line-height: 1.35;
-}
-
-/* Micro-tags de formatos soportados */
-.sidebar-format-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 4px;
     margin-bottom: 8px;
 }
 
-.sidebar-format-tag {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    background: rgba(128, 128, 128, 0.10);
-    border: 1px solid rgba(128, 128, 128, 0.25);
-    border-radius: 3px;
-    padding: 1px 4px;
-    color: inherit;
-    opacity: 0.9;
-}
-
-/* Lista scrolleable de documentos indexados */
-.sidebar-doc-list {
-    max-height: 280px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding-right: 4px;
-    margin-top: 6px;
-    margin-bottom: 6px;
-}
-
-.sidebar-doc-card {
-    background: rgba(128, 128, 128, 0.06);
-    border: 1px solid rgba(128, 128, 128, 0.22);
-    border-radius: 6px;
-    padding: 6px 8px;
-    transition: all 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.sidebar-doc-card:hover {
-    border-color: rgba(99, 102, 241, 0.45);
-    background: rgba(99, 102, 241, 0.06);
-    transform: translateX(2px);
-}
-
-.sidebar-doc-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-}
-
-.sidebar-doc-name {
-    font-size: 0.76rem;
+.empty-state-title {
     font-weight: 600;
-    word-break: break-all;
-    line-height: 1.3;
-    color: inherit;
+    font-size: 0.98rem;
+    margin-bottom: 4px;
 }
 
-.sidebar-doc-meta {
-    font-size: 0.66rem;
-    opacity: 0.80;
-    font-family: var(--font-mono);
-    display: flex;
-    justify-content: space-between;
-    color: inherit;
-}
-
-/* Telemetría del Sistema */
-.sidebar-telemetry-box {
-    background: linear-gradient(135deg, rgba(128, 128, 128, 0.08) 0%, rgba(99, 102, 241, 0.04) 100%);
-    border: 1px solid rgba(128, 128, 128, 0.25);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 0.76rem;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.sidebar-telemetry-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.sidebar-telemetry-engine {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    opacity: 0.90;
-    font-weight: 500;
-    color: inherit;
-}
-
-.sidebar-status-dot-ok {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #10B981;
-}
-
-.sidebar-status-dot-ok::before {
-    content: '';
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #10B981;
-    box-shadow: 0 0 5px rgba(16, 185, 129, 0.6);
-}
-
-/* ========================================================================
-   25. VISOR DE DOCUMENTOS THEME-SAFE (Light & Dark)
-   ======================================================================== */
-
-.visor-source-meta-bar {
-    background-color: rgba(128, 128, 128, 0.06);
-    border: 1px solid rgba(128, 128, 128, 0.20);
-    border-radius: 6px;
-    padding: 6px 10px;
-    margin-bottom: 10px;
-    font-size: 0.80rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    word-break: break-all;
-}
-
-.visor-source-meta-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    word-break: break-all;
-    min-width: 0;
-}
-
-.visor-source-meta-title code {
-    word-break: break-all;
-    white-space: normal;
-}
-
-.visor-source-meta-tags {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-.visor-office-notice-card {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.02) 100%);
-    border: 1px solid rgba(99, 102, 241, 0.25);
-    border-radius: 8px;
-    padding: 16px 18px;
-    text-align: center;
-    margin: 12px 0;
-}
-
-.visor-office-title {
-    font-weight: 600;
-    font-size: 0.95rem;
-    margin-bottom: 6px;
-    word-break: break-all;
-    color: inherit;
-}
-
-.visor-office-desc {
+.empty-state-subtitle {
     font-size: 0.82rem;
-    opacity: 0.8;
-    line-height: 1.45;
+    opacity: 0.75;
 }
 
-/* ==========================================================================
-   Estilos de Navegacion Lateral (Sidebar Navigation Cards)
-   ========================================================================== */
+/* 6. Panel Lateral (Sidebar) y Navegacion como Botones */
+[data-testid="stSidebar"] {
+    border-right: 1px solid rgba(128, 128, 128, 0.15) !important;
+}
+
 [data-testid="stSidebar"] div[data-testid="stRadio"] > div[role="radiogroup"] {
     gap: 5px !important;
 }
@@ -1486,15 +274,36 @@ div[data-testid="stPills"] button[data-checked="true"] {
     box-shadow: 0 1px 3px rgba(99, 102, 241, 0.12);
 }
 
-/* ==========================================================================
-   Pestañas como Botones estilo Sidebar (Tabs as Sidebar-Style Buttons)
-   ========================================================================== */
+.sidebar-format-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.sidebar-format-tag {
+    font-size: 0.70rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(128, 128, 128, 0.08);
+    border: 1px solid rgba(128, 128, 128, 0.18);
+    opacity: 0.8;
+}
+
+.sidebar-footer {
+    padding: 10px 0;
+    border-top: 1px solid rgba(128, 128, 128, 0.15);
+    margin-top: 12px;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+/* 7. Pestanas como Botones estilo Sidebar (Tabs as Buttons) */
 div[data-testid="stTabs"] {
     margin-top: 4px;
     margin-bottom: 12px;
 }
 
-/* Contenedor de la lista de pestañas */
 div[data-testid="stTabs"] [role="tablist"],
 div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
     display: flex !important;
@@ -1505,7 +314,6 @@ div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
     align-items: center !important;
 }
 
-/* Ocultar la línea indicadora por defecto (roja) de Streamlit / React-Aria */
 div[data-testid="stTabs"] .react-aria-SelectionIndicator,
 div[data-testid="stTabs"] div[data-baseweb="tab-highlight"],
 div[data-testid="stTabs"] div[data-baseweb="tab-border"] {
@@ -1515,7 +323,6 @@ div[data-testid="stTabs"] div[data-baseweb="tab-border"] {
     width: 0 !important;
 }
 
-/* Cada pestaña individual con aspecto de botón de la sidebar */
 div[data-testid="stTabs"] [data-testid="stTab"],
 div[data-testid="stTabs"] [role="tab"],
 div[data-testid="stTabs"] button[data-baseweb="tab"] {
@@ -1539,7 +346,6 @@ div[data-testid="stTabs"] button[data-baseweb="tab"] {
     box-shadow: none !important;
 }
 
-/* Hover: idéntico al hover de los botones de la sidebar */
 div[data-testid="stTabs"] [data-testid="stTab"]:hover,
 div[data-testid="stTabs"] [data-testid="stTab"][data-hovered],
 div[data-testid="stTabs"] [role="tab"]:hover,
@@ -1551,7 +357,6 @@ div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
     box-shadow: 0 2px 5px rgba(99, 102, 241, 0.12) !important;
 }
 
-/* Activo / Seleccionado: idéntico al seleccionado de la sidebar (fondo Indigo tenue + borde Indigo brillante) */
 div[data-testid="stTabs"] [data-testid="stTab"][data-selected],
 div[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"],
 div[data-testid="stTabs"] [role="tab"][aria-selected="true"],
@@ -1564,7 +369,6 @@ div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
     box-shadow: 0 1px 4px rgba(99, 102, 241, 0.22) !important;
 }
 
-/* Forzar color de texto en hijos para sobreescribir el rojo primario de Streamlit */
 div[data-testid="stTabs"] [data-testid="stTab"][data-selected] *,
 div[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"] * {
     color: #6366F1 !important;
@@ -1575,7 +379,7 @@ div[data-testid="stTabs"] [data-testid="stTab"]:hover * {
     color: #6366F1 !important;
 }
 
-/* Soporte para Segmented Control y Pills */
+/* 8. Segmented Control & Pills */
 div[data-testid="stSegmentedControl"] button,
 div[data-testid="stPills"] button {
     border-radius: 6px !important;
@@ -1604,9 +408,7 @@ div[data-testid="stPills"] button[data-checked="true"] {
     box-shadow: 0 1px 4px rgba(99, 102, 241, 0.22) !important;
 }
 
-/* ==========================================================================
-   Botones Primarios estilo Índigo Corporativo (Sobreescribe rojo por defecto)
-   ========================================================================== */
+/* 9. Botones Primarios y Generales */
 button[kind="primary"],
 div[data-testid="stButton"] button[kind="primary"],
 button[data-testid="baseButton-primary"],
@@ -1635,3 +437,250 @@ button[kind="primary"] * {
     color: #FFFFFF !important;
 }
 
+.stButton > button:not([kind="primary"]),
+.stDownloadButton > button {
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    transition: all 0.15s ease !important;
+}
+
+/* 10. Expanders Corporativos */
+[data-testid="stExpander"] {
+    border: 1px solid rgba(99, 102, 241, 0.25) !important;
+    border-radius: 8px !important;
+    background: rgba(128, 128, 128, 0.03) !important;
+    margin-bottom: 8px !important;
+}
+
+[data-testid="stExpander"] summary {
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    padding: 6px 10px !important;
+    transition: color 0.15s ease, background 0.15s ease !important;
+}
+
+[data-testid="stExpander"] summary:hover {
+    color: #6366F1 !important;
+    background: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* 11. Tablas y DataFrames */
+div[data-testid="stDataFrame"] {
+    border: 1px solid rgba(128, 128, 128, 0.2) !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+}
+
+/* 12. Comparador Diff Lado a Lado (Split View) */
+.diff-container {
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 8px 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+}
+
+.diff-stats-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: rgba(128, 128, 128, 0.06);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+    font-size: 0.76rem;
+}
+
+.diff-stat-group {
+    display: flex;
+    gap: 8px;
+}
+
+.diff-header-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: rgba(128, 128, 128, 0.08);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+    font-weight: 600;
+}
+
+.diff-header-col {
+    padding: 5px 10px;
+    text-align: center;
+    border-right: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.diff-header-col:last-child {
+    border-right: none;
+}
+
+.diff-body {
+    max-height: 480px;
+    overflow-y: auto;
+}
+
+.diff-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.08);
+}
+
+.diff-cell {
+    display: flex;
+    padding: 2px 6px;
+    border-right: 1px solid rgba(128, 128, 128, 0.12);
+    min-height: 22px;
+    line-height: 1.45;
+}
+
+.diff-cell:last-child {
+    border-right: none;
+}
+
+.diff-num {
+    width: 38px;
+    flex-shrink: 0;
+    text-align: right;
+    padding-right: 6px;
+    opacity: 0.45;
+    user-select: none;
+}
+
+.diff-text {
+    flex-grow: 1;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.diff-add {
+    background-color: rgba(16, 185, 129, 0.14) !important;
+    color: #10B981 !important;
+}
+
+.diff-del {
+    background-color: rgba(106, 57, 123, 0.16) !important;
+    color: rgb(106, 57, 123) !important;
+}
+
+/* 13. Timeline de Versiones */
+.version-timeline-container {
+    border-left: 2px solid rgba(99, 102, 241, 0.3);
+    margin-left: 8px;
+    padding-left: 14px;
+    margin-top: 10px;
+}
+
+.version-timeline-card {
+    background: rgba(128, 128, 128, 0.04);
+    border: 1px solid rgba(128, 128, 128, 0.15);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+/* 14. Visor Multimodal y Metadata */
+.visor-source-meta-bar {
+    background: rgba(128, 128, 128, 0.04);
+    border: 1px solid rgba(128, 128, 128, 0.15);
+    border-radius: 6px;
+    padding: 7px 12px;
+    margin-bottom: 10px;
+    font-size: 0.80rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.visor-source-meta-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.visor-source-meta-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.visor-office-notice-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.02) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 8px;
+    padding: 16px 18px;
+    text-align: center;
+    margin: 12px 0;
+}
+
+.visor-office-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+}
+
+.visor-office-desc {
+    font-size: 0.82rem;
+    opacity: 0.8;
+    line-height: 1.45;
+}
+
+/* 15. Lector Zen Studio (TOC) */
+.zen-reader-canvas {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px 20px;
+    line-height: 1.7;
+    font-size: 0.94rem;
+}
+
+.zen-toc-card {
+    background: rgba(128, 128, 128, 0.04);
+    border: 1px solid rgba(128, 128, 128, 0.15);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.zen-toc-item {
+    padding: 4px 8px;
+    font-size: 0.80rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.zen-toc-item:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366F1;
+}
+
+.zen-stats-card {
+    display: flex;
+    gap: 12px;
+    padding: 6px 10px;
+    font-size: 0.76rem;
+    opacity: 0.75;
+}
+
+/* 16. Scrollbars Discretas */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.25);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.5);
+}

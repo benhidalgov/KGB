@@ -281,70 +281,8 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     """Renderiza el entorno inmersivo Zen Studio con TOC interactivo, buscador interno, personalización de lectura y visor multimodal."""
     st.markdown("""
     <style>
-    section[data-testid="stSidebar"] {
-        display: none !important;
-    }
-    header[data-testid="stHeader"] {
-        display: none !important;
-    }
-    [data-testid="stMainBlockContainer"] {
-        max-width: 98vw !important;
-        padding: 0.6rem 1.4rem !important;
-    }
-    .zen-top-bar {
-        background: rgba(15, 23, 42, 0.92);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(99, 102, 241, 0.35);
-        border-radius: 8px;
-        padding: 10px 18px;
-        margin-bottom: 14px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-    }
-    .zen-toc-card {
-        background: rgba(128, 128, 128, 0.04);
-        border: 1px solid rgba(128, 128, 128, 0.18);
-        border-radius: 8px;
-        padding: 10px 12px;
-        margin-bottom: 12px;
-        max-height: 55vh;
-        overflow-y: auto;
-    }
-    .zen-toc-item {
-        padding: 4px 6px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        cursor: pointer;
-        transition: background 0.15s;
-        margin-bottom: 2px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .zen-toc-item:hover {
-        background: rgba(99, 102, 241, 0.15);
-        color: #6366F1;
-    }
-    .zen-stats-card {
-        background: rgba(99, 102, 241, 0.05);
-        border: 1px solid rgba(99, 102, 241, 0.2);
-        border-radius: 8px;
-        padding: 10px 14px;
-        font-size: 0.78rem;
-        margin-top: 10px;
-    }
-    .zen-reader-canvas {
-        background: var(--zen-bg, rgba(128,128,128,0.03));
-        color: var(--zen-fg, inherit);
-        border: 1px solid rgba(128, 128, 128, 0.18);
-        border-radius: 8px;
-        padding: 24px 32px;
-        min-height: 75vh;
-        font-size: var(--zen-size, 15px);
-        line-height: 1.75;
-    }
+    section[data-testid="stSidebar"], header[data-testid="stHeader"] { display: none !important; }
+    [data-testid="stMainBlockContainer"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }
     </style>
     """, unsafe_allow_html=True)
 

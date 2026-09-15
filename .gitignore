@@ -16,6 +16,7 @@ data/docs/*
 data/mantenimientos.csv
 data/ingestion_manifest.json
 !data/categorias.json
+!data/MANUAL_DE_OPERACIONES.md
 
 # Cache de Python y bytecode
 __pycache__/

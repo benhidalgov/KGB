@@ -43,25 +43,39 @@ from core.configuracion import DOCS_DIR, HISTORY_DIR
 from excel_cleaner import procesar_excel_limpio
 
 
+def _renderizar_boton_descarga(doc_name: str, version: int, contenido_md: str = "", snapshot_excel: str | None = None, key: str = ""):
+    """Helper unificado para renderizado de botones de descarga de archivos Markdown y Excel."""
+    es_x = doc_name.lower().endswith(('.xlsx', '.xls'))
+    if es_x:
+        if snapshot_excel:
+            b_xl = obtener_bytes_snapshot(doc_name, snapshot_excel)
+        else:
+            p = os.path.join(DOCS_DIR, doc_name)
+            b_xl = open(p, "rb").read() if os.path.exists(p) else None
+        if b_xl:
+            st.download_button(
+                label=f"Descargar Versión v{version} (.xlsx)",
+                data=b_xl,
+                file_name=sanitizar_nombre_descarga(doc_name, version, ".xlsx"),
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                width="stretch",
+                key=key
+            )
+    else:
+        st.download_button(
+            label=f"Descargar Versión v{version} (.md)",
+            data=contenido_md.encode("utf-8"),
+            file_name=sanitizar_nombre_descarga(doc_name, version, ".md"),
+            mime="text/markdown",
+            width="stretch",
+            key=key
+        )
+
+
 def renderizar_pestana_documentacion(doc_store: dict):
     """Renderiza la pestaña completa de Documentación Técnica estructurada en 3 subpestañas."""
     st.subheader("Repositorio de Documentación Técnica y Diagramas")
-    st.caption("Visor interactivo Lado a Lado, control de cambios, editor de contenido y gestión taxonómica.")
-
-    st.markdown("""
-    <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.22);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <span class="badge-info" style="font-size:0.68rem;padding:2px 6px;">[MÓDULO]</span>
-            <b style="color:#6366F1;font-size:0.9rem;">Repositorio Documental, Versionado y Clasificación Taxonómica</b>
-        </div>
-        <div style="opacity:0.9;line-height:1.45;margin-bottom:6px;">
-            <b>¿Qué hace?</b> Centraliza manuales, procedimientos, diagramas de arquitectura y hojas de cálculo con versionado inmutable (SHA-256), auditoría obligatoria de cambios, diff entre versiones, rollback y etiquetado masivo.
-        </div>
-        <div style="opacity:0.82;line-height:1.4;font-size:0.8rem;">
-            <b>¿Cómo se usa?</b> Utilice la subpestaña <i>Visor</i> para consultar y comparar versiones, <i>Editar Documento</i> para modificar Markdown o celdas de Excel con firma de autor, y <i>Clasificación en Lote</i> para asignar categorías masivas con sugerencias heurísticas.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.caption("Visor interactivo Lado a Lado, control de cambios inmutable (SHA-256), editor activo y gestión taxonómica.")
 
     if not doc_store:
         st.warning("No hay documentos indexados en el repositorio.")
@@ -174,12 +188,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
             st.markdown("---")
             col_dla, col_dli = st.columns([1.5, 2.5])
             with col_dla:
-                es_x = doc_sel.lower().endswith(('.xlsx', '.xls')) and os.path.exists(os.path.join(DOCS_DIR, doc_sel))
-                if es_x:
-                    with open(os.path.join(DOCS_DIR, doc_sel), "rb") as fx:
-                        st.download_button(label=f"Descargar Versión Activa v{u_ver} (.xlsx)", data=fx.read(), file_name=sanitizar_nombre_descarga(doc_sel, u_ver, ".xlsx"), mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch", key=f"dl_act_x_{doc_sel}")
-                else:
-                    st.download_button(label=f"Descargar Versión Activa v{u_ver} (.md)", data=doc_cont.encode("utf-8"), file_name=sanitizar_nombre_descarga(doc_sel, u_ver, ".md"), mime="text/markdown", width="stretch", key=f"dl_act_m_{doc_sel}")
+                _renderizar_boton_descarga(doc_sel, u_ver, doc_cont, key=f"dl_act_{doc_sel}")
             with col_dli:
                 st.caption(f"Descarga la versión activa actual (**v{u_ver}**).")
 
@@ -198,12 +207,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
                 col_hv1, col_hv2 = st.columns(2)
                 with col_hv1:
-                    if ex_snap:
-                        b_xl = obtener_bytes_snapshot(doc_sel, ex_snap)
-                        if b_xl:
-                            st.download_button(f"Descargar v{it_sel['version']} (.xlsx)", b_xl, sanitizar_nombre_descarga(doc_sel, it_sel['version'], ".xlsx"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch", key=f"btn_dl_x_h_{doc_sel}_{it_sel['version']}")
-                    else:
-                        st.download_button(f"Descargar v{it_sel['version']} (.md)", c_snap.encode("utf-8"), sanitizar_nombre_descarga(doc_sel, it_sel['version'], ".md"), "text/markdown", width="stretch", key=f"btn_dl_m_h_{doc_sel}_{it_sel['version']}")
+                    _renderizar_boton_descarga(doc_sel, it_sel["version"], c_snap, ex_snap, key=f"btn_dl_h_{doc_sel}_{it_sel['version']}")
                 with col_hv2:
                     st.caption(f"Snapshot generado el **{it_sel['timestamp']}** por **{it_sel['autor']}**.")
 
