@@ -110,7 +110,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
 
                 if not cats_disp:
                     st.caption("No existen categorías registradas en el catálogo. Ingrese la categoría para clasificar el/los documento(s):")
-                    nueva_cat_input = st.text_input("Nueva Categoría (*):", placeholder="ej: Redes, Base de Datos, Servidores, Contingencias...", key=f"sb_nueva_cat_ini_{st.session_state.uploader_key_ver}")
+                    nueva_cat_input = st.text_input("Nueva Categoría (*):", key=f"sb_nueva_cat_ini_{st.session_state.uploader_key_ver}")
                     if nueva_cat_input.strip():
                         cat_seleccionadas = [nueva_cat_input.strip()]
                 else:
@@ -118,7 +118,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                     if modo_cat == "Usar Existente":
                         cat_seleccionadas = st.multiselect("Categoría(s) Existente(s) (*):", options=cats_disp, key=f"sb_ms_cat_exist_{st.session_state.uploader_key_ver}")
                     else:
-                        nueva_cat_input = st.text_input("Nombre de Nueva Categoría (*):", placeholder="ej: Almacenamiento SAN, VPN, Seguridad...", key=f"sb_nueva_cat_input_{st.session_state.uploader_key_ver}")
+                        nueva_cat_input = st.text_input("Nombre de Nueva Categoría (*):", key=f"sb_nueva_cat_input_{st.session_state.uploader_key_ver}")
                         if nueva_cat_input.strip():
                             cat_seleccionadas = [nueva_cat_input.strip()]
 
@@ -208,11 +208,11 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
 
                 st.markdown("<b style='font-size:0.75rem;'>Guardar o Actualizar Clave:</b>", unsafe_allow_html=True)
                 sel_k = st.selectbox("Seleccionar Llave:", [s["clave"] for s in sec_list] + ["OTRA_CLAVE_PERSONALIZADA"], key="sb_vault_sel_key", label_visibility="collapsed")
-                k_final = st.text_input("Nombre de la Clave:", value="", placeholder="EJ: MI_API_KEY", key="sb_vault_custom_key") if sel_k == "OTRA_CLAVE_PERSONALIZADA" else sel_k
+                k_final = st.text_input("Nombre de la Clave:", value="", key="sb_vault_custom_key") if sel_k == "OTRA_CLAVE_PERSONALIZADA" else sel_k
                 if "vault_input_version" not in st.session_state:
                     st.session_state.vault_input_version = 0
 
-                v_val = st.text_input("Valor Seguro:", type="password", placeholder="Pegue la clave secreta...", key=f"sb_vault_val_{st.session_state.vault_input_version}")
+                v_val = st.text_input("Valor Seguro:", type="password", key=f"sb_vault_val_{st.session_state.vault_input_version}")
                 col_vs, col_vd = st.columns([2, 1])
                 with col_vs:
                     if st.button("Guardar Llave", width="stretch", type="primary", key="sb_btn_guardar_key"):

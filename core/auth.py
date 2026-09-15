@@ -173,8 +173,8 @@ def renderizar_pantalla_login():
             """, unsafe_allow_html=True)
 
             with st.form(key="form_corporate_login", clear_on_submit=False):
-                username_in = st.text_input("Usuario:", placeholder="admin, operador, auditor")
-                password_in = st.text_input("Contraseña:", type="password", placeholder="Ingrese contraseña")
+                username_in = st.text_input("Usuario:")
+                password_in = st.text_input("Contraseña:", type="password")
                 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
                 btn_login = st.form_submit_button("Iniciar Sesión", type="primary", width="stretch")
 

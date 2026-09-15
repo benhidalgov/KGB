@@ -280,9 +280,9 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 with col_es2:
                     col_ae1, col_ae2 = st.columns(2)
                     with col_ae1:
-                        aut_e = st.text_input("Editor (*)", placeholder="Juan Pérez", key=f"author_input_grid_{doc_act_edit}")
+                        aut_e = st.text_input("Editor (*)", key=f"author_input_grid_{doc_act_edit}")
                     with col_ae2:
-                        mot_e = st.text_input("Motivo (*)", placeholder="Actualización de IP", key=f"motive_input_grid_{doc_act_edit}")
+                        mot_e = st.text_input("Motivo (*)", key=f"motive_input_grid_{doc_act_edit}")
 
                 tags_actuales_xl = obtener_tags_documento(doc_act_edit)
                 cats_disp_xl = obtener_categorias_disponibles()
@@ -290,7 +290,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 with col_tx1:
                     tags_xl_sel = st.multiselect("Categorías Asignadas:", options=sorted(list(set(cats_disp_xl + tags_actuales_xl))), default=tags_actuales_xl, key=f"ms_tags_edit_xl_{doc_act_edit}")
                 with col_tx2:
-                    nueva_cat_xl = st.text_input("Agregar Nueva Categoría:", placeholder="ej: CMDB, Inventario...", key=f"input_new_cat_edit_xl_{doc_act_edit}")
+                    nueva_cat_xl = st.text_input("Agregar Nueva Categoría:", key=f"input_new_cat_edit_xl_{doc_act_edit}")
 
                 df_e = cargar_hoja_excel_dataframe(p_xl, hoja_e, mt_xl)
                 df_mod = st.data_editor(df_e, width="stretch", num_rows="dynamic", height=450, key=f"grid_editor_{doc_act_edit}_{hoja_e}")
@@ -310,9 +310,9 @@ def renderizar_pestana_documentacion(doc_store: dict):
             else:
                 col_e1, col_e2 = st.columns([1, 2])
                 with col_e1:
-                    aut_e = st.text_input("Editor (*)", placeholder="Juan Pérez", key=f"author_input_{doc_act_edit}")
+                    aut_e = st.text_input("Editor (*)", key=f"author_input_{doc_act_edit}")
                 with col_e2:
-                    mot_e = st.text_input("Motivo (*)", placeholder="Actualización técnica", key=f"motive_input_{doc_act_edit}")
+                    mot_e = st.text_input("Motivo (*)", key=f"motive_input_{doc_act_edit}")
 
                 tags_actuales_doc = obtener_tags_documento(doc_act_edit)
                 cats_disp_e = obtener_categorias_disponibles()
@@ -320,7 +320,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 with col_te1:
                     tags_e_sel = st.multiselect("Categorías Asignadas:", options=sorted(list(set(cats_disp_e + tags_actuales_doc))), default=tags_actuales_doc, key=f"ms_tags_edit_{doc_act_edit}")
                 with col_te2:
-                    nueva_cat_e = st.text_input("Agregar Nueva Categoría:", placeholder="ej: Contingencias, Networking...", key=f"input_new_cat_edit_{doc_act_edit}")
+                    nueva_cat_e = st.text_input("Agregar Nueva Categoría:", key=f"input_new_cat_edit_{doc_act_edit}")
 
                 val_txt = doc_cont_e[:100_000] if len(doc_cont_e) > 100_000 else doc_cont_e
                 txt_edit = st.text_area("Contenido (Markdown)", value=val_txt, height=450, key=f"textarea_edit_{doc_act_edit}")
@@ -421,7 +421,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
             with col_ba2:
                 nueva_cat_batch = ""
                 if cat_dest_sel.startswith("[NUEVA]"):
-                    nueva_cat_batch = st.text_input("Nombre de nueva categoría (*):", placeholder="ej: Seguridad Perimetral", key="batch_new_cat_input")
+                    nueva_cat_batch = st.text_input("Nombre de nueva categoría (*):", key="batch_new_cat_input")
                 else:
                     st.caption("Los documentos seleccionados recibirán la categoría seleccionada.")
 

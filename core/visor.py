@@ -88,8 +88,8 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
 
     col_e1, col_e2 = st.columns([1.2, 2])
     with col_e1:
-        autor_caption = st.text_input("Editor / Técnico Responsable (*)", placeholder="Ej: Juan Pérez / DevOps", key=f"input_author_caption_{doc_name}_{key_suffix}")
-        motivo_caption = st.text_input("Motivo de Edición", placeholder="Ej: Actualización de arquitectura de red", key=f"input_motive_caption_{doc_name}_{key_suffix}")
+        autor_caption = st.text_input("Editor / Técnico Responsable (*)", key=f"input_author_caption_{doc_name}_{key_suffix}")
+        motivo_caption = st.text_input("Motivo de Edición", key=f"input_motive_caption_{doc_name}_{key_suffix}")
     with col_e2:
         nuevo_caption_input = st.text_area("Descripción Técnica del Diagrama (Pie de Imagen / Caption) (*)", value=caption_actual, height=108, key=f"textarea_caption_{doc_name}_{key_suffix}")
 
@@ -298,7 +298,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
         """, unsafe_allow_html=True)
 
     with col_zt_search:
-        zen_search_query = st.text_input("Buscar en doc:", placeholder="Resaltar término en documento...", label_visibility="collapsed", key="zen_search_in_doc")
+        zen_search_query = st.text_input("Buscar en doc:", label_visibility="collapsed", key="zen_search_in_doc")
 
     with col_zt_theme:
         col_zt_th1, col_zt_th2 = st.columns(2)
