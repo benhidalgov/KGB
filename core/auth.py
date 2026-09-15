@@ -161,20 +161,49 @@ def renderizar_pantalla_login():
     </div>
     """, unsafe_allow_html=True)
 
+    st.session_state["_pwd_admin"] = _obtener_password_maestra("admin") or "admin2026"
+    st.session_state["_pwd_operador"] = _obtener_password_maestra("operador") or "operador2026"
+    st.session_state["_pwd_auditor"] = _obtener_password_maestra("auditor") or "auditor2026"
+
+    if "login_username_val" not in st.session_state:
+        st.session_state["login_username_val"] = ""
+    if "login_password_val" not in st.session_state:
+        st.session_state["login_password_val"] = ""
+
     col_login, col_manual = st.columns([1.05, 1.55], gap="large")
     with col_login:
         with st.container(border=True):
             st.markdown("""
-            <div style="margin-bottom: 12px;">
+            <div style="margin-bottom: 10px;">
                 <span class="badge-info">[ACCESO]</span>
                 <div style="font-size: 1.05rem; font-weight: 700; margin-top: 8px;">Inicio de sesión</div>
                 <div style="font-size: 0.82rem; opacity: 0.8;">Credenciales corporativas · RBAC</div>
             </div>
             """, unsafe_allow_html=True)
 
+            st.markdown("<div style='font-size:0.75rem;opacity:0.75;margin-bottom:4px;'>Autocompletar usuario de prueba:</div>", unsafe_allow_html=True)
+            col_q1, col_q2, col_q3 = st.columns(3, gap="small")
+            with col_q1:
+                if st.button("admin", key="btn_fill_admin", width="stretch", help="Rol: Administrador"):
+                    st.session_state["login_username_val"] = "admin"
+                    st.session_state["login_password_val"] = st.session_state["_pwd_admin"]
+                    st.rerun()
+            with col_q2:
+                if st.button("operador", key="btn_fill_operador", width="stretch", help="Rol: Operador"):
+                    st.session_state["login_username_val"] = "operador"
+                    st.session_state["login_password_val"] = st.session_state["_pwd_operador"]
+                    st.rerun()
+            with col_q3:
+                if st.button("auditor", key="btn_fill_auditor", width="stretch", help="Rol: Auditor"):
+                    st.session_state["login_username_val"] = "auditor"
+                    st.session_state["login_password_val"] = st.session_state["_pwd_auditor"]
+                    st.rerun()
+
+            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+
             with st.form(key="form_corporate_login", clear_on_submit=False):
-                username_in = st.text_input("Usuario:")
-                password_in = st.text_input("Contraseña:", type="password")
+                username_in = st.text_input("Usuario:", key="login_username_val")
+                password_in = st.text_input("Contraseña:", type="password", key="login_password_val")
                 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
                 btn_login = st.form_submit_button("Iniciar Sesión", type="primary", width="stretch")
 

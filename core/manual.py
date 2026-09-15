@@ -96,14 +96,37 @@ def renderizar_manual_lanzamiento():
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("Términos de Prueba Inmediata en Consola", expanded=False):
+    with st.expander("Autocompletar Cuentas de Prueba (RBAC)", expanded=True):
         st.markdown("""
-        * **Buscar Balanceador:** `BALANCER001`
-        * **Buscar por Dirección IP:** `10.24.0.125`
-        * **Buscar Seguridad / Tokens:** `JWT`
-        * **Consultar Contingencia:** `Failover Redis`
-        * **Buscar por Serial Físico:** `SN-8842-A`
-        """)
+        <div style="font-size: 0.82rem; opacity: 0.88; margin-bottom: 8px;">
+            Seleccione una cuenta corporativa para autocompletar usuario y contraseña en el formulario de acceso:
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_u1, col_u2, col_u3 = st.columns(3, gap="small")
+        with col_u1:
+            if st.button("admin", key="btn_quick_admin", width="stretch", help="Administrador: Control total y Bóveda"):
+                st.session_state["login_username_val"] = "admin"
+                st.session_state["login_password_val"] = st.session_state.get("_pwd_admin", "admin2026")
+                st.rerun()
+        with col_u2:
+            if st.button("operador", key="btn_quick_operador", width="stretch", help="Operador: Consultas, RAG y Visor"):
+                st.session_state["login_username_val"] = "operador"
+                st.session_state["login_password_val"] = st.session_state.get("_pwd_operador", "operador2026")
+                st.rerun()
+        with col_u3:
+            if st.button("auditor", key="btn_quick_auditor", width="stretch", help="Auditor: Solo lectura y Auditoría"):
+                st.session_state["login_username_val"] = "auditor"
+                st.session_state["login_password_val"] = st.session_state.get("_pwd_auditor", "auditor2026")
+                st.rerun()
+
+        st.markdown("""
+        <div style="font-size: 0.74rem; opacity: 0.72; margin-top: 8px; line-height: 1.45;">
+            * <b>admin:</b> Acceso total a Bóveda <code>[VAULT]</code>, Ingesta Batch, Edición y Rollbacks.<br>
+            * <b>operador:</b> Búsqueda en DuckDB, Asistente RAG, Visor Lado a Lado y Edición.<br>
+            * <b>auditor:</b> Modo solo lectura (verificación de CMDB y bitácora de auditoría).
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def renderizar_manual_usuario():
