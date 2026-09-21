@@ -12,7 +12,7 @@ Este documento contiene el registro de avances completados y la planificación t
   - Parámetro CLI `--origen` para apuntar a carpetas locales o unidades de red compartidas (`Z:\` o rutas UNC).
 
 - [x] **Paso 2: Ingesta de Diagramas, Assets y Visor Lado a Lado (*Side-by-Side*)** *(COMPLETADO)*
-  - Soporte de extensiones `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg` en `batch_ingest.py` y subida web.
+  - Soporte de extensiones `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg` en subida web e ingesta ZIP.
   - Almacenamiento organizado de activos gráficos en `data/docs/assets/` y resguardo inmutable de archivos binarios originales en `data/originals/`.
   - Generación de fichas técnicas Markdown asociadas con firmas criptográficas **SHA-256**.
   - Visor Lado a Lado con renderizado adaptativo (Imágenes nativas en alta resolución, PDFs embebidos en iframe Base64, libros Excel interactivos con selector de hojas y documentos Word/PPTX).
@@ -52,7 +52,7 @@ Este documento contiene el registro de avances completados y la planificación t
 - [x] **Paso 8: Normalizador Integral de Nombres y Estandarización de Archivos** *(COMPLETADO)*
   - Sanitización automática de nombres de archivo a `snake_case` seguro en disco (`normalizar_nombre_archivo`), eliminando acentos, caracteres conflictivos y dobles extensiones.
   - Formateo corporativo en interfaz (`normalizar_titulo_display`) respetando acrónimos técnicos (`CMDB`, `SAN`, `WSO2`, `JWT`, `IP`, `HPE`, `PureStorage`, `VMware`, etc.).
-  - Integración transversal en panel lateral de carga, ingesta masiva (`batch_ingest.py`), explorador documental, selector de documentos (`format_func`) y tarjetas de búsqueda.
+  - Integración transversal en panel lateral de carga, explorador documental, selector de documentos (`format_func`) y tarjetas de búsqueda.
 
 - [x] **Paso 9: Renderizado de Imágenes en Vista Formateada y Extracción de Medios DOCX** *(COMPLETADO)*
   - Activación de `keep_data_uris=True` en Microsoft MarkItDown para preservar imágenes completas de documentos Word (.docx).

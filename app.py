@@ -5,8 +5,11 @@ Orquestador central con navegación lateral desacoplada para maximizar el espaci
 import os
 import sys
 import importlib
+import logging
 import pandas as pd
 import streamlit as st
+
+logger = logging.getLogger("infra_copilot.app")
 
 # Recarga preventiva de submódulos 'core' para servidores Streamlit persistentes
 for _mod_k in list(sys.modules.keys()):
@@ -61,9 +64,31 @@ def obtener_dataframe_mantenimientos(mtime: float) -> pd.DataFrame:
 # -------------------------------------------------------------
 # 1. CONFIGURACIÓN Y ESTILOS
 # -------------------------------------------------------------
+@st.cache_resource(show_spinner=False)
+def _aplicar_migraciones_una_vez() -> list:
+    """Aplica las migraciones de esquema una sola vez por proceso."""
+    from core.db import es_postgres_disponible, obtener_engine
+    from core.migraciones import aplicar_migraciones
+    from core.configuracion import ES_PRODUCCION
+
+    if not es_postgres_disponible():
+        return []
+    engine = obtener_engine()
+    if engine is None:
+        return []
+    try:
+        return aplicar_migraciones(engine)
+    except Exception as e:
+        logger.error(f"[MIGRACIONES] Error al aplicar migraciones: {e}")
+        if ES_PRODUCCION:
+            raise
+        return []
+
+
 st.set_page_config(page_title="Consola de Infraestructura y Operaciones", layout="wide", initial_sidebar_state="expanded")
 st.markdown(cargar_estilos_css(), unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
+_aplicar_migraciones_una_vez()
 
 # 1.1 Vista Directa del Manual en Nueva Pestaña del Navegador (?view=manual)
 if st.query_params.get("view") == "manual" or st.query_params.get("manual") == "1":

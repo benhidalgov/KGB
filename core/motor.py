@@ -1,6 +1,8 @@
 import os
 import re
 import html
+import hashlib
+import threading
 import unicodedata
 import duckdb
 import pandas as pd
@@ -12,6 +14,7 @@ from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
 
 _DUCKDB_CON = None
 _DUCKDB_LAST_MTIME = -1.0
+_DUCKDB_LOCK = threading.Lock()
 _DOC_STORE_NORM_CACHE = {}
 _QUERY_RESPONSE_CACHE = {}
 _MAX_CACHE_ENTRIES = 128
@@ -26,38 +29,44 @@ def limpiar_cache_consultas():
 
 
 def _obtener_conexion_duckdb():
-    """Mantiene una conexión y tabla en memoria persistente en DuckDB con recarga automática desde PostgreSQL o CSV."""
+    """Carga la tabla en memoria y devuelve un cursor independiente.
+
+    DuckDB no permite compartir una misma conexión entre hilos; cada consulta
+    usa su propio cursor sobre la misma base en memoria. La recarga se protege
+    con un lock para que dos sesiones no reconstruyan la tabla a la vez.
+    """
     global _DUCKDB_CON, _DUCKDB_LAST_MTIME
     current_mtime = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
-    if _DUCKDB_CON is None or current_mtime != _DUCKDB_LAST_MTIME:
-        _DUCKDB_CON = duckdb.connect(database=':memory:')
-        cargado = False
+    with _DUCKDB_LOCK:
+        if _DUCKDB_CON is None or current_mtime != _DUCKDB_LAST_MTIME:
+            _DUCKDB_CON = duckdb.connect(database=':memory:')
+            cargado = False
 
-        # 1. Intentar cargar desde PostgreSQL si está disponible
-        if es_postgres_disponible():
-            try:
-                df_pg = obtener_mantenimientos_pg_df()
-                if not df_pg.empty:
-                    _DUCKDB_CON.register("df_pg_temp", df_pg)
-                    _DUCKDB_CON.execute("CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM df_pg_temp")
-                    cargado = True
-            except Exception:
-                cargado = False
+            # 1. Intentar cargar desde PostgreSQL si está disponible
+            if es_postgres_disponible():
+                try:
+                    df_pg = obtener_mantenimientos_pg_df()
+                    if not df_pg.empty:
+                        _DUCKDB_CON.register("df_pg_temp", df_pg)
+                        _DUCKDB_CON.execute("CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM df_pg_temp")
+                        cargado = True
+                except Exception:
+                    cargado = False
 
-        # 2. Fallback a archivo CSV local
-        if not cargado and os.path.exists(CSV_PATH):
-            _DUCKDB_CON.execute(f"CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM read_csv_auto('{CSV_PATH}')")
-        elif not cargado:
-            _DUCKDB_CON.execute("""
-                CREATE OR REPLACE TABLE mantenimientos (
-                    servidor_id VARCHAR, numero_serie VARCHAR, ip VARCHAR, vcloud_vm VARCHAR,
-                    nivel_arquitectura VARCHAR, componente VARCHAR, fecha VARCHAR,
-                    tipo_mantenimiento VARCHAR, tecnico VARCHAR, descripcion VARCHAR,
-                    estado VARCHAR, nagios_check VARCHAR
-                )
-            """)
-        _DUCKDB_LAST_MTIME = current_mtime
-    return _DUCKDB_CON
+            # 2. Fallback a archivo CSV local
+            if not cargado and os.path.exists(CSV_PATH):
+                _DUCKDB_CON.execute(f"CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM read_csv_auto('{CSV_PATH}')")
+            elif not cargado:
+                _DUCKDB_CON.execute("""
+                    CREATE OR REPLACE TABLE mantenimientos (
+                        servidor_id VARCHAR, numero_serie VARCHAR, ip VARCHAR, vcloud_vm VARCHAR,
+                        nivel_arquitectura VARCHAR, componente VARCHAR, fecha VARCHAR,
+                        tipo_mantenimiento VARCHAR, tecnico VARCHAR, descripcion VARCHAR,
+                        estado VARCHAR, nagios_check VARCHAR
+                    )
+                """)
+            _DUCKDB_LAST_MTIME = current_mtime
+        return _DUCKDB_CON.cursor()
 
 
 def normalizar_texto(texto: str) -> str:
@@ -65,6 +74,26 @@ def normalizar_texto(texto: str) -> str:
     if not texto:
         return ""
     return unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('utf-8').lower()
+
+
+def _firma_documental(doc_store: dict) -> str:
+    """Huella barata del corpus (nombres y tamaños) para invalidar la caché de respuestas."""
+    h = hashlib.sha256()
+    for nombre in sorted(doc_store):
+        contenido = doc_store[nombre]
+        h.update(nombre.encode("utf-8"))
+        h.update(str(len(contenido)).encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
+def _clave_rol() -> str:
+    """Rol de la sesión activa. La caché de respuestas se segmenta por rol (frontera RBAC)."""
+    try:
+        import streamlit as st
+        usuario = st.session_state.get("usuario_actual") or {}
+        return str(usuario.get("rol", "-"))
+    except Exception:
+        return "-"
 
 
 def _obtener_texto_normalizado(doc_name: str, content: str) -> tuple[str, str]:
@@ -115,7 +144,9 @@ def buscar_en_documentos(query: str, doc_store: dict) -> list:
         return []
 
     resultados = []
-    for doc_name, content in doc_store.items():
+    # Iterar sobre una copia: el doc_store es compartido entre sesiones y otra
+    # sesión podría estar cargando o ingiriendo documentos en paralelo.
+    for doc_name, content in list(doc_store.items()):
         name_norm, content_norm = _obtener_texto_normalizado(doc_name, content)
         tags_d = obtener_tags_documento(doc_name)
         tags_norm = [normalizar_texto(t) for t in tags_d]
@@ -331,7 +362,7 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
     api_key_gemini = obtener_secreto("GEMINI_API_KEY", "")
     has_api_key = bool(api_key_gemini and api_key_gemini.strip())
 
-    cache_key = f"{normalizar_texto(prompt_limpio)}::{has_api_key}::{mtime_csv}::{len(doc_store)}"
+    cache_key = f"{normalizar_texto(prompt_limpio)}::{has_api_key}::{mtime_csv}::{_firma_documental(doc_store)}::{_clave_rol()}"
     if cache_key in _QUERY_RESPONSE_CACHE:
         return _QUERY_RESPONSE_CACHE[cache_key]
 

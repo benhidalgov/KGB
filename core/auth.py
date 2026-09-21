@@ -1,6 +1,8 @@
 """Modulo de Autenticacion, Sesiones y Control de Acceso Basado en Roles (RBAC)."""
 import os
 import json
+import time
+import hmac
 import hashlib
 from typing import Optional, Dict, Any
 import streamlit as st
@@ -8,11 +10,33 @@ from core.auditoria import registrar_evento_auditoria
 from core.manual import activar_manual_en_inicio, renderizar_manual_lanzamiento
 from core.db import es_postgres_disponible, obtener_usuarios_pg, actualizar_ultimo_login_pg
 
-from core.configuracion import USERS_PATH as AUTH_USERS_PATH
+from core.configuracion import USERS_PATH as AUTH_USERS_PATH, ES_PRODUCCION
 DEFAULT_SALT = "infra_console_security_salt_2026"
 
 _ROLES_MAESTROS = {"admin": "Administrador", "operador": "Operador", "auditor": "Auditor"}
 _NOMBRES_MAESTROS = {"admin": "Administrador Principal", "operador": "Operador de Infraestructura", "auditor": "Auditor de Seguridad"}
+
+# Limite de intentos fallidos por usuario (mitigacion en proceso).
+# ponytail: estado local del proceso; para bloqueo real entre varias instancias,
+# usar el proxy inverso o un almacen compartido. Se reinicia al reiniciar el contenedor.
+_INTENTOS_FALLIDOS: Dict[str, list] = {}
+_MAX_INTENTOS = 5
+_VENTANA_BLOQUEO_S = 60.0
+
+
+def _esta_bloqueado(usuario: str) -> bool:
+    ahora = time.time()
+    vigentes = [t for t in _INTENTOS_FALLIDOS.get(usuario, []) if ahora - t < _VENTANA_BLOQUEO_S]
+    _INTENTOS_FALLIDOS[usuario] = vigentes
+    return len(vigentes) >= _MAX_INTENTOS
+
+
+def _registrar_fallo(usuario: str):
+    _INTENTOS_FALLIDOS.setdefault(usuario, []).append(time.time())
+
+
+def _limpiar_fallos(usuario: str):
+    _INTENTOS_FALLIDOS.pop(usuario, None)
 
 
 def _obtener_password_maestra(usuario: str) -> str:
@@ -61,14 +85,18 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
         except Exception:
             pass
 
-    admin_pwd = _obtener_password_maestra("admin") or "admin2026"
-    operador_pwd = _obtener_password_maestra("operador") or "operador2026"
-    auditor_pwd = _obtener_password_maestra("auditor") or "auditor2026"
+    claves = {u: _obtener_password_maestra(u) for u in ("admin", "operador", "auditor")}
+    faltantes = [u for u, p in claves.items() if not p]
+    if faltantes:
+        if ES_PRODUCCION:
+            nombres = ", ".join(f"{u.upper()}_PASSWORD" for u in faltantes)
+            raise RuntimeError(f"Defina las variables maestras de acceso: {nombres} (ver .env.example).")
+        claves = {u: p or f"{u}2026" for u, p in claves.items()}
 
     usuarios_base = {
-        "admin": {"nombre": "Administrador Principal", "rol": "Administrador", "hash": generar_hash_password(admin_pwd), "activo": True},
-        "operador": {"nombre": "Operador de Infraestructura", "rol": "Operador", "hash": generar_hash_password(operador_pwd), "activo": True},
-        "auditor": {"nombre": "Auditor de Seguridad", "rol": "Auditor", "hash": generar_hash_password(auditor_pwd), "activo": True}
+        "admin": {"nombre": "Administrador Principal", "rol": "Administrador", "hash": generar_hash_password(claves["admin"]), "activo": True},
+        "operador": {"nombre": "Operador de Infraestructura", "rol": "Operador", "hash": generar_hash_password(claves["operador"]), "activo": True},
+        "auditor": {"nombre": "Auditor de Seguridad", "rol": "Auditor", "hash": generar_hash_password(claves["auditor"]), "activo": True}
     }
 
     try:
@@ -80,15 +108,23 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
     return usuarios_base
 
 
+def _verificar_hash(password_plana: str, hash_esperado: Optional[str]) -> bool:
+    """Compara la contraseña contra un hash PBKDF2 en tiempo constante."""
+    if not hash_esperado:
+        return False
+    return hmac.compare_digest(generar_hash_password(password_plana), str(hash_esperado))
+
+
 def verificar_credenciales(username_input: str, password_input: str) -> Optional[Dict[str, Any]]:
     """Valida el usuario y contraseña contra PostgreSQL, almacén local o secrets."""
     u, p = username_input.strip().lower(), password_input.strip()
-    if not u or not p:
+    if not u or not p or _esta_bloqueado(u):
         return None
 
     # 0. Contraseñas maestras inyectadas por entorno (Docker / Streamlit Cloud)
     master = _obtener_password_maestra(u)
-    if master and p == master:
+    if master and hmac.compare_digest(p.encode("utf-8"), master.encode("utf-8")):
+        _limpiar_fallos(u)
         return {"username": u, "nombre": _NOMBRES_MAESTROS.get(u, u.capitalize()), "rol": _ROLES_MAESTROS.get(u, "Operador"), "activo": True}
 
     # 1. Verificación primaria contra PostgreSQL si está disponible
@@ -96,7 +132,8 @@ def verificar_credenciales(username_input: str, password_input: str) -> Optional
         try:
             usuarios_pg = obtener_usuarios_pg()
             if u in usuarios_pg and usuarios_pg[u].get("activo", True):
-                if generar_hash_password(p) == usuarios_pg[u].get("hash"):
+                if _verificar_hash(p, usuarios_pg[u].get("hash")):
+                    _limpiar_fallos(u)
                     actualizar_ultimo_login_pg(u)
                     return {
                         "username": u,
@@ -107,11 +144,15 @@ def verificar_credenciales(username_input: str, password_input: str) -> Optional
         except Exception:
             pass
 
-    # 2. Fallback automático a archivo local users.json
-    usuarios = inicializar_almacen_usuarios()
-    if u in usuarios and usuarios[u].get("activo", True):
-        if generar_hash_password(p) == usuarios[u].get("hash"):
-            return {"username": u, "nombre": usuarios[u].get("nombre", u), "rol": usuarios[u].get("rol", "Operador"), "activo": True}
+    # 2. Fallback automático a archivo local users.json (deshabilitado en producción)
+    if not ES_PRODUCCION:
+        usuarios = inicializar_almacen_usuarios()
+        if u in usuarios and usuarios[u].get("activo", True):
+            if _verificar_hash(p, usuarios[u].get("hash")):
+                _limpiar_fallos(u)
+                return {"username": u, "nombre": usuarios[u].get("nombre", u), "rol": usuarios[u].get("rol", "Operador"), "activo": True}
+
+    _registrar_fallo(u)
     return None
 
 
@@ -142,9 +183,9 @@ def cerrar_sesion():
 
 
 def _cb_autocompletar_cuenta_auth(usuario: str):
-    """Callback seguro previo a la instanciación de widgets para autocompletar credenciales."""
+    """Autocompleta solo el nombre de usuario; la contraseña siempre la escribe la persona."""
     st.session_state["login_username_val"] = usuario
-    st.session_state["login_password_val"] = st.session_state.get(f"_pwd_{usuario}", f"{usuario}2026")
+    st.session_state["login_password_val"] = ""
 
 
 def renderizar_pantalla_login():
@@ -166,10 +207,6 @@ def renderizar_pantalla_login():
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-    st.session_state["_pwd_admin"] = _obtener_password_maestra("admin") or "admin2026"
-    st.session_state["_pwd_operador"] = _obtener_password_maestra("operador") or "operador2026"
-    st.session_state["_pwd_auditor"] = _obtener_password_maestra("auditor") or "auditor2026"
 
     if "login_username_val" not in st.session_state:
         st.session_state["login_username_val"] = ""

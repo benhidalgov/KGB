@@ -4,7 +4,6 @@ Ofrece consultas SQL sobre DuckDB en memoria, filtrado multidimensional y métri
 """
 import os
 import datetime
-import duckdb
 import pandas as pd
 import streamlit as st
 
@@ -53,10 +52,9 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
         elif isinstance(rango_fechas, datetime.date):
             conds.append(f"fecha = '{rango_fechas.strftime('%Y-%m-%d')}'")
 
-        try:
-            df_filtrado = duckdb.sql(f"SELECT * FROM read_csv_auto('{CSV_PATH}') WHERE {' AND '.join(conds)} ORDER BY fecha DESC").df()
-        except Exception as e_sql:
-            st.error(f"Error al ejecutar la consulta: {e_sql}")
+        df_filtrado = ejecutar_consulta_sql(f"SELECT * FROM read_csv_auto('{CSV_PATH}') WHERE {' AND '.join(conds)} ORDER BY fecha DESC")
+        if "Error" in df_filtrado.columns:
+            st.error(f"Error al ejecutar la consulta: {df_filtrado.iloc[0, 0]}")
             df_filtrado = pd.DataFrame()
 
         total_reg = len(df_filtrado)

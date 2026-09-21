@@ -188,7 +188,10 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
     return None
 
 
-@st.cache_data(show_spinner=False)
+# cache_resource comparte el mismo objeto entre sesiones: los documentos
+# (strings inmutables) dejan de duplicarse por usuario; cada sesión conserva
+# solo el índice del doc_store.
+@st.cache_resource(show_spinner=False, max_entries=512)
 def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
     ext = os.path.splitext(filepath)[1].lower()
     fname = os.path.basename(filepath)
@@ -282,6 +285,17 @@ def preparar_markdown_con_imagenes(md_content: str, doc_name: str = "", ruta_ori
 
     res = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', _sub_img, res)
     return res
+
+
+def leer_entrada_zip_segura(zf, info, limite: int) -> bytes | None:
+    """Lee una entrada ZIP con tope de tamaño descomprimido.
+
+    Devuelve None si la entrada excede el límite, sin descomprimirla completa:
+    el tope se aplica a los bytes leídos, no al tamaño declarado en el paquete.
+    """
+    with zf.open(info) as fh:
+        datos = fh.read(limite + 1)
+    return None if len(datos) > limite else datos
 
 
 def cargar_documento_individual(filepath: str) -> str:

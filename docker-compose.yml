@@ -3,13 +3,13 @@ services:
     image: postgres:16-alpine
     container_name: infra_copilot_postgres
     restart: unless-stopped
+    mem_limit: 1g
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-infra_copilot}
       POSTGRES_USER: ${POSTGRES_USER:-infra_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD no esta definido. Copie .env.example a .env y complete los valores.}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./docker/init-db:/docker-entrypoint-initdb.d:ro
     expose:
       - "5432"
     healthcheck:
@@ -26,10 +26,15 @@ services:
       dockerfile: Dockerfile
     container_name: infra_copilot_web
     restart: unless-stopped
+    mem_limit: 2g
+    cpus: 2.0
     depends_on:
       postgres_db:
         condition: service_healthy
     environment:
+      # Modo producción: exige credenciales maestras y clave de bóveda explícitas,
+      # y falla de forma visible si PostgreSQL no está disponible.
+      - PRODUCCION=1
       - DATABASE_URL=postgresql://${POSTGRES_USER:-infra_admin}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB:-infra_copilot}
       - DB_HOST=postgres_db
       - DB_PORT=5432
@@ -42,8 +47,8 @@ services:
       - OPERADOR_PASSWORD=${OPERADOR_PASSWORD:-}
       - AUDITOR_PASSWORD=${AUDITOR_PASSWORD:-}
     volumes:
-      # El contenedor corre como usuario sin privilegios (uid 10001).
-      # En hosts Linux, asegure que ./data sea escribible: chown -R 10001:10001 ./data
+      # El entrypoint corrige la propiedad del punto de montaje y baja privilegios,
+      # por lo que ./data puede pertenecer al usuario del host.
       - ./data:/app/data
     ports:
       - "${APP_PORT:-8501}:8501"

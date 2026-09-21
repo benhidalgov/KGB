@@ -8,7 +8,7 @@ import base64
 import hashlib
 from typing import Dict, List
 from cryptography.fernet import Fernet
-from core.configuracion import VAULT_FILE_PATH, VAULT_KEY_PATH
+from core.configuracion import VAULT_FILE_PATH, VAULT_KEY_PATH, ES_PRODUCCION
 from core.auditoria import registrar_evento_auditoria
 
 CLAVES_ESTANDAR_RECOMENDADAS = [
@@ -29,6 +29,11 @@ def obtener_clave_maestra() -> bytes:
             return env_key.encode("utf-8")
         except Exception:
             return _derivar_clave_fernet(env_key)
+
+    # En producción no se genera una clave local junto a la bóveda cifrada:
+    # quien acceda al volumen tendría texto y llave en el mismo lugar.
+    if ES_PRODUCCION:
+        raise RuntimeError("VAULT_MASTER_KEY es obligatoria en producción (ver .env.example).")
 
     if os.path.exists(VAULT_KEY_PATH):
         try:

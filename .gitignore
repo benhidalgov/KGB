@@ -33,6 +33,7 @@ __pycache__/
 *.enc
 .vault*
 data/.vault*
+data/users.json
 .streamlit/secrets.toml
 
 # Archivos temporales de sistema e IDEs

@@ -27,15 +27,10 @@ Plataforma corporativa de asistencia técnica, gestión documental de infraestru
 
 ```text
 C:\Prototipo\
-├── app.py                             # Aplicación principal Streamlit (Navbar, Login y 4 Pestañas)
-├── desktop_app.py                     # Punto de entrada para aplicación nativa de escritorio (PyWebView)
-├── desktop_app.spec                   # Especificación de compilación con PyInstaller
-├── build_exe.bat / build_exe.ps1      # Compilación automatizada de la aplicación .exe en 1 clic
-├── batch_ingest.py                    # Ingesta masiva multihilo con caché SHA-256
+├── app.py                             # Aplicación principal Streamlit (Navbar, Login y Módulos)
 ├── excel_cleaner.py                   # Extractor y normalizador de libros Excel
 ├── run_app.bat / run_app.ps1          # Lanzadores locales de desarrollo en Windows
 ├── requirements.txt                   # Dependencias Python
-├── dist/ConsolaOperaciones/           # Distribución ejecutable portátil (.exe autocontenido)
 ├── .python-version                    # Fijación de runtime oficial (Python 3.12 LTS)
 ├── README.md                          # Manual de uso y puesta en marcha
 ├── ARQUITECTURA_COPILOT_INFRAESTRUCTURA.md # Especificación técnica y arquitectura
@@ -105,7 +100,7 @@ Las credenciales de acceso se gestionan mediante variables de entorno (archivo `
 | `OPERADOR_PASSWORD` | Operador | Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado e Ingesta |
 | `AUDITOR_PASSWORD` | Auditor | Solo lectura (Búsqueda DuckDB y Visor Documental) |
 
-> Si no se definen estas variables, la aplicación genera cuentas locales de desarrollo (`admin2026`, `operador2026`, `auditor2026`) solo en `data/users.json`. No utilice estas credenciales en producción.
+> Con `PRODUCCION=1` (valor por defecto en `docker-compose.yml`) estas variables son **obligatorias**: la aplicación se niega a arrancar sin ellas y no recurre a `data/users.json`. Sin `PRODUCCION` (desarrollo local o aplicación de escritorio) se generan cuentas locales de desarrollo en `data/users.json`, con contraseñas de fábrica derivadas del nombre de usuario. No utilice ese modo en producción.
 
 ### Despliegue con Docker y PostgreSQL
 
@@ -127,8 +122,14 @@ docker compose down
 
 * **Acceso a la Consola Web:** `http://localhost:8501`
 * **Acceso a PostgreSQL:** `localhost:5432` (Base de datos: `infra_copilot`, Usuario: `infra_admin`)
-* **Inicialización Automática:** El directorio `docker/init-db/` ejecuta automáticamente los scripts DDL y de seed en el primer arranque.
+* **Migraciones Automáticas:** La aplicación aplica los scripts de `migrations/*.sql` al arrancar, una sola vez y en orden, registrándolos en la tabla `schema_migrations`. Los cambios de esquema ya no dependen de que el volumen de PostgreSQL se cree por primera vez.
 * **Resiliencia / Fallback:** Si se ejecuta localmente sin Docker, la aplicación conmuta de forma transparente al almacenamiento en archivos locales (`data/`).
+* **Respaldos:** El estado vive en el volumen `pgdata` (PostgreSQL) y en el bind-mount `./data` (documentos, historial y bóveda cifrada). Respalde ambos de forma consistente:
+  ```bash
+  docker compose exec -T postgres_db pg_dump -U ${POSTGRES_USER:-infra_admin} ${POSTGRES_DB:-infra_copilot} > respaldo_$(date +%F).sql
+  tar czf respaldo_data_$(date +%F).tar.gz data/
+  ```
+  Sin `VAULT_MASTER_KEY`, el archivo `data/.vault.enc` es irrecuperable. Guárdela en el gestor de secretos, nunca junto al respaldo.
 
 ---
 
@@ -174,7 +175,6 @@ docker compose down
 | **Ingesta Batch ZIP** | Python `zipfile` + `io.BytesIO` | Descompresión e ingesta masiva en memoria de paquetes `.zip` directamente desde la web |
 | **Auditoría e Integridad** | Python `hashlib` (SHA-256) + `difflib` | Versionado inmutable, Diff y bitácora de auditoría en `audit_log.json` |
 | **Diagramas de Topología** | Mermaid.js | Visualización interactiva de arquitectura en 4 niveles |
-| **Empaquetado de Escritorio** | PyInstaller + PyWebView (WebView2) | Aplicación nativa de escritorio (.exe) independiente, sin navegador y con persistencia local |
 
 ---
 
@@ -182,6 +182,6 @@ docker compose down
 
 * **Olvido de contraseña de administrador:** En Streamlit Cloud, configure `ADMIN_PASSWORD = "nueva_clave"` en **App Settings -> Secrets**; el sistema la adoptará inmediatamente. En local, borre `data/users.json` para restablecer las claves iniciales de fábrica.
 * **Activar Google Gemini:** Configurar `GEMINI_API_KEY` en los Secrets de Streamlit Cloud o en la sección **Bóveda de Credenciales `[VAULT]`** del panel lateral como administrador.
-* **Archivos externos no visibles:** Clic en `>_ Reindexar` en el panel lateral o ejecutar `python batch_ingest.py`.
+* **Archivos externos no visibles:** Subir archivos en el panel lateral o reiniciar el servidor Streamlit para recargar el almacén documental.
 * **Caché de consultas desactualizada tras editar archivos:** Al hacer clic en `>_ Reindexar`, el sistema purga automáticamente la caché de respuestas y la caché documental en memoria.
 * **Subida de lotes grandes:** Comprimir los documentos en un archivo `.zip` y arrastrarlo al cargador del panel lateral para ingesta paralela automática.

@@ -22,7 +22,9 @@ from core.procesador import (
     limpiar_cache_documentos,
     cargar_documentos_locales,
     procesar_e_ingestar_binario,
+    leer_entrada_zip_segura,
 )
+from core.configuracion import MAX_SUBIDA_BYTES, MAX_ENTRADA_BYTES, MAX_LOTE_BYTES
 from core.tags import (
     obtener_categorias_disponibles,
     asignar_tags_documento,
@@ -139,29 +141,42 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                         for uf in uploaded_files:
                             c_name = normalizar_nombre_archivo(uf.name)
                             ext_u = os.path.splitext(c_name)[1].lower()
+                            if uf.size and uf.size > MAX_SUBIDA_BYTES:
+                                st.warning(f"Se omitió '{c_name}': excede {MAX_SUBIDA_BYTES // (1024 * 1024)} MB.")
+                                continue
                             buf = uf.getbuffer().tobytes()
 
                             if ext_u == ".zip":
                                 try:
                                     with zipfile.ZipFile(io.BytesIO(buf)) as z:
                                         zip_cnt = 0
+                                        bytes_lote = 0
                                         for zi in [i for i in z.infolist() if not i.is_dir()]:
                                             in_fn = os.path.basename(zi.filename)
                                             if not in_fn or in_fn.startswith(".") or "__MACOSX" in zi.filename:
                                                 continue
                                             in_cl = normalizar_nombre_archivo(in_fn)
-                                            if os.path.splitext(in_cl)[1].lower() in SUPPORTED_EXTENSIONS:
-                                                st_res, _ = procesar_e_ingestar_binario(
-                                                    in_cl, z.read(zi), doc_store,
-                                                    autor=autor_act, origen_detalle=f"Lote ZIP: {c_name}",
-                                                    tags=cat_seleccionadas
-                                                )
-                                                zip_cnt += 1
-                                                proc_cnt += 1
-                                                if st_res == "nuevo":
-                                                    new_cnt += 1
-                                                elif st_res == "actualizado":
-                                                    upd_cnt += 1
+                                            if os.path.splitext(in_cl)[1].lower() not in SUPPORTED_EXTENSIONS:
+                                                continue
+                                            datos = leer_entrada_zip_segura(z, zi, MAX_ENTRADA_BYTES)
+                                            if datos is None:
+                                                st.warning(f"Se omitió '{in_fn}': excede {MAX_ENTRADA_BYTES // (1024 * 1024)} MB descomprimidos.")
+                                                continue
+                                            bytes_lote += len(datos)
+                                            if bytes_lote > MAX_LOTE_BYTES:
+                                                st.error(f"El paquete '{c_name}' supera {MAX_LOTE_BYTES // (1024 * 1024)} MB descomprimidos. Carga detenida.")
+                                                break
+                                            st_res, _ = procesar_e_ingestar_binario(
+                                                in_cl, datos, doc_store,
+                                                autor=autor_act, origen_detalle=f"Lote ZIP: {c_name}",
+                                                tags=cat_seleccionadas
+                                            )
+                                            zip_cnt += 1
+                                            proc_cnt += 1
+                                            if st_res == "nuevo":
+                                                new_cnt += 1
+                                            elif st_res == "actualizado":
+                                                upd_cnt += 1
                                         st.toast(f"ZIP '{c_name}': {zip_cnt} archivos cargados.")
                                 except Exception as e_z:
                                     st.error(f"No se pudo procesar el ZIP '{c_name}': {str(e_z)}")

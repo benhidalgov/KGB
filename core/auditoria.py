@@ -5,12 +5,20 @@ import shutil
 import difflib
 import hashlib
 import functools
+import logging
+import threading
 from datetime import datetime
 import pandas as pd
 import streamlit as st
 from excel_cleaner import procesar_excel_limpio
-from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR
+from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, ES_PRODUCCION
 from core.db import es_postgres_disponible, insertar_evento_auditoria_pg, obtener_eventos_auditoria_pg
+
+logger = logging.getLogger("infra_copilot.auditoria")
+
+# ponytail: lock de proceso. Con varias réplicas, PostgreSQL es la fuente de
+# verdad en producción y el log local queda solo como respaldo.
+_LOG_LOCK = threading.Lock()
 
 
 def calcular_sha256_texto(texto: str) -> str:
@@ -36,8 +44,10 @@ def _cargar_meta_raw(doc_name: str) -> list:
 def _guardar_meta(doc_name: str, data: list):
     p = _meta_path(doc_name)
     os.makedirs(os.path.dirname(p), exist_ok=True)
-    with open(p, "w", encoding="utf-8") as f:
+    tmp = f"{p}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, p)
 
 
 @functools.lru_cache(maxsize=512)
@@ -79,30 +89,7 @@ def obtener_fecha_carga_documento(doc_name: str):
 
 
 def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, version_nueva: int, autor: str, motivo: str):
-    """Registra un evento inmutable de trazabilidad en PostgreSQL y/o en el log central de auditoría."""
-    # 1. Registro transaccional en PostgreSQL si está disponible
-    if es_postgres_disponible():
-        try:
-            insertar_evento_auditoria_pg(
-                documento=doc_name,
-                accion=accion,
-                version_ant=version_ant,
-                version_nueva=version_nueva,
-                autor=autor.strip() if autor and autor.strip() else "Desconocido",
-                motivo=motivo.strip() if motivo and motivo.strip() else "Sin justificación"
-            )
-        except Exception:
-            pass
-
-    # 2. Espejado y persistencia en archivo local audit_log.json
-    eventos = []
-    if os.path.exists(AUDIT_LOG_PATH):
-        try:
-            with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
-                eventos = json.load(f)
-        except Exception:
-            eventos = []
-
+    """Registra un evento de trazabilidad en el log local (append-only) y en PostgreSQL."""
     evento = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "documento": doc_name,
@@ -110,15 +97,43 @@ def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, ver
         "version_anterior": f"v{version_ant}" if version_ant > 0 else "-",
         "version_nueva": f"v{version_nueva}",
         "editor_responsable": autor.strip() if autor and autor.strip() else "Desconocido",
-        "motivo_justificacion": motivo.strip() if motivo and motivo.strip() else "Sin justificación"
+        "motivo_justificacion": motivo.strip() if motivo and motivo.strip() else "Sin justificación",
     }
-    eventos.append(evento)
+
+    # 1. Log local en modo append: una línea JSON por evento, sin leer ni reescribir
+    # el archivo completo. Escrituras concurrentes no se pisan ni pierden eventos.
+    error_local = ""
     try:
         os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
-        with open(AUDIT_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(eventos, f, indent=2, ensure_ascii=False)
-    except Exception:
-        pass
+        with _LOG_LOCK:
+            _asegurar_formato_ndjson()
+            with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(evento, ensure_ascii=False) + "\n")
+    except Exception as e:
+        error_local = str(e)
+
+    # 2. Registro transaccional en PostgreSQL si está disponible
+    ok_pg = False
+    if es_postgres_disponible():
+        try:
+            ok_pg = insertar_evento_auditoria_pg(
+                documento=doc_name,
+                accion=accion,
+                version_ant=version_ant,
+                version_nueva=version_nueva,
+                autor=evento["editor_responsable"],
+                motivo=evento["motivo_justificacion"],
+            )
+        except Exception:
+            ok_pg = False
+
+    if error_local:
+        logger.error(f"[AUDITORIA] No se pudo escribir el log local: {error_local}")
+
+    # En producción el registro relacional es obligatorio: el respaldo silencioso
+    # a archivos locales dejaría bitácoras divergentes entre instancias.
+    if ES_PRODUCCION and not ok_pg:
+        raise RuntimeError(f"No se pudo registrar el evento de auditoría '{accion}' en PostgreSQL.")
 
 
 def generar_diff_texto(texto_ant: str, texto_nuevo: str, label_ant: str = "Version A", label_nuevo: str = "Version B") -> str:
@@ -384,15 +399,62 @@ def generar_diff_lado_a_lado_html(texto_ant: str, texto_nuevo: str, label_ant: s
     return {"html": diff_html, "stats": {"adiciones": adiciones, "eliminaciones": eliminaciones, "modificaciones": modificaciones, "sin_cambio": sin_cambio, "total_lineas": len(filas_html)}}
 
 
-@functools.lru_cache(maxsize=16)
-def _obtener_todos_los_eventos_auditoria_cached(mtime: float) -> list:
-    if os.path.exists(AUDIT_LOG_PATH):
+def _asegurar_formato_ndjson():
+    """Convierte un log legado (arreglo JSON completo) al formato NDJSON. Idempotente."""
+    if not os.path.exists(AUDIT_LOG_PATH):
+        return
+    try:
+        with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
+            contenido = f.read().strip()
+    except Exception:
+        return
+    if not contenido.startswith("["):
+        return
+    eventos = _leer_eventos_locales()
+    tmp = f"{AUDIT_LOG_PATH}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        for e in eventos:
+            f.write(json.dumps(e, ensure_ascii=False) + "\n")
+    os.replace(tmp, AUDIT_LOG_PATH)
+
+
+def _leer_eventos_locales() -> list:
+    """Lee el log local de auditoría en NDJSON (una línea JSON por evento).
+
+    Tolera el formato antiguo de arreglo JSON completo y líneas corruptas.
+    """
+    if not os.path.exists(AUDIT_LOG_PATH):
+        return []
+    try:
+        with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
+            contenido = f.read().strip()
+    except Exception:
+        return []
+    if not contenido:
+        return []
+
+    if contenido.startswith("["):
         try:
-            with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
-                return list(reversed(json.load(f)))
+            data = json.loads(contenido)
+            return data if isinstance(data, list) else []
         except Exception:
             return []
-    return []
+
+    eventos = []
+    for linea in contenido.splitlines():
+        linea = linea.strip()
+        if not linea:
+            continue
+        try:
+            eventos.append(json.loads(linea))
+        except Exception:
+            continue
+    return eventos
+
+
+@functools.lru_cache(maxsize=16)
+def _obtener_todos_los_eventos_auditoria_cached(mtime: float) -> list:
+    return list(reversed(_leer_eventos_locales()))
 
 
 def obtener_todos_los_eventos_auditoria() -> list:

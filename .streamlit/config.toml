@@ -7,3 +7,7 @@ font = "sans serif"
 
 [browser]
 gatherUsageStats = false
+
+[server]
+# Tope del cuerpo multipart de subida; complementa los límites de ingesta.
+maxUploadSize = 100

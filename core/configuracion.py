@@ -1,6 +1,10 @@
 import os
 import sys
 
+# Modo de despliegue: en producción (Docker) se exige configuración segura
+# explícita y se desactivan los respaldos silenciosos a archivos locales.
+ES_PRODUCCION = os.environ.get("PRODUCCION", "").strip().lower() in ("1", "true", "yes", "si", "sí")
+
 # Determinación de directorios base (Entorno congelado .exe vs Desarrollo)
 if getattr(sys, 'frozen', False):
     APP_DIR = os.path.dirname(sys.executable)
@@ -28,6 +32,12 @@ VAULT_KEY_PATH = os.path.join(DATA_DIR, ".vault.key")
 CATEGORIAS_PATH = os.path.join(DATA_DIR, "categorias.json")
 PLANTILLAS_CUSTOM_PATH = os.path.join(DATA_DIR, "plantillas_custom.json")
 USERS_PATH = os.path.join(DATA_DIR, "users.json")
+
+# Límites de ingesta: protegen contra paquetes ZIP y archivos desproporcionados
+# que agotarían la memoria del contenedor.
+MAX_SUBIDA_BYTES = 100 * 1024 * 1024   # por archivo cargado
+MAX_ENTRADA_BYTES = 25 * 1024 * 1024   # por entrada descomprimida de un ZIP
+MAX_LOTE_BYTES = 250 * 1024 * 1024     # total descomprimido por ZIP
 
 # Archivo de estilos CSS
 _css_bundle = os.path.join(BUNDLE_DIR, "core", "estilos.css")

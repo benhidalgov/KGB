@@ -83,8 +83,8 @@ graph TD
 
 ### Componentes de Ingesta
 * **Procesador Excel Limpio (`excel_cleaner.py`):** Parser y extractor que preserva encabezados, omite ruido estructural y segmenta libros complejos por hojas individuales (`## Hoja: ...`).
-* **MarkItDown (Microsoft):** Motor multiformato para conversión de Word (`mammoth`), Excel (`openpyxl`), PDF (`pypdf`), PowerPoint (`python-pptx`) y Markdown. Configurado con `keep_data_uris=False` para prevenir inyecciones masivas de Base64 en el DOM del navegador, complementado con extracción selectiva de imágenes binarias (< 400 KB) en `core/procesador.py`.
-* **Worker de Ingesta Masiva (`batch_ingest.py`):** Script para conversión por lotes en paralelo con detección automática de cambios mediante firmas SHA-256 registradas en `data/ingestion_manifest.json`.
+* **MarkItDown (Microsoft):** Motor multiformato para conversión de Word, Excel (`openpyxl`), PDF y Markdown. Configurado con `keep_data_uris=False` para prevenir inyecciones masivas de Base64 en el DOM del navegador, complementado con extracción selectiva de imágenes binarias (< 400 KB) en `core/procesador.py`.
+* **Módulo de Ingesta Web (`core/procesador.py`):** Procesamiento de subidas individuales y paquetes ZIP en memoria con detección automática de cambios mediante firmas SHA-256 registradas en `data/ingestion_manifest.json`.
 * **Fichas Técnicas Complejas de Servidores:** Estandarización de matrices de celdas combinadas con datos de monitoreo PRTG (sensores de CPU, Memoria, PING, Disco, HTTP), umbrales (Warning/Critical), criticidad de ambiente y matrices de escalamiento (ej. `BALANCER001`).
 * **Normalizador Integral de Nombres (`core/procesador.py`):**
   * `normalizar_nombre_archivo`: Limpieza física a `snake_case` seguro en disco sin espacios, sin tildes y con versionado normalizado (ej. `cmdb_unicard_v1_1.xlsx`).
@@ -115,7 +115,6 @@ Para resolver el punto ciego de los RAGs vectoriales tradicionales al procesar i
 ```text
 Prototipo/
 ├── app.py                             # Aplicacion interactiva Streamlit (Navbar flotante y 4 Pestanas)
-├── batch_ingest.py                    # Worker de conversion masiva multihilo con cache SHA-256
 ├── excel_cleaner.py                   # Motor de extraccion y limpieza de CMDBs y libros Excel
 ├── requirements.txt                   # Dependencias del entorno virtual (DuckDB, Pandas, MarkItDown, Google-GenAI)
 ├── run_app.bat                        # Lanzador de ejecucion en Windows (Batch)
@@ -160,10 +159,7 @@ Prototipo/
 * **Acceso Local:** `http://localhost:8501`
 
 ### 6.2 Procesamiento Masivo Desatendido
-Para convertir volumenes grandes de documentos en la carpeta `data/inbox/`:
-```powershell
-.\.venv\Scripts\python batch_ingest.py
-```
+Para convertir volúmenes grandes de documentos, empaquetar en un archivo `.zip` y cargarlo directamente desde el módulo **Subir Archivos** en el panel lateral de la interfaz web.
 
 ---
 
@@ -347,19 +343,4 @@ Para evitar el agotamiento de memoria del navegador (*Out of Memory*) en documen
 2. **Fijación de Runtime Estable (`.python-version`):** Fijación estricta de **Python 3.12 LTS** para prevenir la selección automática de versiones experimentales (Python 3.14) en plataformas de despliegue como Streamlit Community Cloud.
 3. **Inyección Segura de Secretos:** Integración nativa con `st.secrets` para custodia transparente de `GEMINI_API_KEY` y contraseñas maestras sin exposición en el repositorio ni en la interfaz pública.
 
----
-
-## 18. Arquitectura de Empaquetado y Distribución de Escritorio (.exe)
-
-Para escenarios operativos donde los analistas e ingenieros no disponen de entornos de desarrollo con Python o navegadores abiertos, la plataforma implementa una arquitectura desacoplada de escritorio:
-
-### 18.1 Lanzador Desacoplado Dual (`desktop_app.py`)
-1. **Backend Headless en Hilo Daemon:** Inicia el servidor de Streamlit programáticamente mediante `streamlit.web.bootstrap.run` en un hilo en segundo plano, suprimiendo telemetría y desactivando el registro de señales que provocaría excepciones fuera del hilo principal.
-2. **Localizador Dinámico de Puerto:** Escanea puertos TCP libres en `127.0.0.1` a partir del 8501 y realiza un sondeo continuo hacia el endpoint de salud `/_stcore/health` (HTTP 200) antes de presentar la interfaz.
-3. **Contenedor Nativo de Escritorio (PyWebView):** Integra el motor nativo de Microsoft Edge WebView2 sin barra de direcciones, pestañas ni controles de navegación, proporcionando una experiencia de software de escritorio corporativo con persistencia de cookies en `.webview_cache`.
-4. **Fallback Autónomo:** Si las directivas de seguridad locales bloquean la inicialización de WebView2, conmuta inmediatamente a Microsoft Edge en modo aplicación (`--app=http://127.0.0.1:{puerto}`).
-
-### 18.2 Especificación PyInstaller y Persistencia de Datos
-* **Recolección de Assets Estáticos:** `desktop_app.spec` empaqueta los recursos frontend de Streamlit (`streamlit/static`), `streamlit_antd_components` y estilos CSS de la plataforma.
-* **Resolución Dinámica de `APP_DIR` (`core/configuracion.py`):** Cuando la aplicación corre congelada (`sys.frozen`), las rutas de datos (`data/mantenimientos.csv`, `data/users.json`, `data/docs/`) se resuelven en la carpeta física junto al ejecutable, garantizando inmutabilidad y persistencia de cambios sin riesgo de borrado en carpetas `%TEMP%`.
-* **Automatización de Compilación:** Scripts `build_exe.bat` y `build_exe.ps1` que generan la distribución completa en `dist/ConsolaOperaciones/` en un único paso reproducible.
+
