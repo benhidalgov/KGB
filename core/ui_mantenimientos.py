@@ -7,14 +7,35 @@ import datetime
 import pandas as pd
 import streamlit as st
 
-from core.configuracion import CSV_PATH
+from core.configuracion import CSV_PATH, ES_PRODUCCION
 from core.motor import ejecutar_consulta_sql
+from core.auth import tiene_permiso
+
+
+def _es_consulta_solo_lectura(sql: str) -> bool:
+    """Acepta una sola sentencia de lectura (SELECT/WITH/DESCRIBE/SHOW/EXPLAIN)."""
+    texto = " ".join(sql.strip().split())
+    if not texto:
+        return False
+    cuerpo = texto[:-1].rstrip() if texto.endswith(";") else texto
+    if ";" in cuerpo:
+        return False
+    primero = cuerpo.split(None, 1)[0].lower()
+    if primero not in ("select", "with", "describe", "show", "explain"):
+        return False
+    prohibidas = (
+        "insert ", "update ", "delete ", "drop ", "create ", "alter ",
+        "copy ", "attach ", "detach ", "call ", "install ", "load ",
+        "pragma ", "export ", "import ", "set ", "reset ",
+    )
+    bajo = f" {cuerpo.lower()} "
+    return not any(p in bajo for p in prohibidas)
 
 
 def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
     """Renderiza el módulo analítico y de mantenimiento de infraestructura."""
     st.subheader("Historial de Mantenimientos e Inventario")
-    st.caption("Filtra por fecha, nivel, estado y técnico, o escribe tu propia consulta SQL.")
+    st.caption("Filtra por fecha, nivel, estado y técnico" + ("" if ES_PRODUCCION else ", o escribe tu propia consulta SQL de solo lectura."))
 
     min_date, max_date = datetime.date(2026, 1, 1), datetime.date(2026, 12, 31)
     if not df_mantenimientos_cache.empty and 'fecha' in df_mantenimientos_cache.columns:
@@ -37,31 +58,40 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
     with col_f4:
         rango_fechas = st.date_input("Rango de Fechas:", value=(min_date, max_date), min_value=min_date, max_value=max_date, key="filtro_rango_fechas_mantenimientos")
 
-    if not os.path.exists(CSV_PATH):
+    df_filtrado = df_mantenimientos_cache
+    if not df_filtrado.empty:
+        if filtro_nivel != "Todos" and "nivel_arquitectura" in df_filtrado.columns:
+            df_filtrado = df_filtrado[df_filtrado["nivel_arquitectura"] == filtro_nivel]
+        if filtro_estado != "Todos" and "estado" in df_filtrado.columns:
+            df_filtrado = df_filtrado[df_filtrado["estado"] == filtro_estado]
+        if filtro_tec.strip() and "tecnico" in df_filtrado.columns:
+            df_filtrado = df_filtrado[
+                df_filtrado["tecnico"].astype(str).str.contains(filtro_tec.strip(), case=False, na=False, regex=False)
+            ]
+        if "fecha" in df_filtrado.columns and isinstance(rango_fechas, (tuple, list)) and len(rango_fechas) == 2:
+            fechas_serie = pd.to_datetime(df_filtrado["fecha"], errors="coerce")
+            inicio = pd.Timestamp(rango_fechas[0])
+            fin = pd.Timestamp(rango_fechas[1])
+            df_filtrado = df_filtrado[(fechas_serie >= inicio) & (fechas_serie <= fin)]
+        elif "fecha" in df_filtrado.columns and isinstance(rango_fechas, datetime.date):
+            fechas_d = pd.to_datetime(df_filtrado["fecha"], errors="coerce").dt.date
+            df_filtrado = df_filtrado[fechas_d == rango_fechas]
+
+    if df_mantenimientos_cache.empty and not os.path.exists(CSV_PATH):
         st.warning("No se encontró data/mantenimientos.csv.")
-    else:
-        conds = ["1=1"]
-        if filtro_nivel != "Todos":
-            conds.append(f"nivel_arquitectura = '{filtro_nivel}'")
-        if filtro_estado != "Todos":
-            conds.append(f"estado = '{filtro_estado}'")
-        if filtro_tec.strip():
-            conds.append(f"LOWER(tecnico) LIKE LOWER('%{filtro_tec.strip()}%')")
-        if isinstance(rango_fechas, (tuple, list)) and len(rango_fechas) == 2:
-            conds.append(f"fecha >= '{rango_fechas[0].strftime('%Y-%m-%d')}' AND fecha <= '{rango_fechas[1].strftime('%Y-%m-%d')}'")
-        elif isinstance(rango_fechas, datetime.date):
-            conds.append(f"fecha = '{rango_fechas.strftime('%Y-%m-%d')}'")
 
-        df_filtrado = ejecutar_consulta_sql(f"SELECT * FROM read_csv_auto('{CSV_PATH}') WHERE {' AND '.join(conds)} ORDER BY fecha DESC")
-        if "Error" in df_filtrado.columns:
-            st.error(f"Error al ejecutar la consulta: {df_filtrado.iloc[0, 0]}")
-            df_filtrado = pd.DataFrame()
+    total_reg = len(df_filtrado)
+    st.markdown(f"<div style='font-size:0.85rem;margin-bottom:8px;font-weight:500;'><span class='badge-info'>{total_reg} registros encontrados</span></div>", unsafe_allow_html=True)
+    st.dataframe(df_filtrado, width="stretch", hide_index=True)
 
-        total_reg = len(df_filtrado)
-        st.markdown(f"<div style='font-size:0.85rem;margin-bottom:8px;font-weight:500;'><span class='badge-info'>{total_reg} registros encontrados</span></div>", unsafe_allow_html=True)
-        st.dataframe(df_filtrado, width="stretch", hide_index=True)
-
-    with st.expander("Escribir Consulta SQL"):
-        custom_sql = st.text_area("Consulta SQL", value=f"SELECT nivel_arquitectura, count(*) as total_mantenimientos FROM read_csv_auto('{CSV_PATH}') GROUP BY nivel_arquitectura")
-        if st.button("Ejecutar") and os.path.exists(CSV_PATH):
-            st.dataframe(ejecutar_consulta_sql(custom_sql), width="stretch")
+    if not ES_PRODUCCION and tiene_permiso("puede_ejecutar_sql"):
+        with st.expander("Escribir Consulta SQL (solo lectura)"):
+            custom_sql = st.text_area(
+                "Consulta SQL",
+                value=f"SELECT nivel_arquitectura, count(*) as total_mantenimientos FROM read_csv_auto('{CSV_PATH}') GROUP BY nivel_arquitectura",
+            )
+            if st.button("Ejecutar") and os.path.exists(CSV_PATH):
+                if not _es_consulta_solo_lectura(custom_sql):
+                    st.error("Solo se permiten sentencias de una sola línea de lectura (SELECT, WITH, DESCRIBE, SHOW o EXPLAIN).")
+                else:
+                    st.dataframe(ejecutar_consulta_sql(custom_sql), width="stretch")

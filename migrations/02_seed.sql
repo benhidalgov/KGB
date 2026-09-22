@@ -6,7 +6,8 @@
 --      a) Variables maestras del entorno (.env): ADMIN_PASSWORD, OPERADOR_PASSWORD, AUDITOR_PASSWORD
 --      b) El almacen local data/users.json gestionado por la aplicacion
 --    Si desea precargar usuarios en PostgreSQL, genere el hash PBKDF2-HMAC-SHA256
---    (sal: infra_console_security_salt_2026, 100000 iteraciones) e insertelo aqui.
+--    con formato pbkdf2_sha256$100000$<sal_aleatoria>$<hash_hex> (sal unica por usuario)
+--    o use el helper core.auth.generar_hash_password(), e insertelo aqui.
 
 -- 2. Registro Inicial de Auditoría
 INSERT INTO registro_auditoria (documento, accion, version_anterior, version_nueva, autor, motivo, sha256_integridad)

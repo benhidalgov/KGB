@@ -4,6 +4,7 @@ import json
 import time
 import hmac
 import hashlib
+import secrets
 from typing import Optional, Dict, Any
 import streamlit as st
 from core.auditoria import registrar_evento_auditoria
@@ -11,7 +12,10 @@ from core.manual import activar_manual_en_inicio, renderizar_manual_lanzamiento
 from core.db import es_postgres_disponible, obtener_usuarios_pg, actualizar_ultimo_login_pg
 
 from core.configuracion import USERS_PATH as AUTH_USERS_PATH, ES_PRODUCCION
-DEFAULT_SALT = "infra_console_security_salt_2026"
+
+# Sal global solo para verificar hashes legados ya emitidos con el formato antiguo.
+_LEGACY_SALT = "infra_console_security_salt_2026"
+_PBKDF2_ITERATIONS = 100_000
 
 _ROLES_MAESTROS = {"admin": "Administrador", "operador": "Operador", "auditor": "Auditor"}
 _NOMBRES_MAESTROS = {"admin": "Administrador Principal", "operador": "Operador de Infraestructura", "auditor": "Auditor de Seguridad"}
@@ -59,21 +63,36 @@ ROLES_PERMISOS = {
     "Administrador": {
         "descripcion": "Acceso total: Consultas al Asistente, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
         "puede_ver_vault": True, "puede_editar_vault": True, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": True,
+        "puede_ejecutar_sql": True,
     },
     "Operador": {
         "descripcion": "Acceso técnico: Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado y Registro de Incidencias.",
         "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": False,
+        "puede_ejecutar_sql": False,
     },
     "Auditor": {
         "descripcion": "Acceso de auditoría: Búsqueda de documentos, visualización de CMDB y verificación de eventos.",
         "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": False, "puede_editar_docs": False, "puede_rollback": False,
+        "puede_ejecutar_sql": False,
     }
 }
 
 
-def generar_hash_password(password_plana: str, salt: str = DEFAULT_SALT) -> str:
-    """Genera hash seguro PBKDF2-HMAC-SHA256."""
-    return hashlib.pbkdf2_hmac("sha256", password_plana.strip().encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
+def generar_hash_password(password_plana: str, salt: Optional[str] = None) -> str:
+    """Genera hash PBKDF2-HMAC-SHA256 con sal aleatoria por usuario.
+
+    Formato: pbkdf2_sha256$<iteraciones>$<salt>$<hash_hex>
+    Si se omite la sal, se genera una nueva (no determinista entre llamadas).
+    """
+    if salt is None:
+        salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac(
+        "sha256",
+        password_plana.strip().encode("utf-8"),
+        salt.encode("utf-8"),
+        _PBKDF2_ITERATIONS,
+    )
+    return f"pbkdf2_sha256${_PBKDF2_ITERATIONS}${salt}${dk.hex()}"
 
 
 def inicializar_almacen_usuarios() -> Dict[str, Any]:
@@ -86,12 +105,22 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
             pass
 
     claves = {u: _obtener_password_maestra(u) for u in ("admin", "operador", "auditor")}
-    faltantes = [u for u, p in claves.items() if not p]
-    if faltantes:
-        if ES_PRODUCCION:
+    generadas = []
+    if ES_PRODUCCION:
+        faltantes = [u for u, p in claves.items() if not p]
+        if faltantes:
             nombres = ", ".join(f"{u.upper()}_PASSWORD" for u in faltantes)
             raise RuntimeError(f"Defina las variables maestras de acceso: {nombres} (ver .env.example).")
-        claves = {u: p or f"{u}2026" for u, p in claves.items()}
+    else:
+        for u, p in claves.items():
+            if not p:
+                claves[u] = secrets.token_urlsafe(12)
+                generadas.append(u)
+        if generadas:
+            print(
+                "[AUTH] Cuentas de desarrollo generadas (no son contraseñas de fábrica): "
+                + ", ".join(f"{u}={claves[u]}" for u in generadas)
+            )
 
     usuarios_base = {
         "admin": {"nombre": "Administrador Principal", "rol": "Administrador", "hash": generar_hash_password(claves["admin"]), "activo": True},
@@ -109,10 +138,32 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
 
 
 def _verificar_hash(password_plana: str, hash_esperado: Optional[str]) -> bool:
-    """Compara la contraseña contra un hash PBKDF2 en tiempo constante."""
+    """Compara la contraseña contra un hash PBKDF2 en tiempo constante.
+
+    Acepta el formato nuevo (sal embebida) y el legado (hash hex con sal global).
+    """
     if not hash_esperado:
         return False
-    return hmac.compare_digest(generar_hash_password(password_plana), str(hash_esperado))
+    valor = str(hash_esperado)
+    if valor.startswith("pbkdf2_sha256$"):
+        try:
+            _, iteraciones, salt, digest = valor.split("$", 3)
+            dk = hashlib.pbkdf2_hmac(
+                "sha256",
+                password_plana.strip().encode("utf-8"),
+                salt.encode("utf-8"),
+                int(iteraciones),
+            )
+            return hmac.compare_digest(dk.hex(), digest)
+        except (ValueError, TypeError):
+            return False
+    legado = hashlib.pbkdf2_hmac(
+        "sha256",
+        password_plana.strip().encode("utf-8"),
+        _LEGACY_SALT.encode("utf-8"),
+        _PBKDF2_ITERATIONS,
+    ).hex()
+    return hmac.compare_digest(legado, valor)
 
 
 def verificar_credenciales(username_input: str, password_input: str) -> Optional[Dict[str, Any]]:

@@ -91,7 +91,7 @@ Las credenciales de acceso se gestionan mediante variables de entorno (archivo `
 | `OPERADOR_PASSWORD` | Operador | Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado e Ingesta |
 | `AUDITOR_PASSWORD` | Auditor | Solo lectura (Búsqueda DuckDB y Visor Documental) |
 
-> Con `PRODUCCION=1` (valor por defecto en `docker-compose.yml`) estas variables son **obligatorias**: la aplicación se niega a arrancar sin ellas y no recurre a `data/users.json`. Sin `PRODUCCION` (desarrollo local) se generan cuentas locales de desarrollo en `data/users.json`, con contraseñas de fábrica derivadas del nombre de usuario. No utilice ese modo en producción.
+> Con `PRODUCCION=1` (valor por defecto en `docker-compose.yml`) estas variables son **obligatorias**: la aplicación se niega a arrancar sin ellas y no recurre a `data/users.json`. Sin `PRODUCCION` (desarrollo local) se generan cuentas locales con **contraseñas aleatorias** que se imprimen una sola vez en la consola del servidor al crear `data/users.json`. No utilice ese modo en producción.
 
 ### Despliegue con Docker y PostgreSQL
 
@@ -129,10 +129,14 @@ docker compose down
 1. Suba el repositorio a su cuenta de **GitHub** (privado o público).
 2. Conecte el repositorio en [share.streamlit.io](https://share.streamlit.io/).
 3. El archivo [`.python-version`](file:///C:/Prototipo/.python-version) garantiza el despliegue automático en **Python 3.12**.
-4. En el panel de **App Settings -> Secrets**, configure las credenciales sin exponerlas en la interfaz:
+4. En el panel de **App Settings -> Secrets**, configure **obligatoriamente** `PRODUCCION` y las tres contraseñas maestras (sin ellas la aplicación no permite iniciar sesión en este modo):
    ```toml
+   PRODUCCION = "1"
+   ADMIN_PASSWORD = "ClaveMaestraFuerte..."
+   OPERADOR_PASSWORD = "ClaveOperadorFuerte..."
+   AUDITOR_PASSWORD = "ClaveAuditorFuerte..."
    GEMINI_API_KEY = "AIzaSy..."
-   ADMIN_PASSWORD = "MiContrasenaMaestra2026"
+   VAULT_MASTER_KEY = "..."
    ```
 5. Presione **Deploy**. La aplicación arrancará protegida detrás del formulario de inicio de sesión corporativo.
 
@@ -140,13 +144,13 @@ docker compose down
 
 ## 5. Guía por Pestaña de la Consola
 
-* **Pantalla de Login:** Acceso corporativo con validación criptográfica PBKDF2. Bloquea la carga de la aplicación y CMDB a usuarios no autorizados.
+* **Pantalla de Login:** Acceso corporativo con validación criptográfica PBKDF2 (sal aleatoria por usuario). Bloquea la carga de la aplicación y CMDB a usuarios no autorizados.
 * **Navbar Superior:** Marca corporativa `[CLI] Consola de Infraestructura y Operaciones`, usuario activo (`@admin [Administrador]`), estado `● ONLINE`, selector de vista (`[Consola]` | `[Manual de Uso]`) y contadores documentales.
 * **Panel Lateral (Sidebar):** Tarjeta de sesión activa con botón **`>_ Cerrar Sesión`**, cargador de archivos individuales o paquetes **`[ZIP BATCH]`**, explorador de documentos filtrable, botón **`>_ Reindexar`** y **Bóveda de Credenciales `[VAULT]`** (exclusiva para administradores).
 * **Pestaña 1 (Consultas y Búsqueda):**
   * *Subpestaña 1.1 (Búsqueda Textual):* Búsqueda en milisegundos (< 2 ms) en memoria RAM sobre DuckDB y documentación, visualización de servidores y fragmentos coincidentes, más botón puente para analizar con el Asistente Técnico.
   * *Subpestaña 1.2 (Asistente Técnico):* Diálogo analítico con Gemini 2.5 Flash RAG, aceleración por memoria caché, diagnósticos de causa raíz y botón **`>_ Limpiar Chat`**.
-* **Pestaña 2 (Historial de Mantenimientos):** Tabla interactiva de servidores con filtros por Nivel de Arquitectura (L1-L4), Estado y Técnico, más consola SQL DuckDB en memoria RAM sobre `mantenimientos.csv`.
+* **Pestaña 2 (Historial de Mantenimientos):** Tabla interactiva de servidores con filtros por Nivel de Arquitectura (L1-L4), Estado y Técnico. En desarrollo, los administradores disponen además de una consola SQL DuckDB de solo lectura (deshabilitada con `PRODUCCION=1`).
 * **Pestaña 3 (Documentación Técnica y Versionado):** Visor Lado a Lado protegido (Markdown vs Original), renderizado de diagramas, editor de libros Excel, editor de texto seguro, comparador Diff (límite 400 líneas) y Rollback auditado.
 * **Pestaña 4 (Plantillas y Runbooks):** Asistente paso a paso para la redacción, validación y publicación formal de procedimientos operativos (`v1`).
 
@@ -171,7 +175,7 @@ docker compose down
 
 ## 7. Resolución de Problemas (Troubleshooting)
 
-* **Olvido de contraseña de administrador:** En Streamlit Cloud, configure `ADMIN_PASSWORD = "nueva_clave"` en **App Settings -> Secrets**; el sistema la adoptará inmediatamente. En local, borre `data/users.json` para restablecer las claves iniciales de fábrica.
+* **Olvido de contraseña de administrador:** En Streamlit Cloud, configure `ADMIN_PASSWORD = "nueva_clave"` en **App Settings -> Secrets**; el sistema la adoptará inmediatamente. En local (sin `PRODUCCION`), borre `data/users.json` y arranque de nuevo: se generarán contraseñas aleatorias nuevas que aparecerán en la consola del servidor.
 * **Activar Google Gemini:** Configurar `GEMINI_API_KEY` en los Secrets de Streamlit Cloud o en la sección **Bóveda de Credenciales `[VAULT]`** del panel lateral como administrador.
 * **Archivos externos no visibles:** Subir archivos en el panel lateral o reiniciar el servidor Streamlit para recargar el almacén documental.
 * **Caché de consultas desactualizada tras editar archivos:** Al hacer clic en `>_ Reindexar`, el sistema purga automáticamente la caché de respuestas y la caché documental en memoria.

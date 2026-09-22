@@ -13,13 +13,22 @@ import core.auth as auth
 
 
 def check_hash():
-    h = auth.generar_hash_password("secreta")
-    assert h == auth.generar_hash_password("secreta"), "el hash debe ser determinista"
-    assert h != auth.generar_hash_password("otra"), "debe depender del contenido"
-    assert h != auth.generar_hash_password("secreta", salt="otro"), "debe depender de la sal"
-    assert auth._verificar_hash("secreta", h)
-    assert not auth._verificar_hash("incorrecta", h)
+    h1 = auth.generar_hash_password("secreta", salt="sal_fija_unica")
+    h2 = auth.generar_hash_password("secreta", salt="sal_fija_unica")
+    assert h1 == h2, "con la misma sal el hash debe ser determinista"
+    assert h1 != auth.generar_hash_password("otra", salt="sal_fija_unica"), "debe depender del contenido"
+    assert h1 != auth.generar_hash_password("secreta", salt="otra"), "debe depender de la sal"
+    assert auth.generar_hash_password("secreta") != auth.generar_hash_password("secreta"), "sin sal explícita debe usar sal aleatoria"
+    assert h1.startswith("pbkdf2_sha256$"), "el formato nuevo debe llevar prefijo"
+    assert auth._verificar_hash("secreta", h1)
+    assert not auth._verificar_hash("incorrecta", h1)
     assert not auth._verificar_hash("secreta", None)
+
+    legado = __import__("hashlib").pbkdf2_hmac(
+        "sha256", b"secreta", auth._LEGACY_SALT.encode("utf-8"), auth._PBKDF2_ITERATIONS
+    ).hex()
+    assert auth._verificar_hash("secreta", legado), "debe verificar hashes legados con sal global"
+    assert not auth._verificar_hash("incorrecta", legado)
 
 
 def check_throttle():

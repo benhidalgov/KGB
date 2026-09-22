@@ -32,6 +32,7 @@ from core.tags import (
 from core.motor import limpiar_cache_consultas
 from core.auth import cerrar_sesion, tiene_permiso
 from core.vault import (
+    ErrorBoveda,
     listar_secretos_disponibles,
     guardar_secreto,
     eliminar_secreto,
@@ -213,36 +214,51 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
             if tiene_permiso("puede_ver_vault"):
                 st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
                 st.markdown("<b style='font-size:0.78rem;'>Credenciales (Bóveda):</b>", unsafe_allow_html=True)
-                sec_list = listar_secretos_disponibles()
-                cfg_cnt = sum(1 for s in sec_list if s["estado"] == "[CONFIGURADO]")
-                st.markdown(f"<div style='font-size:0.72rem;margin-bottom:8px;opacity:0.8;'>Estado: <b>{cfg_cnt} configurada(s)</b>.</div>", unsafe_allow_html=True)
-                for s in sec_list:
-                    badge_s = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[CONFIGURADO]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[NO CONFIGURADO]</span>'
-                    prev_s = f"({s['vista_previa']})" if s['vista_previa'] != '-' else ""
-                    st.markdown(f"<div style='font-size:0.72rem;padding:3px 0;display:flex;justify-content:space-between;align-items:center;'><span style='font-family:monospace;font-weight:600;'>{s['clave']}</span>{badge_s}</div><div style='font-size:0.64rem;opacity:0.6;margin-bottom:4px;'>Origen: {s['origen']} {prev_s}</div>", unsafe_allow_html=True)
+                try:
+                    sec_list = listar_secretos_disponibles()
+                except ErrorBoveda as e:
+                    st.error(str(e))
+                    sec_list = []
+                if sec_list:
+                    cfg_cnt = sum(1 for s in sec_list if s["estado"] == "[CONFIGURADO]")
+                    st.markdown(f"<div style='font-size:0.72rem;margin-bottom:8px;opacity:0.8;'>Estado: <b>{cfg_cnt} configurada(s)</b>.</div>", unsafe_allow_html=True)
+                    for s in sec_list:
+                        badge_s = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[CONFIGURADO]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[NO CONFIGURADO]</span>'
+                        prev_s = f"({s['vista_previa']})" if s['vista_previa'] != '-' else ""
+                        st.markdown(f"<div style='font-size:0.72rem;padding:3px 0;display:flex;justify-content:space-between;align-items:center;'><span style='font-family:monospace;font-weight:600;'>{s['clave']}</span>{badge_s}</div><div style='font-size:0.64rem;opacity:0.6;margin-bottom:4px;'>Origen: {s['origen']} {prev_s}</div>", unsafe_allow_html=True)
 
-                st.markdown("<b style='font-size:0.75rem;'>Guardar Clave:</b>", unsafe_allow_html=True)
-                sel_k = st.selectbox("Seleccionar Llave:", [s["clave"] for s in sec_list] + ["OTRA_CLAVE_PERSONALIZADA"], key="sb_vault_sel_key", label_visibility="collapsed")
-                k_final = st.text_input("Nombre de la Clave:", value="", key="sb_vault_custom_key") if sel_k == "OTRA_CLAVE_PERSONALIZADA" else sel_k
-                if "vault_input_version" not in st.session_state:
-                    st.session_state.vault_input_version = 0
+                    st.markdown("<b style='font-size:0.75rem;'>Guardar Clave:</b>", unsafe_allow_html=True)
+                    sel_k = st.selectbox("Seleccionar Llave:", [s["clave"] for s in sec_list] + ["OTRA_CLAVE_PERSONALIZADA"], key="sb_vault_sel_key", label_visibility="collapsed")
+                    k_final = st.text_input("Nombre de la Clave:", value="", key="sb_vault_custom_key") if sel_k == "OTRA_CLAVE_PERSONALIZADA" else sel_k
+                    if "vault_input_version" not in st.session_state:
+                        st.session_state.vault_input_version = 0
 
-                v_val = st.text_input("Valor:", type="password", key=f"sb_vault_val_{st.session_state.vault_input_version}")
-                col_vs, col_vd = st.columns([2, 1])
-                with col_vs:
-                    if st.button("Guardar Llave", width="stretch", type="primary", key="sb_btn_guardar_key"):
-                        if k_final and v_val:
-                            if guardar_secreto(k_final.strip().upper(), v_val.strip()):
-                                st.toast(f"Clave '{k_final.strip().upper()}' guardada.")
-                                st.session_state.vault_input_version += 1
-                                st.rerun()
-                        else:
-                            st.error("Escribe un nombre y un valor.")
-                with col_vd:
-                    if st.button("Eliminar", width="stretch", key="sb_btn_eliminar_key", help="Elimina la clave de la bóveda"):
-                        if k_final and k_final != "OTRA_CLAVE_PERSONALIZADA":
-                            if eliminar_secreto(k_final.strip().upper()):
-                                st.toast(f"Clave '{k_final.strip().upper()}' eliminada.")
-                                st.rerun()
+                    v_val = st.text_input("Valor:", type="password", key=f"sb_vault_val_{st.session_state.vault_input_version}")
+                    col_vs, col_vd = st.columns([2, 1])
+                    with col_vs:
+                        if st.button("Guardar Llave", width="stretch", type="primary", key="sb_btn_guardar_key"):
+                            if k_final and v_val:
+                                try:
+                                    if guardar_secreto(k_final.strip().upper(), v_val.strip()):
+                                        st.toast(f"Clave '{k_final.strip().upper()}' guardada.")
+                                        st.session_state.vault_input_version += 1
+                                        st.rerun()
+                                    else:
+                                        st.error("No se pudo guardar la clave en la bóveda.")
+                                except ErrorBoveda as e:
+                                    st.error(str(e))
+                            else:
+                                st.error("Escribe un nombre y un valor.")
+                    with col_vd:
+                        if st.button("Eliminar", width="stretch", key="sb_btn_eliminar_key", help="Elimina la clave de la bóveda"):
+                            if k_final and k_final != "OTRA_CLAVE_PERSONALIZADA":
+                                try:
+                                    if eliminar_secreto(k_final.strip().upper()):
+                                        st.toast(f"Clave '{k_final.strip().upper()}' eliminada.")
+                                        st.rerun()
+                                    else:
+                                        st.error("No se pudo eliminar la clave.")
+                                except ErrorBoveda as e:
+                                    st.error(str(e))
 
         return seccion_sel
