@@ -41,13 +41,14 @@ C:\Prototipo\
 │   ├── auth.py                        # Sistema de autenticación RBAC y sesiones
 │   ├── auditoria.py                   # Control de versiones, Diff y bitácora inmutable
 │   ├── configuracion.py               # Rutas base y definición de directorios
-│   ├── conector_sap.py                # Conector, telemetría y topología Mermaid SAP
+│   ├── db.py                          # Acceso a PostgreSQL y fallback a archivos locales
 │   ├── estilos.py / estilos.css       # Reglas visuales corporativas y seguridad CSS
 │   ├── manual.py                      # Manual de uso interactivo en consola
+│   ├── migraciones.py                 # Migraciones de esquema `migrations/*.sql`
 │   ├── motor.py                       # Motor de consultas, DuckDB en RAM, Gemini RAG y cachés
 │   ├── plantillas.py                  # Generador de procedimientos y runbooks
 │   ├── procesador.py                  # Normalización documental, extracción limpia y sanitización
-│   ├── topologia.py                   # Diagramas arquitectónicos Mermaid (L1-L4)
+│   ├── tags.py                        # Etiquetado automático de documentos
 │   ├── ui_consultas.py                # Interfaz de consultas textuales y asistente técnico
 │   ├── ui_documentos.py               # Visor documental, categorización y editor
 │   ├── ui_mantenimientos.py           # Historial de mantenimientos y motor SQL DuckDB
@@ -55,25 +56,15 @@ C:\Prototipo\
 │   ├── ui_sidebar.py                  # Panel lateral de navegación, usuario y vault
 │   ├── vault.py                       # Bóveda de credenciales con cifrado AES-256
 │   └── visor.py                       # Visor Lado a Lado y renderizador protegido
+├── docker/entrypoint.sh               # Entrypoint del contenedor (corrección de permisos)
+├── migrations/                        # Migraciones SQL de PostgreSQL
+├── tests/                             # Verificaciones de auditoría, auth y estructura
 └── data/                              # Repositorio de datos (CMDB, docs, history, originals, auditoría)
 ```
 
 ---
 
 ## 3. Instalación y Puesta en Marcha
-
-### Ejecución como Aplicación de Escritorio (.exe)
-
-La consola dispone de una distribución nativa para Windows empaquetada que no requiere navegador web ni terminal:
-
-1. Ingrese al directorio de la aplicación compilada:
-   ```cmd
-   cd dist\ConsolaOperaciones
-   ```
-2. Ejecute **`ConsolaOperaciones.exe`**.
-3. La aplicación se abrirá en su ventana nativa de escritorio independiente (Edge WebView2) con aceleración por hardware y fondo Obsidian `#0F172A`.
-
-> **Recompilar el ejecutable:** Si realiza modificaciones en el código fuente, simplemente ejecute `build_exe.bat` (o `build_exe.ps1`) para generar una nueva versión de la aplicación de escritorio en `dist\ConsolaOperaciones`.
 
 ### Ejecución en Entorno Local (Desarrollo Web)
 
@@ -100,7 +91,7 @@ Las credenciales de acceso se gestionan mediante variables de entorno (archivo `
 | `OPERADOR_PASSWORD` | Operador | Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado e Ingesta |
 | `AUDITOR_PASSWORD` | Auditor | Solo lectura (Búsqueda DuckDB y Visor Documental) |
 
-> Con `PRODUCCION=1` (valor por defecto en `docker-compose.yml`) estas variables son **obligatorias**: la aplicación se niega a arrancar sin ellas y no recurre a `data/users.json`. Sin `PRODUCCION` (desarrollo local o aplicación de escritorio) se generan cuentas locales de desarrollo en `data/users.json`, con contraseñas de fábrica derivadas del nombre de usuario. No utilice ese modo en producción.
+> Con `PRODUCCION=1` (valor por defecto en `docker-compose.yml`) estas variables son **obligatorias**: la aplicación se niega a arrancar sin ellas y no recurre a `data/users.json`. Sin `PRODUCCION` (desarrollo local) se generan cuentas locales de desarrollo en `data/users.json`, con contraseñas de fábrica derivadas del nombre de usuario. No utilice ese modo en producción.
 
 ### Despliegue con Docker y PostgreSQL
 

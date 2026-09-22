@@ -1,21 +1,10 @@
 import os
-import sys
 
 # Modo de despliegue: en producción (Docker) se exige configuración segura
 # explícita y se desactivan los respaldos silenciosos a archivos locales.
 ES_PRODUCCION = os.environ.get("PRODUCCION", "").strip().lower() in ("1", "true", "yes", "si", "sí")
 
-# Determinación de directorios base (Entorno congelado .exe vs Desarrollo)
-if getattr(sys, 'frozen', False):
-    APP_DIR = os.path.dirname(sys.executable)
-    BUNDLE_DIR = getattr(sys, '_MEIPASS', APP_DIR)
-    try:
-        os.chdir(APP_DIR)
-    except Exception:
-        pass
-else:
-    APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    BUNDLE_DIR = APP_DIR
+APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # Rutas principales de datos y recursos
 DATA_DIR = os.path.join(APP_DIR, "data")
@@ -40,9 +29,7 @@ MAX_ENTRADA_BYTES = 25 * 1024 * 1024   # por entrada descomprimida de un ZIP
 MAX_LOTE_BYTES = 250 * 1024 * 1024     # total descomprimido por ZIP
 
 # Archivo de estilos CSS
-_css_bundle = os.path.join(BUNDLE_DIR, "core", "estilos.css")
-_css_app = os.path.join(APP_DIR, "core", "estilos.css")
-ESTILOS_CSS_PATH = _css_bundle if os.path.exists(_css_bundle) else _css_app
+ESTILOS_CSS_PATH = os.path.join(APP_DIR, "core", "estilos.css")
 
 # Asegurar la existencia de directorios base
 for directory in [DATA_DIR, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR, HISTORY_DIR]:

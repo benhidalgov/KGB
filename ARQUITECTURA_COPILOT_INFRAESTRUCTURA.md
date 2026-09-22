@@ -132,7 +132,6 @@ Prototipo/
 │   ├── motor.py                       # Motor analitico DuckDB, busqueda y Copilot
 │   ├── plantillas.py                  # Generador oficial de plantillas y Runbooks
 │   ├── procesador.py                  # Ingesta y lectura multiformato (MarkItDown, Excel)
-│   ├── topologia.py                   # Diagrama Mermaid y especificacion de capas
 │   └── visor.py                       # Visor Lado a Lado (Side-by-Side) y renderizado adaptativo
 └── data/
     ├── mantenimientos.csv             # Base estructurada de inventario y mantenimientos
