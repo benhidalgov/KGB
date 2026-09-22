@@ -1,4 +1,4 @@
-import hashlib
+    import hashlib
 import os
 import re
 import glob
@@ -401,7 +401,7 @@ def procesar_e_ingestar_binario(
 
     # 3. Documentos Ofimáticos, Excel, PDF y Texto
     else:
-        if tags:
+        if tags:    
             asignar_tags_documento(clean_name, tags, autor=autor)
 
         os.makedirs(DOCS_DIR, exist_ok=True)
