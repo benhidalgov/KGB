@@ -226,7 +226,8 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                         st.session_state.vault_input_version = 0
 
                     v_val = st.text_input("Valor:", type="password", key=f"sb_vault_val_{st.session_state.vault_input_version}")
-                    col_vs, col_vd = st.columns([2, 1])
+                    err_kv = ""
+                    col_vs, col_vd = st.columns([3, 2])
                     with col_vs:
                         if st.button("Guardar Llave", width="stretch", type="primary", key="sb_btn_guardar_key"):
                             if k_final and v_val:
@@ -236,11 +237,11 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                         st.session_state.vault_input_version += 1
                                         st.rerun()
                                     else:
-                                        st.error("No se pudo guardar la clave en la bóveda.")
+                                        err_kv = "No se pudo guardar la clave en la bóveda."
                                 except ErrorBoveda as e:
-                                    st.error(str(e))
+                                    err_kv = str(e)
                             else:
-                                st.error("Escribe un nombre y un valor.")
+                                err_kv = "Escribe un nombre y un valor."
                     with col_vd:
                         if st.button("Eliminar", width="stretch", key="sb_btn_eliminar_key", help="Elimina la clave de la bóveda"):
                             if k_final and k_final != "OTRA_CLAVE_PERSONALIZADA":
@@ -249,8 +250,10 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                         st.toast(f"Clave '{k_final.strip().upper()}' eliminada.")
                                         st.rerun()
                                     else:
-                                        st.error("No se pudo eliminar la clave.")
+                                        err_kv = f"No se pudo eliminar '{k_final}': no está en la bóveda cifrada (viene del entorno o no existe)."
                                 except ErrorBoveda as e:
-                                    st.error(str(e))
+                                    err_kv = str(e)
+                    if err_kv:
+                        st.error(err_kv)
 
         return seccion_sel

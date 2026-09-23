@@ -98,6 +98,9 @@ Las credenciales de acceso se gestionan mediante variables de entorno (archivo `
 La plataforma incluye orquestación multinodo mediante Docker Compose con PostgreSQL 16:
 
 ```bash
+# 0. Crear el .env con los secretos (no viajan por git; ver .env.example)
+#    Completar: POSTGRES_PASSWORD, ADMIN/OPERADOR/AUDITOR_PASSWORD, VAULT_MASTER_KEY
+
 # 1. Construir e iniciar los servicios (Base de datos y Aplicación Web)
 docker compose up --build -d
 

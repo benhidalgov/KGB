@@ -57,9 +57,10 @@ def renderizar_boton_entrar_consola(key_prefix: str, paso_num: int, label: str =
 
 
 def _cb_autocompletar_cuenta_manual(usuario: str):
-    """Callback seguro previo a la instanciación de widgets para autocompletar credenciales."""
+    """Autocompleta usuario y contraseña con la contraseña maestra del entorno."""
+    from core.auth import _obtener_password_maestra  # import perezoso: evita el ciclo auth→manual
     st.session_state["login_username_val"] = usuario
-    st.session_state["login_password_val"] = st.session_state.get(f"_pwd_{usuario}", f"{usuario}2026")
+    st.session_state["login_password_val"] = _obtener_password_maestra(usuario) or st.session_state.get(f"_pwd_{usuario}", "")
 
 
 def renderizar_manual_lanzamiento():
