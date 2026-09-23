@@ -1,6 +1,5 @@
 import os
 import json
-import html
 import shutil
 import difflib
 import hashlib
@@ -106,7 +105,6 @@ def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, ver
     try:
         os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
         with _LOG_LOCK:
-            _asegurar_formato_ndjson()
             with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
                 f.write(json.dumps(evento, ensure_ascii=False) + "\n")
     except Exception as e:
@@ -147,26 +145,6 @@ def generar_diff_texto(texto_ant: str, texto_nuevo: str, label_ant: str = "Versi
     )
     diff_text = "".join(diff)
     return diff_text if diff_text.strip() else "No se detectaron diferencias de contenido entre estas dos versiones."
-
-
-def verificar_integridad_snapshot(doc_name: str, version_num: int) -> dict:
-    """Verifica si el snapshot en disco coincide exactamente con el hash SHA-256 registrado."""
-    for entry in obtener_historial_versiones(doc_name):
-        if entry.get("version") == version_num:
-            snap_file = entry.get("archivo_snapshot")
-            expected_hash = entry.get("sha256")
-            if not snap_file:
-                return {"valido": False, "motivo": "Sin referencia a archivo snapshot"}
-            snap_path = os.path.join(HISTORY_DIR, doc_name, snap_file)
-            if not os.path.exists(snap_path):
-                return {"valido": False, "motivo": "Archivo snapshot no encontrado"}
-            with open(snap_path, "r", encoding="utf-8") as f:
-                actual_hash = calcular_sha256_texto(f.read())
-            if not expected_hash:
-                return {"valido": True, "motivo": "Sin firma previa", "sha256": actual_hash}
-            es_valido = (actual_hash == expected_hash)
-            return {"valido": es_valido, "motivo": "Integridad verificada" if es_valido else "Hash no coincide", "sha256": actual_hash}
-    return {"valido": False, "motivo": f"Version {version_num} no encontrada"}
 
 
 def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: str, autor: str = "Sistema", comentario: str = "Versión base inicial") -> list:
@@ -337,87 +315,6 @@ def obtener_bytes_snapshot(doc_name: str, filename_snapshot: str) -> bytes | Non
     return None
 
 
-def generar_diff_lado_a_lado_html(texto_ant: str, texto_nuevo: str, label_ant: str = "Versión A", label_nuevo: str = "Versión B") -> dict:
-    """Genera una vista visual diff lado a lado en HTML Theme-Safe con conteo de cambios."""
-    todas_ant = texto_ant.splitlines()
-    todas_nuevo = texto_nuevo.splitlines()
-    MAX_DIFF = 400
-    lineas_ant, lineas_nuevo = todas_ant[:MAX_DIFF], todas_nuevo[:MAX_DIFF]
-    es_truncado = len(todas_ant) > MAX_DIFF or len(todas_nuevo) > MAX_DIFF
-
-    matcher = difflib.SequenceMatcher(None, lineas_ant, lineas_nuevo)
-    filas_html = []
-    adiciones = eliminaciones = modificaciones = sin_cambio = 0
-
-    def _cell(num, txt, cls=""):
-        t = html.escape(txt) if txt else "&nbsp;"
-        n = str(num) if num != "" else ""
-        return f'<div class="diff-cell {cls}"><span class="diff-num">{n}</span><span class="diff-text">{t}</span></div>'
-
-    for tag, alo, ahi, blo, bhi in matcher.get_opcodes():
-        ca, cb = ahi - alo, bhi - blo
-        if tag == 'equal':
-            sin_cambio += ca
-            for i in range(ca):
-                filas_html.append(f'<div class="diff-row">{_cell(alo + i + 1, lineas_ant[alo + i])}{_cell(blo + i + 1, lineas_nuevo[blo + i])}</div>')
-        elif tag == 'replace':
-            modificaciones += max(ca, cb)
-            for i in range(max(ca, cb)):
-                l = _cell(alo + i + 1, f"- {lineas_ant[alo + i]}", "diff-del") if i < ca else _cell("", "", "diff-empty")
-                r = _cell(blo + i + 1, f"+ {lineas_nuevo[blo + i]}", "diff-add") if i < cb else _cell("", "", "diff-empty")
-                filas_html.append(f'<div class="diff-row">{l}{r}</div>')
-        elif tag == 'delete':
-            eliminaciones += ca
-            for i in range(ca):
-                filas_html.append(f'<div class="diff-row">{_cell(alo + i + 1, f"- {lineas_ant[alo + i]}", "diff-del")}{_cell("", "", "diff-empty")}</div>')
-        elif tag == 'insert':
-            adiciones += cb
-            for i in range(cb):
-                filas_html.append(f'<div class="diff-row">{_cell("", "", "diff-empty")}{_cell(blo + i + 1, f"+ {lineas_nuevo[blo + i]}", "diff-add")}</div>')
-
-    tag_truncado = '<span class="badge-warn">[Muestra: 400 líneas]</span>' if es_truncado else ''
-    body_html = "".join(filas_html) or '<div style="padding: 16px; opacity: 0.8;">No hay contenido que comparar.</div>'
-
-    diff_html = f"""<div class="diff-container">
-    <div class="diff-stats-bar">
-        <div class="diff-stat-group">
-            <span class="badge-ok">+{adiciones} adiciones</span>
-            <span class="badge-crit">-{eliminaciones} eliminaciones</span>
-            <span class="badge-warn">~{modificaciones} modificaciones</span>
-            <span class="badge-tag">{sin_cambio} líneas iguales</span>
-            {tag_truncado}
-        </div>
-        <div><span class="badge-info">Comparación Lado a Lado</span></div>
-    </div>
-    <div class="diff-header-row">
-        <div class="diff-header-col">[Versión Base] {label_ant}</div>
-        <div class="diff-header-col">[Versión Comparada] {label_nuevo}</div>
-    </div>
-    <div class="diff-body">{body_html}</div>
-</div>"""
-
-    return {"html": diff_html, "stats": {"adiciones": adiciones, "eliminaciones": eliminaciones, "modificaciones": modificaciones, "sin_cambio": sin_cambio, "total_lineas": len(filas_html)}}
-
-
-def _asegurar_formato_ndjson():
-    """Convierte un log legado (arreglo JSON completo) al formato NDJSON. Idempotente."""
-    if not os.path.exists(AUDIT_LOG_PATH):
-        return
-    try:
-        with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
-            contenido = f.read().strip()
-    except Exception:
-        return
-    if not contenido.startswith("["):
-        return
-    eventos = _leer_eventos_locales()
-    tmp = f"{AUDIT_LOG_PATH}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        for e in eventos:
-            f.write(json.dumps(e, ensure_ascii=False) + "\n")
-    os.replace(tmp, AUDIT_LOG_PATH)
-
-
 def _leer_eventos_locales() -> list:
     """Lee el log local de auditoría en NDJSON (una línea JSON por evento).
 
@@ -469,31 +366,3 @@ def obtener_todos_los_eventos_auditoria() -> list:
 
     mtime = os.path.getmtime(AUDIT_LOG_PATH) if os.path.exists(AUDIT_LOG_PATH) else 0.0
     return list(_obtener_todos_los_eventos_auditoria_cached(mtime))
-
-
-def generar_timeline_versiones_html(historial: list) -> str:
-    """Genera una vista visual de línea de tiempo cronológica para el historial de versiones."""
-    if not historial:
-        return ""
-    items_html = []
-    for item in reversed(historial):
-        v_num = item.get("version", 1)
-        ts = item.get("timestamp", "N/A")
-        autor = item.get("autor", "Desconocido")
-        comentario = item.get("comentario", "")
-        caracteres = item.get("caracteres", 0)
-
-        badge_tipo = '<span class="badge-crit">[ROLLBACK]</span>' if "rollback" in comentario.lower() else ('<span class="badge-ok">[BASE v1]</span>' if v_num == 1 else '<span class="badge-info">[REVISIÓN]</span>')
-        items_html.append(f"""
-        <div class="version-timeline-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <div>{badge_tipo}<span style="font-weight: 700; font-size: 0.95rem; margin-left: 6px;">Versión v{v_num}</span></div>
-                <div style="font-size: 0.8rem; opacity: 0.8;">{ts}</div>
-            </div>
-            <div style="font-size: 0.88rem; margin: 4px 0;"><b>Motivo:</b> {html.escape(comentario)}</div>
-            <div style="font-size: 0.78rem; opacity: 0.75; display: flex; justify-content: space-between; margin-top: 6px; border-top: 1px dashed rgba(128,128,128,0.2); padding-top: 4px;">
-                <span><b>Editor:</b> {html.escape(autor)}</span>
-                <span><b>Tamaño:</b> {caracteres} caracteres</span>
-            </div>
-        </div>""")
-    return f'<div class="version-timeline-container">{"".join(items_html)}</div>'

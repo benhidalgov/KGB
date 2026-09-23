@@ -146,7 +146,6 @@ def renderizar_modulo_consultas(doc_store: dict):
             with col_rb:
                 if st.button(">_ Limpiar Chat", width="stretch", key="btn_clear_search_history"):
                     st.session_state.historial_busquedas = []
-                    st.session_state.messages = []
                     st.toast("Historial borrado.")
                     st.rerun()
 

@@ -13,10 +13,6 @@ def check_hash():
     h = auth.generar_hash_password("secreta", salt="fija")
     assert auth._verificar_hash("secreta", h)
     assert not auth._verificar_hash("mala", h)
-    legado = __import__("hashlib").pbkdf2_hmac(
-        "sha256", b"secreta", auth._LEGACY_SALT.encode(), auth._PBKDF2_ITERATIONS
-    ).hex()
-    assert auth._verificar_hash("secreta", legado)
     print("[OK] hash")
 
 

@@ -3,24 +3,13 @@ Consola Principal de Infraestructura y Operaciones.
 Orquestador central con navegación lateral desacoplada para maximizar el espacio del panel principal.
 """
 import os
-import sys
-import importlib
 import logging
 import pandas as pd
 import streamlit as st
 
 logger = logging.getLogger("infra_copilot.app")
 
-# Recarga preventiva de submódulos 'core' para servidores Streamlit persistentes
-for _mod_k in list(sys.modules.keys()):
-    if _mod_k.startswith("core."):
-        try:
-            importlib.reload(sys.modules[_mod_k])
-        except Exception:
-            pass
-
-from core.estilos import cargar_estilos_css
-from core.configuracion import CSV_PATH
+from core.configuracion import CSV_PATH, ESTILOS_CSS_PATH
 from core.auth import (
     es_usuario_autenticado,
     obtener_usuario_actual,
@@ -86,7 +75,12 @@ def _aplicar_migraciones_una_vez() -> list:
 
 
 st.set_page_config(page_title="Consola de Infraestructura y Operaciones", layout="wide", initial_sidebar_state="expanded")
-st.markdown(cargar_estilos_css(), unsafe_allow_html=True)
+try:
+    with open(ESTILOS_CSS_PATH, "r", encoding="utf-8") as _f_css:
+        _css = _f_css.read()
+except OSError:
+    _css = ""
+st.markdown(f"<style>\n{_css}\n</style>", unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
 _aplicar_migraciones_una_vez()
 
@@ -113,7 +107,7 @@ if not es_usuario_autenticado():
 # -------------------------------------------------------------
 # 3. INICIALIZACIÓN DE ESTADO Y ALMACÉN DOCUMENTAL
 # -------------------------------------------------------------
-for k, default_v in [("historial_busquedas", []), ("messages", []), ("quick_pills_version", 0)]:
+for k, default_v in [("historial_busquedas", [])]:
     if k not in st.session_state:
         st.session_state[k] = default_v
 

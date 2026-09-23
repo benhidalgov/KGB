@@ -4,16 +4,7 @@ Permite configurar parámetros técnicos con esquemas dinámicos, previsualizar 
 y publicar procedimientos con control de versiones y categorización obligatoria.
 """
 import os
-import importlib
 import streamlit as st
-import streamlit_antd_components as sac
-
-try:
-    _mod_plant = importlib.import_module("core.plantillas")
-    if not hasattr(_mod_plant, "obtener_esquema_campos"):
-        importlib.reload(_mod_plant)
-except Exception:
-    pass
 
 from core.plantillas import (
     generar_doc_plantilla,
@@ -35,13 +26,6 @@ def renderizar_pestana_plantillas(doc_store: dict):
     """Renderiza el generador guiado de procedimientos técnicos y runbooks."""
     st.subheader("Generador de Documentos y Runbooks")
     st.caption("Crea un documento de procedimiento o un tipo nuevo en unos minutos.")
-
-    sac.steps(items=[
-        sac.StepsItem(title="Paso 1", subtitle="Elegir tipo"),
-        sac.StepsItem(title="Paso 2", subtitle="Detalles"),
-        sac.StepsItem(title="Paso 3", subtitle="Revisar y guardar")
-    ], size="sm", return_index=False)
-    st.markdown("---")
 
     col_t1, col_t2 = st.columns([1, 1], gap="large")
     with col_t1:

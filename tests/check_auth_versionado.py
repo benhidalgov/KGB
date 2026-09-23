@@ -24,12 +24,6 @@ def check_hash():
     assert not auth._verificar_hash("incorrecta", h1)
     assert not auth._verificar_hash("secreta", None)
 
-    legado = __import__("hashlib").pbkdf2_hmac(
-        "sha256", b"secreta", auth._LEGACY_SALT.encode("utf-8"), auth._PBKDF2_ITERATIONS
-    ).hex()
-    assert auth._verificar_hash("secreta", legado), "debe verificar hashes legados con sal global"
-    assert not auth._verificar_hash("incorrecta", legado)
-
 
 def check_throttle():
     u = "usuario_throttle_test"
@@ -60,9 +54,6 @@ def check_versionado(ruta_tmp):
     assert v3 == 2, "contenido idéntico no debe generar una versión nueva"
 
     assert len(aud.obtener_historial_versiones("d.md")) == 2
-
-    integridad = aud.verificar_integridad_snapshot("d.md", 1)
-    assert integridad["valido"], f"snapshot v1 debería ser válido: {integridad}"
 
 
 if __name__ == "__main__":

@@ -22,7 +22,6 @@ def obtener_modulos_manual() -> dict[int, str]:
 
 def activar_manual_en_inicio():
     """Abre el manual completo como primera vista tras el login."""
-    st.session_state["top_navbar_view_selector"] = "Manual de Uso"
     st.session_state["manual_lanzamiento"] = True
     st.session_state["manual_paso_actual"] = 1
 
@@ -31,7 +30,6 @@ def ir_a_consola_desde_manual():
     """Cierra el onboarding de inicio o la vista standalone y redirige a la consola."""
     st.session_state["manual_lanzamiento"] = False
     st.session_state["_ir_consola"] = True
-    st.session_state["top_navbar_view_selector"] = "Consola"
     try:
         if hasattr(st, "query_params"):
             for p in ["view", "manual"]:
@@ -199,22 +197,3 @@ def renderizar_manual_usuario():
     modulos = obtener_modulos_manual()
     contenido_modulo = modulos.get(paso_num, "Contenido no disponible para este módulo.")
     st.markdown(contenido_modulo, unsafe_allow_html=True)
-
-    # =========================================================================
-    # BARRA DE NAVEGACIÓN INFERIOR DEL STEPPER
-    # =========================================================================
-    st.markdown("---")
-    col_prev, col_center_info, col_next = st.columns([1.2, 2.0, 1.4], vertical_alignment="center")
-
-    with col_prev:
-        if paso_num > 1:
-            st.button(f"< Módulo {paso_num - 1}", width="stretch", key=f"btn_bot_prev_{paso_num}", on_click=navegar_modulo, args=(paso_num - 1,))
-
-    with col_center_info:
-        st.markdown(f"<div style='text-align: center; font-size: 0.82rem; opacity: 0.8;'>Módulo <b>{paso_num}</b> de <b>8</b> completado</div>", unsafe_allow_html=True)
-
-    with col_next:
-        if paso_num < 8:
-            st.button(f"Siguiente: Módulo {paso_num + 1} >", type="primary", width="stretch", key=f"btn_bot_next_{paso_num}", on_click=navegar_modulo, args=(paso_num + 1,))
-        else:
-            renderizar_boton_entrar_consola("btn_bot_finish", paso_num)

@@ -23,16 +23,6 @@ class ErrorBoveda(RuntimeError):
     """El archivo de bóveda existe pero no se pudo descifrar (clave incorrecta o corrupto)."""
 
 
-def _derivar_claves_fernet(clave_origen: str) -> List[bytes]:
-    """Claves candidatas a partir de una passphrase: PBKDF2 (actual) y SHA-256 (legado)."""
-    pbkdf2 = hashlib.pbkdf2_hmac(
-        "sha256", clave_origen.encode("utf-8"), _KDF_SALT, _KDF_ITERATIONS
-    )
-    nueva = base64.urlsafe_b64encode(pbkdf2)
-    legado = base64.urlsafe_b64encode(hashlib.sha256(clave_origen.encode("utf-8")).digest())
-    return [nueva, legado]
-
-
 def _claves_candidatas() -> List[bytes]:
     """Claves a probar al descifrar; la primera se usa para cifrar."""
     env_key = os.environ.get("VAULT_MASTER_KEY", "").strip()
@@ -41,7 +31,8 @@ def _claves_candidatas() -> List[bytes]:
             Fernet(env_key.encode("utf-8"))
             return [env_key.encode("utf-8")]
         except Exception:
-            return _derivar_claves_fernet(env_key)
+            pbkdf2 = hashlib.pbkdf2_hmac("sha256", env_key.encode("utf-8"), _KDF_SALT, _KDF_ITERATIONS)
+            return [base64.urlsafe_b64encode(pbkdf2)]
 
     # En producción no se genera una clave local junto a la bóveda cifrada:
     # quien acceda al volumen tendría texto y llave en el mismo lugar.
