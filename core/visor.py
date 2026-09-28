@@ -48,16 +48,16 @@ def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
 
         if size_mb > 2.5:
             st.markdown(f"""
-            <div style="padding: 14px 16px; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; margin-bottom: 12px;">
-                <div style="font-weight: 700; font-size: 0.88rem; color: #6366F1; margin-bottom: 4px;">Documento PDF ({size_mb:.1f} MB)</div>
-                <div style="font-size: 0.78rem; opacity: 0.85; margin-bottom: 10px; line-height: 1.4;">Descárgalo para verlo sin recargar el navegador.</div>
+            <div class="bento-card" style="margin-bottom: 12px;">
+                <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-primary); margin-bottom: 4px;">Documento PDF ({size_mb:.1f} MB)</div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">Descárgalo para verlo sin recargar el navegador.</div>
             </div>
             """, unsafe_allow_html=True)
             st.download_button(label=f"Descargar PDF Original ({fname})", data=pdf_bytes, file_name=fname, mime="application/pdf", width="stretch", key=f"dl_heavy_pdf_{fname}")
             return
 
         b64 = base64.b64encode(pdf_bytes).decode("utf-8")
-        st.markdown(f'<iframe src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0" width="100%" height="{height}px" type="application/pdf" style="border:1px solid rgba(128,128,128,0.25); border-radius:6px; background-color:#ffffff;"></iframe>', unsafe_allow_html=True)
+        st.markdown(f'<iframe src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0" width="100%" height="{height}px" type="application/pdf" style="border:1px solid var(--border-subtle); border-radius:6px; background-color:var(--bg-surface);"></iframe>', unsafe_allow_html=True)
     except Exception as e:
         st.error(f"No se pudo mostrar el PDF: {str(e)}")
 
@@ -70,12 +70,12 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
     caption_actual = extraer_caption_diagrama(md_content, os.path.splitext(fname)[0])
 
     st.markdown(f"""
-    <div style="background-color: rgba(128, 128, 128, 0.06); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 6px; padding: 8px 14px; margin-bottom: 12px; font-size: 0.84rem; display: flex; justify-content: space-between; align-items: center;">
-        <div><b>Archivo:</b> <code style="color: #38BDF8;">{fname}</code></div>
+    <div class="bento-card" style="padding: 10px 14px; margin-bottom: 12px; font-size: 0.84rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div><b>Archivo:</b> <code style="color: var(--text-primary);">{fname}</code></div>
         <div><b>Formato:</b> <span class="badge-ok">{ext.upper().replace('.', '')}</span></div>
         <div><b>Tamaño:</b> <code>{size_kb:.1f} KB</code></div>
         <div><b>Versión:</b> <span class="badge-ok">v{ultima_version}</span></div>
-        <div><b>Último Editor:</b> <span style="color: #34D399;">{ultimo_editor}</span></div>
+        <div><b>Último Editor:</b> <span style="color: var(--text-secondary);">{ultimo_editor}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -272,27 +272,25 @@ def resaltar_termino_en_html(html_o_md: str, termino: str) -> tuple[str, int]:
     patron = re.compile(rf'(?i)({t_clean})')
     coincidencias = len(patron.findall(html_o_md))
     if coincidencias > 0:
-        res = patron.sub(r'<mark style="background-color: #fef08a; color: #713f12; padding: 2px 4px; border-radius: 3px; font-weight: 600;">\1</mark>', html_o_md)
+        res = patron.sub(r'<mark style="background-color: var(--pastel-amber-bg); color: var(--pastel-amber-text); padding: 2px 4px; border-radius: 3px; font-weight: 600;">\1</mark>', html_o_md)
         return res, coincidencias
     return html_o_md, 0
 
 
 def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | None, u_ver: int = 1, u_edit: str = "Técnico", u_time: str = "N/A"):
     """Renderiza el entorno inmersivo Zen Studio con TOC interactivo, buscador interno, personalización de lectura y visor multimodal."""
-    st.markdown("""
-    <style>
-    section[data-testid="stSidebar"], header[data-testid="stHeader"] { display: none !important; }
-    [data-testid="stMainBlockContainer"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }
-    </style>
-    """, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>")
+    else:
+        st.markdown("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>", unsafe_allow_html=True)
 
     col_zt_title, col_zt_search, col_zt_theme, col_zt_exit = st.columns([3.2, 2.4, 2.2, 1.2], vertical_alignment="center")
 
     with col_zt_title:
         st.markdown(f"""
         <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
-            <span class="badge-ok" style="font-size:0.7rem;padding:2px 8px;font-weight:700;">[ZEN STUDIO]</span>
-            <span style="font-size:1.05rem;font-weight:700;color:#6366F1;">{normalizar_titulo_display(doc_name)}</span>
+            <span class="badge-ok" style="font-size:0.7rem;padding:2px 8px;font-weight:600;">[ZEN STUDIO]</span>
+            <span style="font-family:var(--font-serif);font-size:1.2rem;font-weight:500;color:var(--text-primary);">{normalizar_titulo_display(doc_name)}</span>
             <span class="badge-info" style="font-size:0.68rem;">v{u_ver}</span>
         </div>
         """, unsafe_allow_html=True)
@@ -303,52 +301,27 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_zt_theme:
         col_zt_th1, col_zt_th2 = st.columns(2)
         with col_zt_th1:
-            tema_lectura = st.selectbox("Tema", ["Obsidian", "Sepia", "Papel"], label_visibility="collapsed", key="zen_theme_selector")
+            tema_lectura = st.selectbox("Tema", ["Cálido", "Sepia", "Grafito"], label_visibility="collapsed", key="zen_theme_selector")
         with col_zt_th2:
             tam_fuente = st.selectbox("Tamaño", ["Normal (15px)", "Grande (17px)", "Compacto (13px)"], label_visibility="collapsed", key="zen_font_size_selector")
 
     with col_zt_exit:
         if st.button(">_ Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
             st.session_state["zen_studio_activo"] = False
+            st.session_state["top_navbar_view_selector"] = "Consola"
             st.rerun()
 
     font_size_val = "17px" if "Grande" in tam_fuente else ("13px" if "Compacto" in tam_fuente else "15px")
     if tema_lectura == "Sepia":
-        st.markdown(f"""
-        <style>
-        .zen-reader-canvas {{
-            --zen-bg: #fdf6e2;
-            --zen-fg: #2c251d;
-            --zen-size: {font_size_val};
-        }}
-        .zen-reader-canvas * {{
-            color: #2c251d !important;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
-    elif tema_lectura == "Papel":
-        st.markdown(f"""
-        <style>
-        .zen-reader-canvas {{
-            --zen-bg: #ffffff;
-            --zen-fg: #0f172a;
-            --zen-size: {font_size_val};
-        }}
-        .zen-reader-canvas * {{
-            color: #0f172a !important;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
+        css_zen = f"<style>.zen-reader-canvas {{ --zen-bg: #FBF6EC; --zen-fg: #3B332A; --zen-size: {font_size_val}; }} .zen-reader-canvas * {{ color: #3B332A !important; }}</style>"
+    elif tema_lectura == "Grafito":
+        css_zen = f"<style>.zen-reader-canvas {{ --zen-bg: #1E2023; --zen-fg: #EDECE8; --zen-size: {font_size_val}; }} .zen-reader-canvas * {{ color: #EDECE8 !important; }}</style>"
     else:
-        st.markdown(f"""
-        <style>
-        .zen-reader-canvas {{
-            --zen-bg: rgba(15, 23, 42, 0.4);
-            --zen-fg: #f1f5f9;
-            --zen-size: {font_size_val};
-        }}
-        </style>
-        """, unsafe_allow_html=True)
+        css_zen = f"<style>.zen-reader-canvas {{ --zen-bg: #FAF9F6; --zen-fg: #1C1B19; --zen-size: {font_size_val}; }} .zen-reader-canvas * {{ color: #1C1B19 !important; }}</style>"
+    if hasattr(st, "html"):
+        st.html(css_zen)
+    else:
+        st.markdown(css_zen, unsafe_allow_html=True)
 
     col_toc, col_canvas = st.columns([1.1, 3.4], gap="medium")
 
@@ -375,12 +348,14 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
             seccion_sel = "Documento Completo"
 
         st.markdown(f"""
-        <div class="zen-stats-card">
-            <div style="font-weight:700;color:#6366F1;margin-bottom:6px;">Detalles del Documento</div>
-            <div><b>Palabras:</b> {palabras:,}</div>
-            <div><b>Lectura:</b> ~{minutos_lectura} min</div>
-            <div><b>Editor:</b> {u_edit}</div>
-            <div><b>Actualizado:</b> {u_time}</div>
+        <div class="bento-card" style="padding:10px 14px;margin-top:10px;font-size:0.8rem;">
+            <div style="font-weight:600;color:var(--text-primary);margin-bottom:6px;">Detalles del Documento</div>
+            <div style="display:flex;flex-direction:column;gap:4px;color:var(--text-secondary);">
+                <div><b>Palabras:</b> {palabras:,}</div>
+                <div><b>Lectura:</b> ~{minutos_lectura} min</div>
+                <div><b>Editor:</b> {u_edit}</div>
+                <div><b>Actualizado:</b> {u_time}</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 

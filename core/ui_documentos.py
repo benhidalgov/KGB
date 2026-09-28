@@ -170,17 +170,17 @@ def renderizar_pestana_documentacion(doc_store: dict):
             ext_badge = os.path.splitext(doc_sel)[1].upper().replace(".", "") or "MD"
 
             st.markdown(f"""
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 6px 0;margin:2px 0 6px 0;font-size:0.8rem;border-bottom:1px solid rgba(128,128,128,0.14);">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 8px 0;margin:2px 0 8px 0;font-size:0.8rem;border-bottom:1px solid var(--border-subtle);">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     <span class="badge-tag" style="font-size:0.68rem;padding:1px 5px;">[{ext_badge}]</span>
                     <span class="badge-ok" style="font-size:0.68rem;padding:1px 5px;">v{u_ver}</span>
                     {tags_badges}
-                    <span style="opacity:0.35;">•</span>
-                    <span style="opacity:0.85;">Editor: <b style="color:#10B981;">{u_edit}</b></span>
-                    <span style="opacity:0.35;">•</span>
-                    <span style="opacity:0.7;font-family:monospace;font-size:0.74rem;">{u_time}</span>
+                    <span style="color:var(--border-strong);">|</span>
+                    <span style="color:var(--text-secondary);">Editor: <b style="color:var(--text-primary);">{u_edit}</b></span>
+                    <span style="color:var(--border-strong);">|</span>
+                    <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.74rem;">{u_time}</span>
                 </div>
-                <div style="font-size:0.72rem;opacity:0.48;font-family:monospace;">{doc_sel}</div>
+                <div style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);">{doc_sel}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -263,8 +263,8 @@ def renderizar_pestana_documentacion(doc_store: dict):
             u_ver_e = len(historial_e)
 
             st.markdown(f"""
-            <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:6px;padding:8px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-                <div><b>Documento Activo:</b> <span style="color:#6366F1;font-weight:600;">{normalizar_titulo_display(doc_act_edit)}</span> <span style="font-family:monospace;opacity:0.65;font-size:0.8rem;">({doc_act_edit})</span></div>
+            <div class="bento-card" style="padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+                <div><b>Documento Activo:</b> <span style="color:var(--text-primary);font-weight:600;">{normalizar_titulo_display(doc_act_edit)}</span> <span style="font-family:var(--font-mono);color:var(--text-muted);font-size:0.8rem;">({doc_act_edit})</span></div>
                 <div><span class="badge-ok">Versión Activa: v{u_ver_e}</span></div>
             </div>
             """, unsafe_allow_html=True)

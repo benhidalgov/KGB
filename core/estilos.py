@@ -1,12 +1,112 @@
 """
 Gestor de estilos visuales CSS para la interfaz de Streamlit.
 Carga las reglas CSS desacopladas desde core/estilos.css con soporte dinámico de temas Claro / Oscuro.
+Garantiza transiciones bidireccionales completas con sobrescrituras prioritarias para cada tema.
 """
 import os
 import streamlit as st
 from core.configuracion import ESTILOS_CSS_PATH
 
-# Reglas de sobrescritura para Modo Oscuro (se inyectan dentro de <style> sin sangría Markdown)
+# Sobrescrituras obligatorias para Modo Claro
+CSS_CLARO_OVERRIDES = """
+:root, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
+    --bg-canvas: #FAF9F6 !important;
+    --bg-surface: #FFFFFF !important;
+    --bg-surface-subtle: #F4F3EE !important;
+    --bg-surface-hover: #EFEFEA !important;
+    --border-subtle: #E8E8E3 !important;
+    --border-medium: #D5D5CE !important;
+    --border-strong: #999990 !important;
+    --text-primary: #18181B !important;
+    --text-secondary: #404044 !important;
+    --text-muted: #71717A !important;
+    --btn-primary-bg: #18181B !important;
+    --btn-primary-text: #FFFFFF !important;
+    --btn-primary-hover: #27272A !important;
+    --btn-secondary-bg: #FFFFFF !important;
+    --btn-secondary-text: #18181B !important;
+    --btn-secondary-border: #DCDCD7 !important;
+    --btn-secondary-hover: #F4F4F0 !important;
+    --input-bg: #FFFFFF !important;
+    --input-border: #D5D5CE !important;
+    --input-text: #18181B !important;
+    --pastel-green-bg: #EBF5EE !important;
+    --pastel-green-text: #276738 !important;
+    --pastel-green-border: #CDE6D3 !important;
+    --pastel-amber-bg: #FEF7E6 !important;
+    --pastel-amber-text: #8C5900 !important;
+    --pastel-amber-border: #F9E4B7 !important;
+    --pastel-crit-bg: #FDF0F0 !important;
+    --pastel-crit-text: #9C2A2A !important;
+    --pastel-crit-border: #F7CACA !important;
+    --pastel-blue-bg: #EEF4FE !important;
+    --pastel-blue-text: #1D5CA8 !important;
+    --pastel-blue-border: #C8DCFA !important;
+    --pastel-neutral-bg: #F3F3F0 !important;
+    --pastel-neutral-text: #52525B !important;
+    --pastel-neutral-border: #E2E2DC !important;
+    background-color: #FAF9F6 !important;
+    color: #18181B !important;
+}
+.stApp, [data-testid="stAppViewContainer"] {
+    background-color: #FAF9F6 !important;
+    color: #18181B !important;
+}
+[data-testid="stSidebar"] {
+    background-color: #F4F3EE !important;
+    border-right-color: #E8E8E3 !important;
+}
+[data-testid="stSidebar"] > div:first-child,
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+    background-color: #F4F3EE !important;
+}
+div[data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="stVerticalBlockBorderWrapper"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"],
+.bento-card, .search-result-card, [data-testid="stExpander"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E8E8E3 !important;
+}
+.stTextInput input, .stTextArea textarea, .stSelectbox > div > div {
+    background-color: #FFFFFF !important;
+    border-color: #D5D5CE !important;
+    color: #18181B !important;
+}
+.stTextInput input:focus, .stTextArea textarea:focus {
+    border-color: #18181B !important;
+    box-shadow: 0 0 0 1px #18181B !important;
+}
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] *,
+label[data-testid="stWidgetLabel"] p,
+.stTextInput label,
+.stTextArea label,
+.stSelectbox label {
+    color: #18181B !important;
+    font-weight: 500 !important;
+}
+button:not([kind="primary"]):not([kind="primaryFormSubmit"]) {
+    background-color: #FFFFFF !important;
+    border: 1px solid #DCDCD7 !important;
+    color: #18181B !important;
+}
+button:not([kind="primary"]):not([kind="primaryFormSubmit"]):hover {
+    background-color: #F4F4F0 !important;
+    border-color: #999990 !important;
+    color: #18181B !important;
+}
+div[data-testid="stAlert"] {
+    background-color: #FDF0F0 !important;
+    border: 1px solid #F7CACA !important;
+    border-radius: 6px !important;
+}
+div[data-testid="stAlert"] * {
+    color: #9C2A2A !important;
+    font-weight: 500 !important;
+}
+""".strip()
+
+# Sobrescrituras obligatorias para Modo Oscuro
 CSS_OSCURO_OVERRIDES = """
 :root, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
     --bg-canvas: #121315 !important;
@@ -110,9 +210,8 @@ def cargar_estilos_css(tema: str = "Claro") -> str:
     """Lee el archivo CSS externo y retorna las reglas envueltas en <style> para Streamlit, aplicando el tema activo."""
     mtime = os.path.getmtime(ESTILOS_CSS_PATH) if os.path.exists(ESTILOS_CSS_PATH) else 0.0
     css_content = _cargar_estilos_css_mtime(mtime)
-    if tema == "Oscuro":
-        return f"<style>\n{css_content}\n\n/* OVERRIDES MODO OSCURO */\n{CSS_OSCURO_OVERRIDES}\n</style>"
-    return f"<style>\n{css_content}\n</style>"
+    overrides = CSS_OSCURO_OVERRIDES if tema == "Oscuro" else CSS_CLARO_OVERRIDES
+    return f"<style>\n{css_content}\n\n/* OVERRIDES TEMA {tema.upper()} */\n{overrides}\n</style>"
 
 
 @st.cache_data(show_spinner=False)

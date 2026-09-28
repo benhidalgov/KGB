@@ -1,9 +1,9 @@
 import os
 import re
+import html
 import hashlib
 import threading
 import unicodedata
-from functools import lru_cache
 import duckdb
 import pandas as pd
 from core.configuracion import CSV_PATH
@@ -15,15 +15,16 @@ from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
 _DUCKDB_CON = None
 _DUCKDB_LAST_MTIME = -1.0
 _DUCKDB_LOCK = threading.Lock()
+_DOC_STORE_NORM_CACHE = {}
 _QUERY_RESPONSE_CACHE = {}
 _MAX_CACHE_ENTRIES = 128
 
 
 def limpiar_cache_consultas():
     """Invalida todas las caches en memoria del motor."""
-    global _QUERY_RESPONSE_CACHE, _DUCKDB_LAST_MTIME
+    global _QUERY_RESPONSE_CACHE, _DOC_STORE_NORM_CACHE, _DUCKDB_LAST_MTIME
     _QUERY_RESPONSE_CACHE.clear()
-    _obtener_texto_normalizado.cache_clear()
+    _DOC_STORE_NORM_CACHE.clear()
     _DUCKDB_LAST_MTIME = -1.0
 
 
@@ -95,9 +96,14 @@ def _clave_rol() -> str:
         return "-"
 
 
-@lru_cache(maxsize=512)
 def _obtener_texto_normalizado(doc_name: str, content: str) -> tuple[str, str]:
-    return normalizar_texto(doc_name), normalizar_texto(content)
+    c_len = len(content)
+    cached = _DOC_STORE_NORM_CACHE.get(doc_name)
+    if cached and cached[0] == c_len:
+        return cached[1], cached[2]
+    name_norm, content_norm = normalizar_texto(doc_name), normalizar_texto(content)
+    _DOC_STORE_NORM_CACHE[doc_name] = (c_len, name_norm, content_norm)
+    return name_norm, content_norm
 
 
 def ejecutar_consulta_sql(query_sql: str) -> pd.DataFrame:
@@ -282,7 +288,7 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         st_badge = "badge-ok" if row['estado'].lower() == "operativo" else ("badge-warn" if "revision" in row['estado'].lower() else "badge-crit")
         desc = resaltar_terminos_en_html(row['descripcion'], prompt_usuario)
 
-        html_out = f"""<div class="search-result-card" style="border-left: 3.5px solid #10B981;">
+        html_out = f"""<div class="bento-card">
     <div class="search-header-row">
         <div><span class="badge-info">[Inventario]</span><span class="search-doc-title" style="margin-left: 8px;">{row['servidor_id']}</span></div>
         <div><span class="{st_badge}">[{row['estado'].upper()}]</span><span class="badge-tag" style="margin-left: 6px;">{row['nivel_arquitectura']}</span></div>
@@ -299,11 +305,11 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
 | **Técnico** | `{row['tecnico']}` |
 | **Monitoreo** | `{row['nagios_check']}` |
 
-<div style="margin-top: 12px; font-size: 0.88rem; line-height: 1.5;"><b>Descripción:</b><br/>{desc}</div>
-<div class="search-meta-footer"><span>Respuesta generada desde tus datos.</span><span>{total} registro(s)</span></div>
+<div style="margin-top: 12px; font-size: 0.88rem; line-height: 1.55; color: var(--text-secondary);"><b>Descripción:</b><br/>{desc}</div>
+<div class="search-meta-footer"><span>Origen: Inventario CMDB</span><span>{total} registro(s)</span></div>
 </div>"""
         if total > 1:
-            html_out += f"\n\n*Hay {total - 1} registro(s) más. Revisa la pestaña Historial de Mantenimientos.*"
+            html_out += f"\n\n*Hay {total - 1} registro(s) más en el Historial de Mantenimientos.*"
         return html_out
 
     if doc_matches:
@@ -314,40 +320,40 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         tags_doc0 = obtener_tags_documento(doc_name)
         tag_badge0 = f'<span class="badge-tag" style="margin-left: 6px;">[{tags_doc0[0]}]</span>' if tags_doc0 else ""
 
-        html_out = f"""<div class="search-result-card" style="border-left: 3.5px solid #6366F1;">
+        html_out = f"""<div class="bento-card">
     <div class="search-header-row">
-        <div><span class="badge-info">{tipo_badge}</span>{tag_badge0}<span class="search-doc-title" style="margin-left: 8px;">{normalizar_titulo_display(doc_name)}</span><span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65; margin-left: 6px;">({doc_name})</span></div>
+        <div><span class="badge-info">{tipo_badge}</span>{tag_badge0}<span class="search-doc-title" style="margin-left: 8px;">{normalizar_titulo_display(doc_name)}</span><span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">({doc_name})</span></div>
         <div><span class="badge-ok">Coincidencia: {score_label}</span></div>
     </div>
-    <div style="font-size: 0.82rem; font-weight: 600; opacity: 0.85; margin-bottom: 6px;">Fragmento:</div>
+    <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Fragmento:</div>
     <div class="search-snippet-content">{frag}</div>
-    <div class="search-meta-footer"><span>Respuesta desde tus documentos.</span><span>Abre el archivo en <b>Documentación Técnica</b></span></div>
+    <div class="search-meta-footer"><span>Origen: Documentación Técnica</span><span>Disponible en visor</span></div>
 </div>"""
         if len(doc_matches) > 1:
-            html_out += f"\n\n**Otros documentos ({len(doc_matches) - 1}):**\n"
+            html_out += f"\n\n**Otros documentos relacionados ({len(doc_matches) - 1}):**\n"
             for sec_name, sec_content, sec_score in doc_matches[1:3]:
                 sec_tags = obtener_tags_documento(sec_name)
                 sec_tag_b = f'<span class="badge-tag" style="margin-left: 6px;">[{sec_tags[0]}]</span>' if sec_tags else ""
                 sec_frag = resaltar_terminos_en_html(limpiar_encabezados_snippet(extraer_fragmento_relevante(sec_content, prompt_usuario, max_chars=250)), prompt_usuario)
                 sec_b = "[Diagrama]" if sec_name.startswith("DIAGRAMA__") else "[Documento]"
-                html_out += f"""\n<div style="background-color: rgba(128, 128, 128, 0.03); border: 1px solid rgba(128, 128, 128, 0.18); border-radius: 6px; padding: 10px; margin-top: 8px; font-size: 0.85rem;">
+                html_out += f"""\n<div style="background-color: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px 12px; margin-top: 8px; font-size: 0.85rem;">
     <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-        <span><b>{sec_b} {normalizar_titulo_display(sec_name)}</b>{sec_tag_b} <span style="font-family: monospace; font-size: 0.72rem; opacity: 0.65;">({sec_name})</span></span>
+        <span><b>{sec_b} {normalizar_titulo_display(sec_name)}</b>{sec_tag_b} <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">({sec_name})</span></span>
         <span class="badge-tag">Puntos: {sec_score}</span>
     </div>
-    <div style="font-size: 0.82rem; opacity: 0.9; line-height: 1.4;">{sec_frag}</div>
+    <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45;">{sec_frag}</div>
 </div>"""
         return html_out
 
-    return f"""<div class="search-result-card" style="border-left: 3.5px solid #D97706;">
-    <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;"><span class="badge-warn">[Sin resultados]</span> No encontré nada para: <code>{prompt_usuario}</code></div>
-    <div style="font-size: 0.85rem; opacity: 0.85; line-height: 1.5;">Prueba con un servidor (<code>BALANCER001</code>), una serie (<code>SN-8842-A</code>), una IP (<code>10.24.0.125</code>) o un término como <code>JWT</code> o <code>Failover</code>.</div>
-    <div class="search-meta-footer"><span>Respuesta generada desde tus datos.</span><span>0 registros</span></div>
+    return f"""<div class="bento-card">
+    <div style="font-weight: 500; font-size: 0.95rem; margin-bottom: 6px;"><span class="badge-warn">[Sin resultados]</span> No se encontraron coincidencias para: <code>{prompt_usuario}</code></div>
+    <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">Prueba con un servidor (<code>BALANCER001</code>), número de serie (<code>SN-8842-A</code>), dirección IP (<code>10.24.0.125</code>) o término técnico (<code>JWT</code>, <code>Failover</code>).</div>
+    <div class="search-meta-footer"><span>Origen: Base técnica local</span><span>0 coincidencias</span></div>
 </div>"""
 
 
 def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
-    """Genera la respuesta técnica del Camarada con aceleración por caché en RAM."""
+    """Genera la respuesta técnica con aceleración por caché en RAM."""
     prompt_limpio = prompt_usuario.strip()
     if not prompt_limpio:
         return ""
@@ -367,17 +373,17 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
         contexto = construir_contexto_rag(prompt_usuario, df_srv, doc_matches)
         ok_gemini, resp_texto, modelo = consultar_gemini_rag(prompt_usuario, contexto, api_key_gemini)
         if ok_gemini:
-            resultado = f"""<div class="search-result-card" style="border-left: 3.5px solid #10B981;">
+            resultado = f"""<div class="bento-card">
     <div class="search-header-row">
-        <div><span class="badge-ok">[OK]</span><span class="search-doc-title" style="margin-left: 8px;">Respuesta</span></div>
+        <div><span class="badge-ok">[OK]</span><span class="search-doc-title" style="margin-left: 8px;">Respuesta Técnica</span></div>
         <div><span class="badge-tag">Asistente</span></div>
     </div>
 {resp_texto}
-<div class="search-meta-footer"><span>Respuesta del asistente.</span><span>Fuentes: {len(df_srv)} inventario + {len(doc_matches)} documentos</span></div>
+<div class="search-meta-footer"><span>Respuesta asistida por IA</span><span>Fuentes: {len(df_srv)} inventario + {len(doc_matches)} documentos</span></div>
 </div>"""
         else:
             resp_local = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
-            resultado = f'<div style="font-size:0.75rem; background-color: rgba(217, 119, 6, 0.08); border: 1px solid #D97706; border-radius: 4px; padding: 6px 10px; margin-bottom: 8px;"><span class="badge-warn">[Aviso]</span> No pude conectar con el asistente en línea ({resp_texto}). Te muestro la respuesta local.</div>' + resp_local
+            resultado = f'<div style="font-size:0.75rem; background-color: var(--pastel-amber-bg); border: 1px solid var(--pastel-amber-border); color: var(--pastel-amber-text); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;"><span class="badge-warn">[Aviso]</span> No fue posible conectar con el asistente remoto ({resp_texto}). Se presenta la respuesta local.</div>' + resp_local
     else:
         resultado = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
 

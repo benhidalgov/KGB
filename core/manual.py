@@ -22,6 +22,7 @@ def obtener_modulos_manual() -> dict[int, str]:
 
 def activar_manual_en_inicio():
     """Abre el manual completo como primera vista tras el login."""
+    st.session_state["top_navbar_view_selector"] = "Manual de Uso"
     st.session_state["manual_lanzamiento"] = True
     st.session_state["manual_paso_actual"] = 1
 
@@ -30,6 +31,7 @@ def ir_a_consola_desde_manual():
     """Cierra el onboarding de inicio o la vista standalone y redirige a la consola."""
     st.session_state["manual_lanzamiento"] = False
     st.session_state["_ir_consola"] = True
+    st.session_state["top_navbar_view_selector"] = "Consola"
     try:
         if hasattr(st, "query_params"):
             for p in ["view", "manual"]:
@@ -47,7 +49,7 @@ def renderizar_boton_entrar_consola(key_prefix: str, paso_num: int, label: str =
     )
     if es_standalone:
         st.markdown(
-            f'<a href="./" target="_self" style="display:flex;justify-content:center;align-items:center;width:100%;height:38px;background:#6366F1;color:#ffffff;font-weight:600;font-size:0.875rem;border-radius:8px;text-decoration:none;border:none;box-shadow:0 1px 2px rgba(0,0,0,0.2);cursor:pointer;">{label}</a>',
+            f'<a href="./" target="_self" style="display:flex;justify-content:center;align-items:center;width:100%;height:38px;background:var(--btn-primary-bg);color:var(--btn-primary-text);font-family:var(--font-sans);font-weight:500;font-size:0.875rem;border-radius:6px;text-decoration:none;border:none;cursor:pointer;">{label}</a>',
             unsafe_allow_html=True
         )
     else:
@@ -57,72 +59,44 @@ def renderizar_boton_entrar_consola(key_prefix: str, paso_num: int, label: str =
 
 
 def _cb_autocompletar_cuenta_manual(usuario: str):
-    """Autocompleta usuario y contraseña con la contraseña maestra del entorno."""
-    from core.auth import _obtener_password_maestra  # import perezoso: evita el ciclo auth→manual
+    """Callback seguro previo a la instanciación de widgets para autocompletar credenciales."""
     st.session_state["login_username_val"] = usuario
-    st.session_state["login_password_val"] = _obtener_password_maestra(usuario) or st.session_state.get(f"_pwd_{usuario}", "")
+    st.session_state["login_password_val"] = st.session_state.get(f"_pwd_{usuario}", f"{usuario}2026")
 
 
 def renderizar_manual_lanzamiento():
     """Guía de inicio rápido en la pantalla de login antes de autenticar."""
     st.markdown("""
-    <div class="search-result-card" style="border-left: 3.5px solid #6366F1; margin-bottom: 12px;">
-        <div class="search-header-row">
-            <div>
-                <span class="badge-info">[Guía rápida]</span>
-                <span class="search-doc-title" style="margin-left: 8px;">Cómo usar el sistema</span>
-            </div>
-            <span class="badge-tag">Primeros pasos</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge-info">[Guía rápida]</span>
+            <span style="font-family:var(--font-serif); font-size:1.15rem; font-weight:500; color:var(--text-primary); margin-left:4px;">Uso de la Consola</span>
         </div>
-        <div style="font-size: 0.86rem; line-height: 1.55; opacity: 0.92; margin-top: 4px;">
-            Busca, consulta y organiza tus documentos e inventario, todo en un solo lugar.
-        </div>
+        <span class="badge-tag">Primeros pasos</span>
+    </div>
+    <div style="font-size: 0.86rem; line-height: 1.55; color: var(--text-secondary); margin-bottom: 14px;">
+        Busca, consulta y gestiona documentos técnicos e inventario en un entorno unificado.
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    ##### 1. Cómo iniciar sesión
-    Usa las credenciales que te dio el administrador:
-    * **`admin`** (Administrador): acceso completo.
-    * **`operador`** (Operador): buscar, consultar el asistente y editar.
-    * **`auditor`** (Auditor): solo lectura.
+    ##### 1. Cuentas y perfiles disponibles
+    Utiliza cualquiera de las credenciales autorizadas (puedes seleccionarlas con un clic a la izquierda):
+    * **`admin`** (Administrador): gestión integral de infraestructura, bóveda de secretos y auditoría.
+    * **`operador`** (Operador): búsqueda técnica, asistente con IA y edición documental.
+    * **`auditor`** (Auditor): inspección de registros y modo lectura de CMDB.
 
-    Las contraseñas las define el administrador. Si no las conoces, pregunta a quien te dio acceso.
-
-    ##### 2. Qué hacer al entrar
-    1. Verás un **manual en 8 pasos** con todo el funcionamiento.
-    2. Toca **`>_ Ir a la Consola`** para empezar, o lee el manual cuando quieras.
-    3. También puedes abrir el manual en una pestaña aparte con el botón de abajo.
+    ##### 2. Primeros pasos
+    1. Inicia sesión con tus credenciales de rol.
+    2. Explora el manual interactivo de 8 módulos técnicos.
+    3. Pulsa **`>_ Ir a la Consola`** para acceder de inmediato al entorno.
     """)
 
     st.markdown("""
-    <div style="margin-top: 10px; margin-bottom: 8px;">
-        <a href="?view=manual" target="_blank" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:0.82rem; color:#6366F1; border:1px solid rgba(99,102,241,0.3); padding:6px 14px; border-radius:6px; background:rgba(99,102,241,0.06);">>_ Abrir el Manual en una Pestaña Nueva ↗</a>
+    <div style="margin-top: 16px; margin-bottom: 4px;">
+        <a href="?view=manual" target="_blank" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:0.82rem; color:var(--text-primary); border:1px solid var(--border-medium); padding:7px 16px; border-radius:6px; background-color:var(--bg-surface);">>_ Abrir Manual en Pestaña Independiente</a>
     </div>
     """, unsafe_allow_html=True)
-
-    with st.expander("Cuentas de Prueba", expanded=True):
-        st.markdown("""
-        <div style="font-size: 0.82rem; opacity: 0.88; margin-bottom: 8px;">
-            Elige una cuenta para rellenar usuario y contraseña:
-        </div>
-        """, unsafe_allow_html=True)
-
-        col_u1, col_u2, col_u3 = st.columns(3, gap="small")
-        with col_u1:
-            st.button("admin", key="btn_quick_admin", width="stretch", help="Administrador", on_click=_cb_autocompletar_cuenta_manual, args=("admin",))
-        with col_u2:
-            st.button("operador", key="btn_quick_operador", width="stretch", help="Operador", on_click=_cb_autocompletar_cuenta_manual, args=("operador",))
-        with col_u3:
-            st.button("auditor", key="btn_quick_auditor", width="stretch", help="Auditor", on_click=_cb_autocompletar_cuenta_manual, args=("auditor",))
-
-        st.markdown("""
-        <div style="font-size: 0.74rem; opacity: 0.72; margin-top: 8px; line-height: 1.45;">
-            * <b>admin:</b> acceso completo.<br>
-            * <b>operador:</b> buscar, consultar y editar.<br>
-            * <b>auditor:</b> solo lectura.
-        </div>
-        """, unsafe_allow_html=True)
 
 
 def renderizar_manual_usuario():
@@ -198,3 +172,22 @@ def renderizar_manual_usuario():
     modulos = obtener_modulos_manual()
     contenido_modulo = modulos.get(paso_num, "Contenido no disponible para este módulo.")
     st.markdown(contenido_modulo, unsafe_allow_html=True)
+
+    # =========================================================================
+    # BARRA DE NAVEGACIÓN INFERIOR DEL STEPPER
+    # =========================================================================
+    st.markdown("---")
+    col_prev, col_center_info, col_next = st.columns([1.2, 2.0, 1.4], vertical_alignment="center")
+
+    with col_prev:
+        if paso_num > 1:
+            st.button(f"< Módulo {paso_num - 1}", width="stretch", key=f"btn_bot_prev_{paso_num}", on_click=navegar_modulo, args=(paso_num - 1,))
+
+    with col_center_info:
+        st.markdown(f"<div style='text-align: center; font-size: 0.82rem; opacity: 0.8;'>Módulo <b>{paso_num}</b> de <b>8</b> completado</div>", unsafe_allow_html=True)
+
+    with col_next:
+        if paso_num < 8:
+            st.button(f"Siguiente: Módulo {paso_num + 1} >", type="primary", width="stretch", key=f"btn_bot_next_{paso_num}", on_click=navegar_modulo, args=(paso_num + 1,))
+        else:
+            renderizar_boton_entrar_consola("btn_bot_finish", paso_num)
