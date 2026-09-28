@@ -15,12 +15,7 @@ env/
 .vault.key
 data/
 
-# Compilaciones de escritorio y PyInstaller
+# Compilaciones residuales
 dist/
 build/
-*.spec
-*.spec.bak
-desktop_app.py
-.webview_cache/
-data/.webview_cache/
 

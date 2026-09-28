@@ -135,7 +135,7 @@ def renderizar_modulo_consultas(doc_store: dict):
         if not st.session_state.historial_busquedas:
             st.markdown("""
             <div class="empty-state-container">
-                <div class="empty-state-console-icon">&gt;_ infra::rag_engine</div>
+                <div class="empty-state-console-icon">haz preguntas con IA</div>
                 <div class="empty-state-title">Asistente de Operaciones</div>
                 <div class="empty-state-subtitle">Haz preguntas sobre tu infraestructura y documentos.</div>
             </div>""", unsafe_allow_html=True)
@@ -146,7 +146,6 @@ def renderizar_modulo_consultas(doc_store: dict):
             with col_rb:
                 if st.button(">_ Limpiar Chat", width="stretch", key="btn_clear_search_history"):
                     st.session_state.historial_busquedas = []
-                    st.session_state.messages = []
                     st.toast("Historial borrado.")
                     st.rerun()
 

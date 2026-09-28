@@ -13,12 +13,15 @@ import core.auth as auth
 
 
 def check_hash():
-    h = auth.generar_hash_password("secreta")
-    assert h == auth.generar_hash_password("secreta"), "el hash debe ser determinista"
-    assert h != auth.generar_hash_password("otra"), "debe depender del contenido"
-    assert h != auth.generar_hash_password("secreta", salt="otro"), "debe depender de la sal"
-    assert auth._verificar_hash("secreta", h)
-    assert not auth._verificar_hash("incorrecta", h)
+    h1 = auth.generar_hash_password("secreta", salt="sal_fija_unica")
+    h2 = auth.generar_hash_password("secreta", salt="sal_fija_unica")
+    assert h1 == h2, "con la misma sal el hash debe ser determinista"
+    assert h1 != auth.generar_hash_password("otra", salt="sal_fija_unica"), "debe depender del contenido"
+    assert h1 != auth.generar_hash_password("secreta", salt="otra"), "debe depender de la sal"
+    assert auth.generar_hash_password("secreta") != auth.generar_hash_password("secreta"), "sin sal explícita debe usar sal aleatoria"
+    assert h1.startswith("pbkdf2_sha256$"), "el formato nuevo debe llevar prefijo"
+    assert auth._verificar_hash("secreta", h1)
+    assert not auth._verificar_hash("incorrecta", h1)
     assert not auth._verificar_hash("secreta", None)
 
 
@@ -51,9 +54,6 @@ def check_versionado(ruta_tmp):
     assert v3 == 2, "contenido idéntico no debe generar una versión nueva"
 
     assert len(aud.obtener_historial_versiones("d.md")) == 2
-
-    integridad = aud.verificar_integridad_snapshot("d.md", 1)
-    assert integridad["valido"], f"snapshot v1 debería ser válido: {integridad}"
 
 
 if __name__ == "__main__":

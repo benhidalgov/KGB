@@ -4,7 +4,6 @@ import re
 import glob
 import unicodedata
 import base64
-import zipfile
 from datetime import datetime
 import streamlit as st
 from excel_cleaner import procesar_excel_limpio
@@ -216,25 +215,6 @@ def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
         return leer_texto_resiliente(filepath)
 
 
-def extraer_imagenes_de_docx(docx_path: str) -> list[str]:
-    """Extrae las imágenes binarias de un archivo .docx empaquetado (limitadas a 400 KB)."""
-    imgs = []
-    if not (docx_path and os.path.exists(docx_path) and docx_path.lower().endswith(".docx")):
-        return imgs
-    try:
-        with zipfile.ZipFile(docx_path, "r") as z:
-            media = sorted([f for f in z.namelist() if f.startswith("word/media/")])
-            for mf in media:
-                ext = os.path.splitext(mf)[1].lower().replace(".", "")
-                if ext in ("png", "jpg", "jpeg", "svg", "webp") and z.getinfo(mf).file_size <= 400 * 1024:
-                    mime = "jpeg" if ext in ("jpg", "jpeg") else ext
-                    b64 = base64.b64encode(z.read(mf)).decode("utf-8")
-                    imgs.append(f"data:image/{mime};base64,{b64}")
-    except Exception:
-        pass
-    return imgs
-
-
 def resolver_ruta_imagen_a_base64(src_path: str, ruta_original: str | None = None) -> str:
     """Resuelve rutas de imagen locales a Data URI base64 seguro limitando a 400 KB."""
     if not src_path or (src_path.startswith("data:image/") and not src_path.endswith("...")):
@@ -401,7 +381,7 @@ def procesar_e_ingestar_binario(
 
     # 3. Documentos Ofimáticos, Excel, PDF y Texto
     else:
-        if tags:
+        if tags:    
             asignar_tags_documento(clean_name, tags, autor=autor)
 
         os.makedirs(DOCS_DIR, exist_ok=True)

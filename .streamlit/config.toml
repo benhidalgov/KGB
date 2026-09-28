@@ -1,13 +1,14 @@
 [theme]
-primaryColor = "#6366F1"
-backgroundColor = "#0F172A"
-secondaryBackgroundColor = "#1E293B"
-textColor = "#F8FAFC"
+base = "light"
+primaryColor = "#18181B"
+backgroundColor = "#FAF9F6"
+secondaryBackgroundColor = "#F4F3EF"
+textColor = "#1C1B19"
 font = "sans serif"
 
 [browser]
 gatherUsageStats = false
 
 [server]
-# Tope del cuerpo multipart de subida; complementa los límites de ingesta.
+# Tope del cuerpo multipart de subida; complementa los limites de ingesta.
 maxUploadSize = 100

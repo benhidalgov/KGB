@@ -44,11 +44,7 @@ data/users.json
 .DS_Store
 Thumbs.db
 
-# Compilaciones PyInstaller y Escritorio
+# Compilaciones residuales
 dist/
 build/
-*.spec.bak
-.webview_cache/
-data/.webview_cache/
-
 

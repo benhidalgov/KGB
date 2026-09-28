@@ -1,9 +1,9 @@
 import os
 import re
-import html
 import hashlib
 import threading
 import unicodedata
+from functools import lru_cache
 import duckdb
 import pandas as pd
 from core.configuracion import CSV_PATH
@@ -15,16 +15,15 @@ from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
 _DUCKDB_CON = None
 _DUCKDB_LAST_MTIME = -1.0
 _DUCKDB_LOCK = threading.Lock()
-_DOC_STORE_NORM_CACHE = {}
 _QUERY_RESPONSE_CACHE = {}
 _MAX_CACHE_ENTRIES = 128
 
 
 def limpiar_cache_consultas():
     """Invalida todas las caches en memoria del motor."""
-    global _QUERY_RESPONSE_CACHE, _DOC_STORE_NORM_CACHE, _DUCKDB_LAST_MTIME
+    global _QUERY_RESPONSE_CACHE, _DUCKDB_LAST_MTIME
     _QUERY_RESPONSE_CACHE.clear()
-    _DOC_STORE_NORM_CACHE.clear()
+    _obtener_texto_normalizado.cache_clear()
     _DUCKDB_LAST_MTIME = -1.0
 
 
@@ -96,14 +95,9 @@ def _clave_rol() -> str:
         return "-"
 
 
+@lru_cache(maxsize=512)
 def _obtener_texto_normalizado(doc_name: str, content: str) -> tuple[str, str]:
-    c_len = len(content)
-    cached = _DOC_STORE_NORM_CACHE.get(doc_name)
-    if cached and cached[0] == c_len:
-        return cached[1], cached[2]
-    name_norm, content_norm = normalizar_texto(doc_name), normalizar_texto(content)
-    _DOC_STORE_NORM_CACHE[doc_name] = (c_len, name_norm, content_norm)
-    return name_norm, content_norm
+    return normalizar_texto(doc_name), normalizar_texto(content)
 
 
 def ejecutar_consulta_sql(query_sql: str) -> pd.DataFrame:

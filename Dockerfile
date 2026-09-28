@@ -26,13 +26,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Usuario sin privilegios para ejecutar el servicio
 RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin appuser
 
-# Copiar manifiesto de dependencias e instalar.
-# pyinstaller y pywebview son exclusivos del empaquetado de escritorio (.exe)
-# en Windows; no aplican a la imagen Linux.
+# Copiar manifiesto de dependencias e instalar
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    grep -vE '^(pyinstaller|pywebview)==' requirements.txt > /tmp/requirements-docker.txt && \
-    pip install --no-cache-dir -r /tmp/requirements-docker.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # Copiar código fuente del proyecto y fijar propiedad
 COPY . .

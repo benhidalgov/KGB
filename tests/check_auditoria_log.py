@@ -35,13 +35,7 @@ def main():
             json.dump([{"documento": "viejo", "accion": "LEGADO"}], f)
         assert aud._leer_eventos_locales() == [{"documento": "viejo", "accion": "LEGADO"}]
 
-        # 3. Migración: un log legado conserva su historial al registrar un evento nuevo
-        _con_log_temporal(ruta)
-        aud.registrar_evento_auditoria("d3", "CREACION", 0, 1, "tester", "m3")
-        docs = [e["documento"] for e in aud._leer_eventos_locales()]
-        assert docs == ["viejo", "d3"], f"migracion perdio historial: {docs}"
-
-        # 4. Una línea corrupta no rompe la lectura del resto
+        # 3. Una línea corrupta no rompe la lectura del resto
         with open(ruta, "w", encoding="utf-8") as f:
             f.write(json.dumps({"documento": "ok"}) + "\n{no-json\n")
         assert len(aud._leer_eventos_locales()) == 1

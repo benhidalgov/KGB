@@ -5,15 +5,8 @@ Permite clasificar, filtrar y persistir etiquetas para la base documental corpor
 import os
 import json
 import re
-import importlib
 
-try:
-    import core.configuracion
-    if not hasattr(core.configuracion, "CATEGORIAS_PATH"):
-        importlib.reload(core.configuracion)
-    CATEGORIAS_PATH = getattr(core.configuracion, "CATEGORIAS_PATH", os.path.join("data", "categorias.json"))
-except Exception:
-    CATEGORIAS_PATH = os.path.join("data", "categorias.json")
+from core.configuracion import CATEGORIAS_PATH
 
 SIGLAS_COMUNES = {
     "CMDB", "DRP", "SSL", "TLS", "API", "REST", "SOAP", "BD", "SQL", "SAN",
@@ -79,19 +72,6 @@ def obtener_categorias_disponibles() -> list[str]:
     return sorted(list(set([normalizar_categoria(c) for c in data.get("categorias", []) if c.strip()])))
 
 
-def registrar_categoria(cat_nombre: str) -> str | None:
-    """Registra una nueva categoría en el catálogo si es válida y no existe."""
-    cat_limpia = normalizar_categoria(cat_nombre)
-    if not cat_limpia or len(cat_limpia) < 2:
-        return None
-    data = cargar_datos_categorias()
-    if cat_limpia not in data["categorias"]:
-        data["categorias"].append(cat_limpia)
-        data["categorias"].sort()
-        guardar_datos_categorias(data)
-    return cat_limpia
-
-
 def obtener_tags_documento(doc_name: str) -> list[str]:
     """Retorna la lista de tags/categorías asociadas a un documento específico."""
     data = cargar_datos_categorias()
@@ -127,26 +107,6 @@ def asignar_tags_documento(doc_name: str, tags: list[str], autor: str = "Técnic
 
     data.setdefault("documentos", {})[doc_name] = tags_limpios
     return guardar_datos_categorias(data)
-
-
-def filtrar_documentos_por_categoria(doc_list: list[str], categoria: str) -> list[str]:
-    """Filtra una lista de nombres de documentos según la categoría seleccionada."""
-    if not categoria or categoria == "Todas":
-        return doc_list
-    data = cargar_datos_categorias()
-    docs = data.get("documentos", {})
-    res = []
-    for d in doc_list:
-        tags_d = docs.get(d, [])
-        if categoria in tags_d:
-            res.append(d)
-        elif d.startswith("DIAGRAMA__"):
-            base_alias = d.replace("DIAGRAMA__", "").replace(".md", "")
-            for k, v in docs.items():
-                if base_alias in k and categoria in v:
-                    res.append(d)
-                    break
-    return res
 
 
 REGLAS_SUGERENCIA = [

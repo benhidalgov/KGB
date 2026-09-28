@@ -4,6 +4,7 @@ import json
 import time
 import hmac
 import hashlib
+import secrets
 from typing import Optional, Dict, Any
 import streamlit as st
 from core.auditoria import registrar_evento_auditoria
@@ -11,7 +12,8 @@ from core.manual import activar_manual_en_inicio, renderizar_manual_lanzamiento
 from core.db import es_postgres_disponible, obtener_usuarios_pg, actualizar_ultimo_login_pg
 
 from core.configuracion import USERS_PATH as AUTH_USERS_PATH, ES_PRODUCCION
-DEFAULT_SALT = "infra_console_security_salt_2026"
+
+_PBKDF2_ITERATIONS = 100_000
 
 _ROLES_MAESTROS = {"admin": "Administrador", "operador": "Operador", "auditor": "Auditor"}
 _NOMBRES_MAESTROS = {"admin": "Administrador Principal", "operador": "Operador de Infraestructura", "auditor": "Auditor de Seguridad"}
@@ -59,21 +61,36 @@ ROLES_PERMISOS = {
     "Administrador": {
         "descripcion": "Acceso total: Consultas al Asistente, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
         "puede_ver_vault": True, "puede_editar_vault": True, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": True,
+        "puede_ejecutar_sql": True,
     },
     "Operador": {
         "descripcion": "Acceso técnico: Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado y Registro de Incidencias.",
         "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": False,
+        "puede_ejecutar_sql": False,
     },
     "Auditor": {
         "descripcion": "Acceso de auditoría: Búsqueda de documentos, visualización de CMDB y verificación de eventos.",
         "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": False, "puede_editar_docs": False, "puede_rollback": False,
+        "puede_ejecutar_sql": False,
     }
 }
 
 
-def generar_hash_password(password_plana: str, salt: str = DEFAULT_SALT) -> str:
-    """Genera hash seguro PBKDF2-HMAC-SHA256."""
-    return hashlib.pbkdf2_hmac("sha256", password_plana.strip().encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
+def generar_hash_password(password_plana: str, salt: Optional[str] = None) -> str:
+    """Genera hash PBKDF2-HMAC-SHA256 con sal aleatoria por usuario.
+
+    Formato: pbkdf2_sha256$<iteraciones>$<salt>$<hash_hex>
+    Si se omite la sal, se genera una nueva (no determinista entre llamadas).
+    """
+    if salt is None:
+        salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac(
+        "sha256",
+        password_plana.strip().encode("utf-8"),
+        salt.encode("utf-8"),
+        _PBKDF2_ITERATIONS,
+    )
+    return f"pbkdf2_sha256${_PBKDF2_ITERATIONS}${salt}${dk.hex()}"
 
 
 def inicializar_almacen_usuarios() -> Dict[str, Any]:
@@ -86,12 +103,22 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
             pass
 
     claves = {u: _obtener_password_maestra(u) for u in ("admin", "operador", "auditor")}
-    faltantes = [u for u, p in claves.items() if not p]
-    if faltantes:
-        if ES_PRODUCCION:
+    generadas = []
+    if ES_PRODUCCION:
+        faltantes = [u for u, p in claves.items() if not p]
+        if faltantes:
             nombres = ", ".join(f"{u.upper()}_PASSWORD" for u in faltantes)
             raise RuntimeError(f"Defina las variables maestras de acceso: {nombres} (ver .env.example).")
-        claves = {u: p or f"{u}2026" for u, p in claves.items()}
+    else:
+        for u, p in claves.items():
+            if not p:
+                claves[u] = secrets.token_urlsafe(12)
+                generadas.append(u)
+        if generadas:
+            print(
+                "[AUTH] Cuentas de desarrollo generadas (no son contraseñas de fábrica): "
+                + ", ".join(f"{u}={claves[u]}" for u in generadas)
+            )
 
     usuarios_base = {
         "admin": {"nombre": "Administrador Principal", "rol": "Administrador", "hash": generar_hash_password(claves["admin"]), "activo": True},
@@ -109,10 +136,26 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
 
 
 def _verificar_hash(password_plana: str, hash_esperado: Optional[str]) -> bool:
-    """Compara la contraseña contra un hash PBKDF2 en tiempo constante."""
+    """Compara la contraseña contra un hash PBKDF2 en tiempo constante.
+
+    Acepta solo el formato nuevo (sal embebida); los hashes legados se rechazan.
+    """
     if not hash_esperado:
         return False
-    return hmac.compare_digest(generar_hash_password(password_plana), str(hash_esperado))
+    valor = str(hash_esperado)
+    if not valor.startswith("pbkdf2_sha256$"):
+        return False
+    try:
+        _, iteraciones, salt, digest = valor.split("$", 3)
+        dk = hashlib.pbkdf2_hmac(
+            "sha256",
+            password_plana.strip().encode("utf-8"),
+            salt.encode("utf-8"),
+            int(iteraciones),
+        )
+        return hmac.compare_digest(dk.hex(), digest)
+    except (ValueError, TypeError):
+        return False
 
 
 def verificar_credenciales(username_input: str, password_input: str) -> Optional[Dict[str, Any]]:
@@ -164,10 +207,6 @@ def obtener_usuario_actual() -> Dict[str, Any]:
     return st.session_state.get("usuario_actual", {"username": "anonimo", "nombre": "Invitado no autenticado", "rol": "Invitado"})
 
 
-def es_administrador() -> bool:
-    return obtener_usuario_actual().get("rol") == "Administrador"
-
-
 def tiene_permiso(permiso_clave: str) -> bool:
     return ROLES_PERMISOS.get(obtener_usuario_actual().get("rol", "Invitado"), {}).get(permiso_clave, False)
 
@@ -180,12 +219,6 @@ def cerrar_sesion():
     st.session_state["usuario_actual"] = None
     st.toast("Sesión cerrada.")
     st.rerun()
-
-
-def _cb_autocompletar_cuenta_auth(usuario: str):
-    """Autocompleta solo el nombre de usuario; la contraseña siempre la escribe la persona."""
-    st.session_state["login_username_val"] = usuario
-    st.session_state["login_password_val"] = ""
 
 
 def renderizar_pantalla_login():
@@ -223,17 +256,6 @@ def renderizar_pantalla_login():
                 <div style="font-size: 0.82rem; opacity: 0.8;">Escribe tu usuario y contraseña</div>
             </div>
             """, unsafe_allow_html=True)
-
-            st.markdown("<div style='font-size:0.75rem;opacity:0.75;margin-bottom:4px;'>Cuentas de prueba:</div>", unsafe_allow_html=True)
-            col_q1, col_q2, col_q3 = st.columns(3, gap="small")
-            with col_q1:
-                st.button("admin", key="btn_fill_admin", width="stretch", help="Rol: Administrador", on_click=_cb_autocompletar_cuenta_auth, args=("admin",))
-            with col_q2:
-                st.button("operador", key="btn_fill_operador", width="stretch", help="Rol: Operador", on_click=_cb_autocompletar_cuenta_auth, args=("operador",))
-            with col_q3:
-                st.button("auditor", key="btn_fill_auditor", width="stretch", help="Rol: Auditor", on_click=_cb_autocompletar_cuenta_auth, args=("auditor",))
-
-            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
             with st.form(key="form_corporate_login", clear_on_submit=False):
                 username_in = st.text_input("Usuario:", key="login_username_val")
