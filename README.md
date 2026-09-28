@@ -33,8 +33,6 @@ C:\Prototipo\
 ├── requirements.txt                   # Dependencias Python
 ├── .python-version                    # Fijación de runtime oficial (Python 3.12 LTS)
 ├── README.md                          # Manual de uso y puesta en marcha
-├── ARQUITECTURA_COPILOT_INFRAESTRUCTURA.md # Especificación técnica y arquitectura
-├── HOJA_DE_RUTA_DIAGRAMAS_E_INGESTA.md     # Roadmap de desarrollo
 ├── GEMINI.md                          # Reglas y directrices mandatorias de desarrollo
 ├── core/                              # Módulos centrales de la plataforma
 │   ├── __init__.py                    # Inicializador de paquete desacoplado
