@@ -33,30 +33,11 @@ _PALETA = {
         "blu_bg": "rgba(59, 130, 246, 0.16)", "blu_tx": "#93C5FD", "blu_bd": "rgba(59, 130, 246, 0.35)",
         "neu_bg": "rgba(255, 255, 255, 0.08)", "neu_tx": "#D4D3CB", "neu_bd": "rgba(255, 255, 255, 0.18)",
     },
-    "Accesible": {
-        "canvas": "#F8FAFC", "surface": "#FFFFFF", "subtle": "#EDF2F7", "hover": "#E2E8F0",
-        "border_s": "#CBD5E1", "border_m": "#94A3B8", "border_st": "#475569",
-        "text_p": "#0F172A", "text_s": "#334155", "text_m": "#64748B",
-        "btn_p_bg": "#0F172A", "btn_p_tx": "#FFFFFF", "btn_p_hv": "#1E293B",
-        "btn_s_bg": "#FFFFFF", "btn_s_tx": "#0F172A", "btn_s_bd": "#94A3B8", "btn_s_hv": "#EDF2F7",
-        "inp_bg": "#FFFFFF", "inp_bd": "#94A3B8", "inp_tx": "#0F172A",
-        "grn_bg": "#E6F9F0", "grn_tx": "#006644", "grn_bd": "#36B37E",
-        "amb_bg": "#FEF7E6", "amb_tx": "#8C5400", "amb_bd": "#FFAB00",
-        "crit_bg": "#FFF0EB", "crit_tx": "#A82A00", "crit_bd": "#FF5630",
-        "blu_bg": "#DEEBFF", "blu_tx": "#0747A6", "blu_bd": "#4C9AFF",
-        "neu_bg": "#EDF2F7", "neu_tx": "#334155", "neu_bd": "#CBD5E1",
-    },
 }
 
 
 def _generar_overrides_tema(t: str) -> str:
     c = _PALETA.get(t, _PALETA["Claro"])
-    extra_acc = """
-.badge-ok, .badge-warn, .badge-crit, .badge-info, .badge-tag { font-weight: 700 !important; border-width: 1.5px !important; }
-.badge-ok { border-style: solid !important; }
-.badge-warn { border-style: dashed !important; border-width: 2px !important; }
-.badge-crit { border-style: solid !important; border-width: 2px !important; text-decoration: underline !important; }
-""" if t == "Accesible" else ""
     return f"""
 :root, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {{
     --bg-canvas: {c['canvas']} !important; --bg-surface: {c['surface']} !important;
@@ -109,7 +90,6 @@ button:not([kind="primary"]):not([kind="primaryFormSubmit"]):hover {{
 }}
 div[data-testid="stAlert"] {{ background-color: {c['crit_bg']} !important; border: 1px solid {c['crit_bd']} !important; border-radius: 6px !important; }}
 div[data-testid="stAlert"] * {{ color: {c['crit_tx']} !important; font-weight: 500 !important; }}
-{extra_acc}
 """.strip()
 
 
