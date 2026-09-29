@@ -542,6 +542,69 @@ button[kind="secondaryFormSubmit"] *,
     color: var(--text-muted);
 }
 
+/* 8.1 Tarjeta Micro-Bento de Sesión de Usuario en Sidebar */
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color: var(--bg-surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    transition: border-color 0.15s ease !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    border-color: var(--border-medium) !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
+    padding: 6px 10px !important;
+    gap: 0 !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] p {
+    margin: 0 !important;
+    line-height: 1.2 !important;
+}
+
+/* Botón Salir en Sidebar */
+[data-testid="stSidebar"] .st-key-btn_logout_sidebar,
+[data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] {
+    display: flex !important;
+    justify-content: flex-end !important;
+    margin: 0 !important;
+}
+
+[data-testid="stSidebar"] .st-key-btn_logout_sidebar button,
+[data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] button {
+    min-height: 26px !important;
+    height: 26px !important;
+    padding: 2px 10px !important;
+    font-family: var(--font-sans) !important;
+    font-size: 0.74rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.02em !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--border-medium) !important;
+    background-color: var(--bg-surface-subtle) !important;
+    color: var(--text-secondary) !important;
+    box-shadow: none !important;
+    line-height: 1 !important;
+    transition: all 0.15s ease !important;
+}
+
+[data-testid="stSidebar"] .st-key-btn_logout_sidebar button:hover,
+[data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] button:hover {
+    background-color: var(--bg-surface-hover) !important;
+    border-color: var(--border-strong) !important;
+    color: var(--text-primary) !important;
+    transform: scale(0.98) !important;
+}
+
+[data-testid="stSidebar"] .st-key-btn_logout_sidebar button:active,
+[data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] button:active {
+    transform: scale(0.96) !important;
+}
+
 /* 9. Pestanas Utilitarias (Tabs) */
 div[data-testid="stTabs"] {
     margin-top: 6px;

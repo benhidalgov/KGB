@@ -80,6 +80,14 @@ button:not([kind="primary"]):not([kind="primaryFormSubmit"]) {{
 button:not([kind="primary"]):not([kind="primaryFormSubmit"]):hover {{
     background-color: {c['btn_s_hv']} !important; color: {c['text_p']} !important;
 }}
+[data-testid="stSidebar"] .st-key-btn_logout_sidebar button,
+[data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] button {{
+    background-color: {c['subtle']} !important; border: 1px solid {c['border_m']} !important; color: {c['text_s']} !important;
+}}
+[data-testid="stSidebar"] .st-key-btn_logout_sidebar button:hover,
+[data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] button:hover {{
+    background-color: {c['hover']} !important; border-color: {c['border_st']} !important; color: {c['text_p']} !important;
+}}
 div[data-testid="stAlert"] {{ background-color: {c['crit_bg']} !important; border: 1px solid {c['crit_bd']} !important; border-radius: 6px !important; }}
 div[data-testid="stAlert"] * {{ color: {c['crit_tx']} !important; font-weight: 500 !important; }}
 """.strip()

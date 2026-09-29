@@ -78,12 +78,20 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
 
         # 2. Información de Sesión y Logout
-        col_u_info, col_u_out = st.columns([2.5, 1.5], vertical_alignment="center")
-        with col_u_info:
-            st.markdown(f'<div style="font-size:0.88rem;font-weight:600;color:var(--text-primary);">{user_act.get("username", "usuario")}</div>', unsafe_allow_html=True)
-        with col_u_out:
-            if st.button("Salir", width="stretch", key="btn_logout_sidebar", help="Cerrar sesión"):
-                cerrar_sesion()
+        with st.container(border=True):
+            col_u_info, col_u_out = st.columns([2.2, 1.1], vertical_alignment="center")
+            with col_u_info:
+                st.markdown(f'''
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:var(--bg-surface-subtle); border:1px solid var(--border-subtle); color:var(--text-secondary); flex-shrink:0;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </span>
+                    <span style="font-family:var(--font-mono); font-size:0.82rem; font-weight:600; color:var(--text-primary); letter-spacing:-0.01em;">{user_act.get("username", "usuario")}</span>
+                </div>
+                ''', unsafe_allow_html=True)
+            with col_u_out:
+                if st.button("Salir", width="stretch", key="btn_logout_sidebar", help="Cerrar sesión"):
+                    cerrar_sesion()
 
         st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
