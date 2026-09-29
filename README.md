@@ -181,3 +181,9 @@ docker compose down
 * **Archivos externos no visibles:** Subir archivos en el panel lateral o reiniciar el servidor Streamlit para recargar el almacén documental.
 * **Caché de consultas desactualizada tras editar archivos:** Al hacer clic en `Recargar Documentos`, el sistema purga automáticamente la caché de respuestas y la caché documental en memoria.
 * **Subida de lotes grandes:** Comprimir los documentos en un archivo `.zip` y arrastrarlo al cargador del panel lateral para ingesta paralela automática.
+
+---
+
+## 8. Licencia
+
+Este proyecto se distribuye bajo la licencia **GNU Affero General Public License v3.0 (GNU AGPLv3)**. Consulta el archivo [LICENSE](LICENSE) para consultar el texto íntegro y las condiciones de distribución.
