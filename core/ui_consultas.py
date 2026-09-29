@@ -20,8 +20,8 @@ from core.motor import (
 def renderizar_modulo_consultas(doc_store: dict):
     """Renderiza el módulo de búsqueda y asistente de IA."""
     subtab_duckdb, subtab_asistente = st.tabs([
-        ">_ Buscar Documentos",
-        ">_ Asistente Técnico"
+        "Buscar Documentos",
+        "Asistente Técnico"
     ])
 
     # 1. Búsqueda Textual en CMDB y Documentos
@@ -98,7 +98,7 @@ def renderizar_modulo_consultas(doc_store: dict):
             with col_bt:
                 st.caption("¿Quieres que el asistente analice este término?")
             with col_bb:
-                if st.button(">_ Analizar con Asistente", width="stretch", type="primary", key="btn_bridge_to_asistente"):
+                if st.button("Analizar con Asistente", width="stretch", type="primary", key="btn_bridge_to_asistente"):
                     with st.spinner("Analizando..."):
                         resp_c = generar_respuesta_asistente(active_duck_term, doc_store)
                         st.session_state.historial_busquedas.insert(0, {
@@ -135,7 +135,7 @@ def renderizar_modulo_consultas(doc_store: dict):
         if not st.session_state.historial_busquedas:
             st.markdown("""
             <div class="empty-state-container">
-                <div class="empty-state-console-icon">&gt;_ infra::rag_engine</div>
+                <div class="empty-state-console-icon">infra::rag_engine</div>
                 <div class="empty-state-title">Asistente de Operaciones</div>
                 <div class="empty-state-subtitle">Haz preguntas sobre tu infraestructura y documentos.</div>
             </div>""", unsafe_allow_html=True)
@@ -144,7 +144,7 @@ def renderizar_modulo_consultas(doc_store: dict):
             with col_rt:
                 st.markdown(f"<div style='font-size:0.95rem;font-weight:600;'>Historial ({len(st.session_state.historial_busquedas)}):</div>", unsafe_allow_html=True)
             with col_rb:
-                if st.button(">_ Limpiar Chat", width="stretch", key="btn_clear_search_history"):
+                if st.button("Limpiar Chat", width="stretch", key="btn_clear_search_history"):
                     st.session_state.historial_busquedas = []
                     st.session_state.messages = []
                     st.toast("Historial borrado.")

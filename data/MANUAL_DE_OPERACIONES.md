@@ -34,11 +34,11 @@
         3. **Configurar o Modificar Claves en la Bóveda (Solo Administrador):**
            * En el panel lateral, despliegue la sección **`Bóveda de Credenciales [VAULT]`**.
            * En el desplegable, seleccione la clave a configurar (por ejemplo, `GEMINI_API_KEY`).
-           * Escriba el valor de la clave en el campo de texto y presione **`>_ Guardar`**.
+           * Escriba el valor de la clave en el campo de texto y presione **`Guardar`**.
            * El sistema cifra el valor en memoria y lo guarda en `data/.vault.enc` registrando la auditoría.
-           * Para borrar una clave, selecciónela y presione **`>_ Revocar`**.
+           * Para borrar una clave, selecciónela y presione **`Revocar`**.
         4. **Cerrar Sesión:**
-           * Haga clic en el botón **`>_ Cerrar Sesión`** en la barra lateral. La sesión se purga y el evento `LOGOUT` queda registrado.
+           * Haga clic en el botón **`Salir`** en la barra lateral. La sesión se purga y el evento `LOGOUT` queda registrado.
 
 ---
 
@@ -73,10 +73,10 @@
            * Dirección IP: `10.24.0.125`, `10.24.0.10`.
            * Protocolo o Componente: `JWT`, `SSL`, `Redis`, `WSO2`, `PostgreSQL`.
            * Número de Serie: `SN-8842-A`.
-        3. Presione `Enter` o haga clic en **`>_ Buscar en CMDB y Documentos`**.
+        3. Presione `Enter` o haga clic en **`Buscar en CMDB y Documentos`**.
         4. **Interpretación de Resultados:**
            * **Panel Superior (Servidores CMDB):** Muestra la cuadrícula de servidores con su IP, Nivel arquitectónico (`L1` Hardware físico, `L2` Virtualización, `L3` Middleware, `L4` Aplicaciones), Estado operativo (`[OPERATIVO]`, `[ALERTA]`, `[CRÍTICO]`) y Técnico Responsable.
-           * **Panel Inferior (Documentos Técnicos):** Tarjetas con el Score de relevancia, fragmentos de texto con términos resaltados y el botón **`>_ Analizar con Asistente`** para transferir el contexto a la IA.
+           * **Panel Inferior (Documentos Técnicos):** Tarjetas con el Score de relevancia, fragmentos de texto con términos resaltados y el botón **`Analizar con Asistente`** para transferir el contexto a la IA.
 
 ---
 
@@ -113,9 +113,9 @@
            * *"¿Cómo realizo el procedimiento de failover de Redis según los manuales de contingencia?"*
            * *"Indícame la IP, capa y técnico responsable del servidor BALANCER001."*
            * *"¿Qué servidores de nivel L3 están en estado crítico y qué servicios afectan?"*
-        3. Presione el botón **`>_ Consultar Asistente`**.
+        3. Presione el botón **`Consultar Asistente`**.
         4. Revise la respuesta generada con pasos secuenciales, comandos de terminal y referencias documentales.
-        5. Para iniciar una nueva consulta limpia, presione **`>_ Limpiar Chat`**.
+        5. Para iniciar una nueva consulta limpia, presione **`Limpiar Chat`**.
 
 ---
 
@@ -144,7 +144,7 @@
            * Use los selectores superiores para aislar servidores por capa (ej: `L2 (Virtualización)`), estado o técnico asignado.
            * La tabla interactiva se actualiza al instante permitiendo ordenar columnas y redimensionar anchos.
         3. **Ejecución de Consultas SQL:**
-           * Despliegue la sección **`>_ Ejecutar Consulta SQL en Memoria (DuckDB)`**.
+           * Despliegue la sección **`Ejecutar Consulta SQL en Memoria (DuckDB)`**.
            * Escriba su sentencia SQL en el editor. Ejemplos prácticos:
              ```sql
              -- Servidores con alertas activas agrupados por capa
@@ -159,7 +159,7 @@
              WHERE tecnico_asignado ILIKE '%Carlos%'
              ORDER BY ip;
              ```
-           * Presione **`>_ Ejecutar SQL`** para visualizar la cuadrícula de datos resultante.
+           * Presione **`Ejecutar SQL`** para visualizar la cuadrícula de datos resultante.
 
 ---
 
@@ -223,7 +223,7 @@
 
         #### 2. ¿Cómo se utiliza paso a paso?
         1. **Entrar a Zen Studio:**
-           * En la pestaña `Documentación Técnica`, presione el botón azul **`>_ Abrir en Zen Studio`** (o elija `Zen Studio` en la barra superior).
+           * En la pestaña `Documentación Técnica`, presione el botón azul **`Abrir en Zen Studio`** (o elija `Zen Studio` en la barra superior).
         2. **Navegar por Secciones:**
            * En el panel lateral izquierdo, use el selector **`Saltar a Sección:`** para aislar un procedimiento específico (ej: *"Procedimiento de Failover"* o *"Parámetros de Red"*), o elija *"Documento Completo"*.
         3. **Buscar Palabras Clave en el Documento:**
@@ -232,7 +232,7 @@
            * Alterne el tema en el selector `Tema` (`Obsidian`, `Sepia`, `Papel`) y el tamaño en `Tamaño` (`Compacto`, `Normal`, `Grande`).
         5. **Subpestañas Multimodales:**
            * Alterne entre `Lector Markdown`, `Documento Original` (PDF o Excel a 750px de altura) y `Lado a Lado (50/50)`.
-        6. **Salir:** Presione el botón **`>_ Salir`** en la esquina superior derecha para retornar a la consola estándar.
+        6. **Salir:** Presione el botón **`Salir`** en la esquina superior derecha para retornar a la consola estándar.
 
 ---
 
@@ -321,4 +321,4 @@
            * Complete los campos guiados: Nombre del servicio, responsable, criticidad, ventana de mantenimiento, pasos secuenciales y comandos de terminal.
            * Revise la vista previa generada en tiempo real en la columna derecha.
            * Presione **`Guardar y Publicar en Base de Conocimiento`**. El runbook queda guardado en `data/docs/` como `v1` y disponible para búsquedas.
-        3. **Sincronización:** Si agrega documentos directamente en el servidor o terminal, pulse el botón **`>_ Reindexar`** en el panel lateral para refrescar la memoria caché.
+        3. **Sincronización:** Si agrega documentos directamente en el servidor o terminal, pulse el botón **`Recargar Documentos`** en el panel lateral para refrescar la memoria caché.

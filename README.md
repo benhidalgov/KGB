@@ -146,11 +146,11 @@ docker compose down
 ## 5. Guía por Pestaña de la Consola
 
 * **Pantalla de Login:** Acceso corporativo con validación criptográfica PBKDF2 (sal aleatoria por usuario). Bloquea la carga de la aplicación y CMDB a usuarios no autorizados.
-* **Navbar Superior:** Marca corporativa `[CLI] Consola de Infraestructura y Operaciones`, usuario activo (`@admin [Administrador]`), estado `● ONLINE`, selector de vista (`[Consola]` | `[Manual de Uso]`) y contadores documentales.
-* **Panel Lateral (Sidebar):** Tarjeta de sesión activa con botón **`>_ Cerrar Sesión`**, cargador de archivos individuales o paquetes **`[ZIP BATCH]`**, explorador de documentos filtrable, botón **`>_ Reindexar`** y **Bóveda de Credenciales `[VAULT]`** (exclusiva para administradores).
+* **Navbar Superior:** Marca corporativa `[CLI] Consola de Infraestructura y Operaciones`, usuario activo (`@admin [Administrador]`), selector de vista (`[Consola]` | `[Manual de Uso]`) y contadores documentales.
+* **Panel Lateral (Sidebar):** Tarjeta de sesión activa con botón **`Salir`**, cargador de archivos individuales o paquetes **`[ZIP BATCH]`**, explorador de documentos filtrable, botón **`Recargar Documentos`** y **Bóveda de Credenciales `[VAULT]`** (exclusiva para administradores).
 * **Pestaña 1 (Consultas y Búsqueda):**
   * *Subpestaña 1.1 (Búsqueda Textual):* Búsqueda en milisegundos (< 2 ms) en memoria RAM sobre DuckDB y documentación, visualización de servidores y fragmentos coincidentes, más botón puente para analizar con el Asistente Técnico.
-  * *Subpestaña 1.2 (Asistente Técnico):* Diálogo analítico con Gemini 2.5 Flash RAG, aceleración por memoria caché, diagnósticos de causa raíz y botón **`>_ Limpiar Chat`**.
+  * *Subpestaña 1.2 (Asistente Técnico):* Diálogo analítico con Gemini 2.5 Flash RAG, aceleración por memoria caché, diagnósticos de causa raíz y botón **`Limpiar Chat`**.
 * **Pestaña 2 (Historial de Mantenimientos):** Tabla interactiva de servidores con filtros por Nivel de Arquitectura (L1-L4), Estado y Técnico. En desarrollo, los administradores disponen además de una consola SQL DuckDB de solo lectura (deshabilitada con `PRODUCCION=1`).
 * **Pestaña 3 (Documentación Técnica y Versionado):** Visor Lado a Lado protegido (Markdown vs Original), renderizado de diagramas, editor de libros Excel, editor de texto seguro, comparador Diff (límite 400 líneas) y Rollback auditado.
 * **Pestaña 4 (Plantillas y Runbooks):** Asistente paso a paso para la redacción, validación y publicación formal de procedimientos operativos (`v1`).
@@ -179,5 +179,5 @@ docker compose down
 * **Olvido de contraseña de administrador:** En Streamlit Cloud, configure `ADMIN_PASSWORD = "nueva_clave"` en **App Settings -> Secrets**; el sistema la adoptará inmediatamente. En local (sin `PRODUCCION`), borre `data/users.json` y arranque de nuevo: se generarán contraseñas aleatorias nuevas que aparecerán en la consola del servidor.
 * **Activar Google Gemini:** Configurar `GEMINI_API_KEY` en los Secrets de Streamlit Cloud o en la sección **Bóveda de Credenciales `[VAULT]`** del panel lateral como administrador.
 * **Archivos externos no visibles:** Subir archivos en el panel lateral o reiniciar el servidor Streamlit para recargar el almacén documental.
-* **Caché de consultas desactualizada tras editar archivos:** Al hacer clic en `>_ Reindexar`, el sistema purga automáticamente la caché de respuestas y la caché documental en memoria.
+* **Caché de consultas desactualizada tras editar archivos:** Al hacer clic en `Recargar Documentos`, el sistema purga automáticamente la caché de respuestas y la caché documental en memoria.
 * **Subida de lotes grandes:** Comprimir los documentos en un archivo `.zip` y arrastrarlo al cargador del panel lateral para ingesta paralela automática.

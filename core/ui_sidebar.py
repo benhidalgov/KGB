@@ -43,11 +43,10 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
     with st.sidebar:
         # 1. Cabecera de Marca y Estado
         st.markdown('''
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:2px 0 8px 0; border-bottom:1px solid var(--border-subtle); margin-bottom:8px;">
+        <div style="padding:2px 0 8px 0; border-bottom:1px solid var(--border-subtle); margin-bottom:8px;">
             <div style="font-size:0.88rem; font-weight:600; color:var(--text-primary); letter-spacing:0.2px;">
                 <span class="badge-tag" style="font-size:0.65rem; padding:1px 5px; margin-right:4px;">[CLI]</span> Consola Operativa
             </div>
-            <span class="badge-pulse-online"><span class="pulse-dot"></span>ONLINE</span>
         </div>
         ''', unsafe_allow_html=True)
 
@@ -81,12 +80,9 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         # 2. Información de Sesión y Logout
         col_u_info, col_u_out = st.columns([2.5, 1.5], vertical_alignment="center")
         with col_u_info:
-            st.markdown(f"""
-            <div style="font-size:0.86rem;font-weight:600;line-height:1.2;">{user_act.get('nombre', user_act.get('username'))}</div>
-            <div style="font-size:0.68rem;opacity:0.75;margin-top:2px;"><span class="badge-ok" style="font-size:0.6rem;padding:1px 4px;">{user_act.get('rol', 'Usuario')}</span> <span style="font-family:monospace;opacity:0.6;">@{user_act.get('username')}</span></div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.88rem;font-weight:600;color:var(--text-primary);">{user_act.get("username", "usuario")}</div>', unsafe_allow_html=True)
         with col_u_out:
-            if st.button(">_ Salir", width="stretch", key="btn_logout_sidebar", help="Cerrar sesión"):
+            if st.button("Salir", width="stretch", key="btn_logout_sidebar", help="Cerrar sesión"):
                 cerrar_sesion()
 
         st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
@@ -153,7 +149,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
 
                 col_conf_up, col_canc_up = st.columns([2.4, 1.1])
                 with col_conf_up:
-                    btn_confirmar_subida = st.button(">_ Subir y Clasificar", type="primary", width="stretch", key="btn_confirmar_ingesta_tags")
+                    btn_confirmar_subida = st.button("Subir y Clasificar", type="primary", width="stretch", key="btn_confirmar_ingesta_tags")
                 with col_canc_up:
                     if st.button("Cancelar", width="stretch", key="btn_cancelar_ingesta"):
                         st.session_state["uploader_key_ver"] += 1
@@ -230,7 +226,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                         st.rerun()
         # 5. Herramientas del Sistema y Bóveda
         with st.expander("Herramientas y Bóveda", expanded=False):
-            if st.button(">_ Recargar Documentos", help="Recarga todos los documentos de data/docs/", width="stretch", key="btn_sidebar_reindexar"):
+            if st.button("Recargar Documentos", help="Recarga todos los documentos de data/docs/", width="stretch", key="btn_sidebar_reindexar"):
                 limpiar_cache_documentos()
                 cargar_documentos_locales(doc_store, force=True)
                 limpiar_cache_consultas()

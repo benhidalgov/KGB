@@ -42,7 +42,7 @@ def ir_a_consola_desde_manual():
         pass
 
 
-def renderizar_boton_entrar_consola(key_prefix: str, paso_num: int, label: str = ">_ ¡Entrar a la Consola!"):
+def renderizar_boton_entrar_consola(key_prefix: str, paso_num: int, label: str = "Ir a la Consola"):
     """Renderiza el botón de acceso a la consola compatible con vistas standalone y estándar."""
     es_standalone = bool(
         hasattr(st, "query_params") and (st.query_params.get("view") == "manual" or st.query_params.get("manual") == "1")
@@ -89,12 +89,12 @@ def renderizar_manual_lanzamiento():
     ##### 2. Primeros pasos
     1. Inicia sesión con tus credenciales de rol.
     2. Explora el manual interactivo de 8 módulos técnicos.
-    3. Pulsa **`>_ Ir a la Consola`** para acceder de inmediato al entorno.
+    3. Pulsa **`Ir a la Consola`** para acceder de inmediato al entorno.
     """)
 
     st.markdown("""
     <div style="margin-top: 16px; margin-bottom: 4px;">
-        <a href="?view=manual" target="_blank" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:0.82rem; color:var(--text-primary); border:1px solid var(--border-medium); padding:7px 16px; border-radius:6px; background-color:var(--bg-surface);">>_ Abrir Manual en Pestaña Independiente</a>
+        <a href="?view=manual" target="_blank" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:0.82rem; color:var(--text-primary); border:1px solid var(--border-medium); padding:7px 16px; border-radius:6px; background-color:var(--bg-surface);">Abrir Manual en Pestaña Independiente</a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -109,7 +109,7 @@ def renderizar_manual_usuario():
         st.caption("Guía del sistema. Revisa los pasos o entra directo a la consola.")
         col_cta, col_hint = st.columns([1.2, 2.8], gap="small", vertical_alignment="center")
         with col_cta:
-            renderizar_boton_entrar_consola("btn_manual_ir_consola", 0, label=">_ Ir a la Consola")
+            renderizar_boton_entrar_consola("btn_manual_ir_consola", 0, label="Ir a la Consola")
         with col_hint:
             st.caption("Puedes cambiar entre Consola, Zen Studio y este manual desde la barra superior.")
         st.markdown("---")

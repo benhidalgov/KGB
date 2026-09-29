@@ -221,7 +221,7 @@ def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | 
         badge = '<span class="badge-ok" style="font-size:0.72rem;padding:2px 7px;">Fuente Disponible</span>' if (ruta_original and os.path.exists(ruta_original)) else '<span class="badge-warn" style="font-size:0.72rem;padding:2px 7px;">Nativo Markdown</span>'
         st.markdown(f'<div style="text-align:center;font-size:0.78rem;opacity:0.9;"><b>Estado:</b> {badge}</div>', unsafe_allow_html=True)
     with col_zen:
-        if st.button(">_ Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el modo de lectura a pantalla completa."):
+        if st.button("Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el modo de lectura a pantalla completa."):
             st.session_state["zen_studio_activo"] = True
             st.session_state["zen_doc_sel"] = doc_name
             st.rerun()
@@ -306,7 +306,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
             tam_fuente = st.selectbox("Tamaño", ["Normal (15px)", "Grande (17px)", "Compacto (13px)"], label_visibility="collapsed", key="zen_font_size_selector")
 
     with col_zt_exit:
-        if st.button(">_ Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
+        if st.button("Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
             st.session_state["zen_studio_activo"] = False
             st.session_state["top_navbar_view_selector"] = "Consola"
             st.rerun()
