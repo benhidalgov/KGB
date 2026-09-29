@@ -29,28 +29,16 @@ def _formatear_valor_celda(val) -> str:
 
 
 def _dataframe_a_markdown(df: pd.DataFrame) -> str:
-    """Convierte un DataFrame a Markdown limpio sin requerir tabulate, con formato de celdas pulido."""
+    """Convierte un DataFrame a Markdown limpio con celdas formateadas y credenciales protegidas."""
     if df.empty:
         return ""
-    
-    cols = [_formatear_valor_celda(c) for c in df.columns]
-    cols = [c if c != "-" and not c.lower().startswith("unnamed:") else f"Col_{i+1}" for i, c in enumerate(cols)]
-    
-    header = "| " + " | ".join(cols) + " |"
-    separator = "| " + " | ".join([":---"] * len(cols)) + " |"
-    rows = []
-    
-    for _, row in df.iterrows():
-        valores_limpios = [_formatear_valor_celda(val) for val in row]
-        # Omitir filas totalmente vacias o que solo tienen guiones
-        if all(v == "-" for v in valores_limpios):
-            continue
-        row_str = "| " + " | ".join(valores_limpios) + " |"
-        rows.append(_enmascarar_credenciales(row_str))
-        
-    if not rows:
-        return ""
-    return "\n".join([header, separator] + rows)
+    cols = [c if c != "-" and not c.lower().startswith("unnamed:") else f"Col_{i+1}" for i, c in enumerate(_formatear_valor_celda(c) for c in df.columns)]
+    filas = []
+    for row in df.itertuples(index=False):
+        vals = [_formatear_valor_celda(val) for val in row]
+        if not all(v == "-" for v in vals):
+            filas.append(_enmascarar_credenciales("| " + " | ".join(vals) + " |"))
+    return f"| {' | '.join(cols)} |\n| {' | '.join([':---'] * len(cols))} |\n" + "\n".join(filas) if filas else ""
 
 
 def _procesar_hoja_formulario(data: list) -> list:

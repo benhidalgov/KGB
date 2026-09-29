@@ -19,18 +19,10 @@ def normalizar_categoria(cat: str) -> str:
     """Limpia y estandariza el nombre de una categoría conservando siglas técnicas."""
     if not cat:
         return ""
-    c = cat.strip()
-    c = re.sub(r'\s+', ' ', c)
-    palabras = c.split()
-    res = []
-    for p in palabras:
-        if p.upper() in SIGLAS_COMUNES:
-            res.append(p.upper())
-        elif len(p) <= 2:
-            res.append(p.lower() if p.lower() in {"de", "en", "y", "a"} else p.upper())
-        else:
-            res.append(p.capitalize())
-    return " ".join(res)
+    return " ".join(
+        p.upper() if p.upper() in SIGLAS_COMUNES else (p.lower() if len(p) <= 2 and p.lower() in {"de", "en", "y", "a"} else p.capitalize())
+        for p in re.sub(r'\s+', ' ', cat.strip()).split()
+    )
 
 
 def cargar_datos_categorias() -> dict:
@@ -57,10 +49,7 @@ def guardar_datos_categorias(data: dict) -> bool:
         tmp_path = f"{CATEGORIAS_PATH}.tmp"
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        if os.path.exists(CATEGORIAS_PATH):
-            os.replace(tmp_path, CATEGORIAS_PATH)
-        else:
-            os.rename(tmp_path, CATEGORIAS_PATH)
+        os.replace(tmp_path, CATEGORIAS_PATH)
         return True
     except Exception:
         return False

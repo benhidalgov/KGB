@@ -306,47 +306,36 @@ def cargar_hoja_excel_dataframe(filepath: str, sheet_name: str, mtime: float = 0
 
 def obtener_bytes_snapshot(doc_name: str, filename_snapshot: str) -> bytes | None:
     """Recupera los bytes binarios de un snapshot histórico."""
-    if not filename_snapshot:
-        return None
-    snap_path = os.path.join(HISTORY_DIR, doc_name, filename_snapshot)
-    if os.path.exists(snap_path):
-        with open(snap_path, "rb") as f:
-            return f.read()
-    return None
+    p = os.path.join(HISTORY_DIR, doc_name, filename_snapshot) if filename_snapshot else ""
+    return open(p, "rb").read() if p and os.path.exists(p) else None
 
 
 def _leer_eventos_locales() -> list:
-    """Lee el log local de auditoría en NDJSON (una línea JSON por evento).
-
-    Tolera el formato antiguo de arreglo JSON completo y líneas corruptas.
-    """
+    """Lee el log local de auditoría en NDJSON o formato legado de arreglo JSON."""
     if not os.path.exists(AUDIT_LOG_PATH):
         return []
     try:
         with open(AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
             contenido = f.read().strip()
+        if not contenido:
+            return []
+        if contenido.startswith("["):
+            try:
+                data = json.loads(contenido)
+                return data if isinstance(data, list) else []
+            except Exception:
+                return []
+        eventos = []
+        for linea in contenido.splitlines():
+            s = linea.strip()
+            if s:
+                try:
+                    eventos.append(json.loads(s))
+                except Exception:
+                    pass
+        return eventos
     except Exception:
         return []
-    if not contenido:
-        return []
-
-    if contenido.startswith("["):
-        try:
-            data = json.loads(contenido)
-            return data if isinstance(data, list) else []
-        except Exception:
-            return []
-
-    eventos = []
-    for linea in contenido.splitlines():
-        linea = linea.strip()
-        if not linea:
-            continue
-        try:
-            eventos.append(json.loads(linea))
-        except Exception:
-            continue
-    return eventos
 
 
 @functools.lru_cache(maxsize=16)
