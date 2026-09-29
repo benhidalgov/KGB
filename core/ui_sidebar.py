@@ -50,26 +50,26 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         </div>
         ''', unsafe_allow_html=True)
 
-        # 1.1 Selector de Modo Claro / Modo Oscuro
+        # 1.1 Selector de Modo Claro / Modo Oscuro / Accesible
         def _cb_cambiar_tema_sidebar():
             nuevo = st.session_state.get("segmented_theme_sidebar")
-            if nuevo in ("Claro", "Oscuro"):
+            if nuevo in ("Claro", "Oscuro", "Accesible"):
                 st.session_state["tema_visual"] = nuevo
                 st.session_state["seg_theme_login"] = nuevo
             else:
                 st.session_state["segmented_theme_sidebar"] = st.session_state.get("tema_visual", "Claro")
 
         tema_act_sb = st.session_state.get("tema_visual", "Claro")
-        if "segmented_theme_sidebar" not in st.session_state or st.session_state["segmented_theme_sidebar"] not in ("Claro", "Oscuro"):
+        if "segmented_theme_sidebar" not in st.session_state or st.session_state["segmented_theme_sidebar"] not in ("Claro", "Oscuro", "Accesible"):
             st.session_state["segmented_theme_sidebar"] = tema_act_sb
 
-        col_th_lbl, col_th_ctl = st.columns([1.1, 2.2], vertical_alignment="center")
+        col_th_lbl, col_th_ctl = st.columns([0.9, 2.7], vertical_alignment="center")
         with col_th_lbl:
             st.markdown('<span style="font-size:0.75rem; color:var(--text-secondary); font-weight:500;">Tema:</span>', unsafe_allow_html=True)
         with col_th_ctl:
             st.segmented_control(
                 "Tema:",
-                options=["Claro", "Oscuro"],
+                options=["Claro", "Oscuro", "Accesible"],
                 key="segmented_theme_sidebar",
                 on_change=_cb_cambiar_tema_sidebar,
                 label_visibility="collapsed"

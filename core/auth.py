@@ -239,7 +239,7 @@ def _cb_autocompletar_cuenta_auth(usuario: str):
 
 def _cb_cambiar_tema_auth():
     nuevo = st.session_state.get("seg_theme_login")
-    if nuevo in ("Claro", "Oscuro"):
+    if nuevo in ("Claro", "Oscuro", "Accesible"):
         st.session_state["tema_visual"] = nuevo
         st.session_state["segmented_theme_sidebar"] = nuevo
     else:
@@ -253,7 +253,7 @@ def renderizar_pantalla_login():
     else:
         st.markdown("<style>[data-testid=\"stSidebar\"], [data-testid=\"stSidebarCollapsedControl\"] { display: none !important; }</style>", unsafe_allow_html=True)
 
-    col_h_left, col_h_right = st.columns([3.8, 1.2], vertical_alignment="center")
+    col_h_left, col_h_right = st.columns([3.4, 1.6], vertical_alignment="center")
     with col_h_left:
         st.markdown("""
         <div class="bento-card" style="margin: 4px 0 16px 0;">
@@ -271,11 +271,11 @@ def renderizar_pantalla_login():
         """, unsafe_allow_html=True)
     with col_h_right:
         tema_actual_auth = st.session_state.get("tema_visual", "Claro")
-        if "seg_theme_login" not in st.session_state or st.session_state["seg_theme_login"] not in ("Claro", "Oscuro"):
+        if "seg_theme_login" not in st.session_state or st.session_state["seg_theme_login"] not in ("Claro", "Oscuro", "Accesible"):
             st.session_state["seg_theme_login"] = tema_actual_auth
         st.segmented_control(
             "Tema:",
-            options=["Claro", "Oscuro"],
+            options=["Claro", "Oscuro", "Accesible"],
             key="seg_theme_login",
             on_change=_cb_cambiar_tema_auth,
             label_visibility="collapsed"
