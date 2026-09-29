@@ -146,7 +146,7 @@ docker compose down
 ## 5. Guía por Pestaña de la Consola
 
 * **Pantalla de Login:** Acceso corporativo con validación criptográfica PBKDF2 (sal aleatoria por usuario). Bloquea la carga de la aplicación y CMDB a usuarios no autorizados.
-* **Navbar Superior:** Marca corporativa `[CLI] Consola de Infraestructura y Operaciones`, usuario activo (`@admin [Administrador]`), selector de vista (`[Consola]` | `[Manual de Uso]`) y contadores documentales.
+* **Navbar Superior:** Marca corporativa ` Consola de Infraestructura y Operaciones`, usuario activo (`@admin [Administrador]`), selector de vista (`[Consola]` | `[Manual de Uso]`) y contadores documentales.
 * **Panel Lateral (Sidebar):** Tarjeta de sesión activa con botón **`Salir`**, cargador de archivos individuales o paquetes **`[ZIP BATCH]`**, explorador de documentos filtrable, botón **`Recargar Documentos`** y **Bóveda de Credenciales `[VAULT]`** (exclusiva para administradores).
 * **Pestaña 1 (Consultas y Búsqueda):**
   * *Subpestaña 1.1 (Búsqueda Textual):* Búsqueda en milisegundos (< 2 ms) en memoria RAM sobre DuckDB y documentación, visualización de servidores y fragmentos coincidentes, más botón puente para analizar con el Asistente Técnico.

@@ -259,7 +259,6 @@ def renderizar_pantalla_login():
         <div class="bento-card" style="margin: 4px 0 16px 0;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <div>
-                    <span class="navbar-brand-badge" style="font-size: 0.74rem; padding: 2px 8px;">[CLI]</span>
                     <span class="search-doc-title" style="margin-left: 8px;">Consola de Infraestructura y Operaciones</span>
                 </div>
                 <span class="badge-info">[INICIO]</span>

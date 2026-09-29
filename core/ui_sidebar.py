@@ -45,7 +45,6 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         st.markdown('''
         <div style="padding:2px 0 8px 0; border-bottom:1px solid var(--border-subtle); margin-bottom:8px;">
             <div style="font-size:0.88rem; font-weight:600; color:var(--text-primary); letter-spacing:0.2px;">
-                <span class="badge-tag" style="font-size:0.65rem; padding:1px 5px; margin-right:4px;">[CLI]</span> Consola Operativa
             </div>
         </div>
         ''', unsafe_allow_html=True)
