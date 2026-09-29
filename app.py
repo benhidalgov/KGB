@@ -28,7 +28,6 @@ from core.auth import (
 )
 from core.procesador import (
     cargar_documentos_locales,
-    limpiar_cache_documentos,
     obtener_ruta_original,
 )
 from core.auditoria import inicializar_version_inicial_si_no_existe
@@ -41,9 +40,13 @@ from core.ui_documentos import renderizar_pestana_documentacion
 from core.ui_plantillas import renderizar_pestana_plantillas
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=60)
 def obtener_dataframe_mantenimientos(mtime: float) -> pd.DataFrame:
-    """Carga en caché los mantenimientos de la CMDB desde PostgreSQL o CSV local."""
+    """Carga en caché los mantenimientos de la CMDB desde PostgreSQL o CSV local.
+
+    El mtime del CSV invalida al instante en modo local; el ttl refresca los
+    datos servidos por PostgreSQL, que no modifican ningún archivo local.
+    """
     from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
     if es_postgres_disponible():
         try:
@@ -121,10 +124,6 @@ for k, default_v in [("historial_busquedas", []), ("messages", []), ("quick_pill
 if "doc_store" not in st.session_state:
     st.session_state.doc_store = {}
     cargar_documentos_locales(st.session_state.doc_store)
-elif any(len(v) > 150_000 for v in st.session_state.doc_store.values()):
-    limpiar_cache_documentos()
-    st.session_state.doc_store.clear()
-    cargar_documentos_locales(st.session_state.doc_store, force=True)
 
 # 3.1 Modo Zen Studio (Lector Inmersivo de Documentos)
 if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_sel"):

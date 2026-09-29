@@ -60,7 +60,7 @@ def _obtener_password_maestra(usuario: str) -> str:
 ROLES_PERMISOS = {
     "Administrador": {
         "descripcion": "Acceso total: Consultas al Asistente, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
-        "puede_ver_vault": True, "puede_editar_vault": True, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": True,
+        "puede_ver_vault": True, "puede_editar_vault": True, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": True, "puede_ejecutar_sql": True,
     },
     "Operador": {
         "descripcion": "Acceso técnico: Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado y Registro de Incidencias.",
@@ -219,17 +219,22 @@ def cerrar_sesion():
 
 
 def _obtener_password_demo(usuario: str) -> str:
-    """Retorna la contrasena maestra o la clave autorizada para pruebas tecnicas."""
-    master = _obtener_password_maestra(usuario)
-    if master:
-        return master
+    """Clave de pruebas para autocompletado del formulario de acceso.
+
+    Nunca devuelve la contrasena maestra del entorno: la pantalla de login es
+    alcanzable sin autenticar y precargar la clave real la expondria.
+    """
+    if ES_PRODUCCION:
+        return ""
     return f"{usuario}2026"
 
 
 def _cb_autocompletar_cuenta_auth(usuario: str):
     """Autocompleta el nombre de usuario y su contrasena de prueba correspondiente."""
     st.session_state["login_username_val"] = usuario
-    st.session_state["login_password_val"] = _obtener_password_demo(usuario)
+    demo = _obtener_password_demo(usuario)
+    if demo:
+        st.session_state["login_password_val"] = demo
 
 
 def _cb_cambiar_tema_auth():
@@ -292,16 +297,17 @@ def renderizar_pantalla_login():
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown("<div style='font-size:0.78rem; font-weight:500; color:var(--text-secondary); margin-bottom:6px;'>Cuentas de prueba:</div>", unsafe_allow_html=True)
-            col_q1, col_q2, col_q3 = st.columns(3, gap="small")
-            with col_q1:
-                st.button("admin", key="btn_fill_admin", width="stretch", help="Rol: Administrador | Clave: admin2026", on_click=_cb_autocompletar_cuenta_auth, args=("admin",))
-            with col_q2:
-                st.button("operador", key="btn_fill_operador", width="stretch", help="Rol: Operador | Clave: operador2026", on_click=_cb_autocompletar_cuenta_auth, args=("operador",))
-            with col_q3:
-                st.button("auditor", key="btn_fill_auditor", width="stretch", help="Rol: Auditor | Clave: auditor2026", on_click=_cb_autocompletar_cuenta_auth, args=("auditor",))
+            if not ES_PRODUCCION:
+                st.markdown("<div style='font-size:0.78rem; font-weight:500; color:var(--text-secondary); margin-bottom:6px;'>Cuentas de prueba:</div>", unsafe_allow_html=True)
+                col_q1, col_q2, col_q3 = st.columns(3, gap="small")
+                with col_q1:
+                    st.button("admin", key="btn_fill_admin", width="stretch", help="Rol: Administrador | Clave: admin2026", on_click=_cb_autocompletar_cuenta_auth, args=("admin",))
+                with col_q2:
+                    st.button("operador", key="btn_fill_operador", width="stretch", help="Rol: Operador | Clave: operador2026", on_click=_cb_autocompletar_cuenta_auth, args=("operador",))
+                with col_q3:
+                    st.button("auditor", key="btn_fill_auditor", width="stretch", help="Rol: Auditor | Clave: auditor2026", on_click=_cb_autocompletar_cuenta_auth, args=("auditor",))
 
-            st.markdown("<div style='font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; margin-bottom: 10px;'>Clave predeterminada: <code>[usuario]2026</code> (se rellena automáticamente).</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; margin-bottom: 10px;'>Clave predeterminada: <code>[usuario]2026</code> (se rellena automáticamente).</div>", unsafe_allow_html=True)
 
             with st.form(key="form_corporate_login", clear_on_submit=False):
                 username_in = st.text_input("Usuario:", key="login_username_val")

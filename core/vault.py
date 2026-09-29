@@ -121,7 +121,7 @@ def obtener_secreto(nombre_secreto: str, valor_defecto: str = "") -> str:
     except ErrorBoveda:
         return valor_defecto
     return secretos.get(k, valor_defecto).strip() if k in secretos else valor_defecto
-
+    
 
 def guardar_secreto(nombre_secreto: str, valor: str, autor: str = "Operador / Consola") -> bool:
     """Guarda o actualiza un secreto en la bóveda cifrada local registrando auditoría.

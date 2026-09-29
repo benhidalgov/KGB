@@ -1,6 +1,7 @@
 import os
 import re
 import html
+import time
 import hashlib
 import threading
 import unicodedata
@@ -15,6 +16,9 @@ from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
 _DUCKDB_CON = None
 _DUCKDB_LAST_MTIME = -1.0
 _DUCKDB_LOCK = threading.Lock()
+_DUCKDB_FROM_PG = False
+_DUCKDB_LAST_LOAD_TS = 0.0
+_DUCKDB_RELOAD_INTERVAL = 60.0  # Refresco periódico cuando la fuente es PostgreSQL
 _DOC_STORE_NORM_CACHE = {}
 _QUERY_RESPONSE_CACHE = {}
 _MAX_CACHE_ENTRIES = 128
@@ -35,10 +39,17 @@ def _obtener_conexion_duckdb():
     usa su propio cursor sobre la misma base en memoria. La recarga se protege
     con un lock para que dos sesiones no reconstruyan la tabla a la vez.
     """
-    global _DUCKDB_CON, _DUCKDB_LAST_MTIME
+    global _DUCKDB_CON, _DUCKDB_LAST_MTIME, _DUCKDB_FROM_PG, _DUCKDB_LAST_LOAD_TS
     current_mtime = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
+    # El CSV invalida por mtime; PostgreSQL no toca archivos locales, así que se
+    # refresca de forma periódica para reflejar cambios en la base relacional.
+    necesita_recarga = (
+        _DUCKDB_CON is None
+        or current_mtime != _DUCKDB_LAST_MTIME
+        or (_DUCKDB_FROM_PG and time.time() - _DUCKDB_LAST_LOAD_TS > _DUCKDB_RELOAD_INTERVAL)
+    )
     with _DUCKDB_LOCK:
-        if _DUCKDB_CON is None or current_mtime != _DUCKDB_LAST_MTIME:
+        if necesita_recarga:
             _DUCKDB_CON = duckdb.connect(database=':memory:')
             cargado = False
 
@@ -65,6 +76,8 @@ def _obtener_conexion_duckdb():
                         estado VARCHAR, nagios_check VARCHAR
                     )
                 """)
+            _DUCKDB_FROM_PG = cargado
+            _DUCKDB_LAST_LOAD_TS = time.time()
             _DUCKDB_LAST_MTIME = current_mtime
         return _DUCKDB_CON.cursor()
 
@@ -122,7 +135,9 @@ def buscar_servidores_duckdb(termino: str) -> pd.DataFrame:
 
     tokens = [t for t in t_norm.split() if len(t) >= 2] or [t_norm]
     cols = ["servidor_id", "numero_serie", "ip", "tecnico", "descripcion", "componente", "vcloud_vm"]
-    condiciones = [" OR ".join(f"LOWER({c}) LIKE LOWER('%{t}%')" for c in cols) for t in tokens]
+    # LIKE parametrizado: los terminos del usuario nunca se interpolan en el SQL.
+    condiciones = [" OR ".join(f"LOWER({c}) LIKE ?" for c in cols) for t in tokens]
+    params = [f"%{t}%" for t in tokens for _ in cols]
 
     query_sql = f"""
         SELECT servidor_id, numero_serie, ip, vcloud_vm, nivel_arquitectura, componente, fecha, tipo_mantenimiento, tecnico, descripcion, estado, nagios_check
@@ -131,7 +146,7 @@ def buscar_servidores_duckdb(termino: str) -> pd.DataFrame:
         ORDER BY fecha DESC
     """
     try:
-        return _obtener_conexion_duckdb().execute(query_sql).df()
+        return _obtener_conexion_duckdb().execute(query_sql, params).df()
     except Exception:
         return pd.DataFrame()
 

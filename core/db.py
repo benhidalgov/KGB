@@ -181,13 +181,13 @@ def insertar_evento_auditoria_pg(
 
 def obtener_eventos_auditoria_pg(limite: int = 200) -> List[Dict[str, Any]]:
     """Recupera la lista de eventos de auditoría ordenados cronológicamente inverso."""
-    sql = f"""
+    sql = """
         SELECT timestamp, documento, accion, version_anterior, version_nueva, autor, motivo, sha256_integridad
         FROM registro_auditoria
         ORDER BY timestamp DESC
-        LIMIT {limite}
+        LIMIT :limite
     """
-    df = ejecutar_consulta_df(sql)
+    df = ejecutar_consulta_df(sql, {"limite": int(limite)})
     if df.empty:
         return []
 
