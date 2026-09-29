@@ -194,7 +194,8 @@
            * **`[Lado a Lado]`:** Muestra el Markdown a la izquierda y el archivo original a la derecha.
            * **`[Solo Markdown]`:** Oculta el archivo original para concentrarse en el texto limpio.
            * **`[Solo Formato Original]`:** Muestra exclusivamente el visor PDF o la tabla Excel a todo el ancho.
-        4. En libros Excel: Utilice el selector `Seleccionar Hoja de Trabajo` para alternar entre hojas del libro de cálculo.
+        4. En libros Excel: Utilice el selector `Seleccionar Hoja de Trabajo`w
+         para alternar entre hojas del libro de cálculo.
         5. Botón de Descarga: Al pie de la columna izquierda o derecha, pulse **`Descargar Versión Activa v{N}`** para obtener una copia local en `.md`, `.xlsx` o `.pdf`.
 
 ---
