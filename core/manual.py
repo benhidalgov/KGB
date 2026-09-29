@@ -111,7 +111,7 @@ def renderizar_manual_usuario():
         with col_cta:
             renderizar_boton_entrar_consola("btn_manual_ir_consola", 0, label="Ir a la Consola")
         with col_hint:
-            st.caption("Puedes cambiar entre Consola, Zen Studio y este manual desde la barra superior.")
+            st.caption("Puedes cambiar entre Consola, el modo lectura y este manual desde la barra superior.")
         st.markdown("---")
     else:
         st.caption("Explicación de cada parte y cómo usarla.")
@@ -125,7 +125,7 @@ def renderizar_manual_usuario():
         "3. Asistente",
         "4. Inventario y SQL",
         "5. Visor de Documentos",
-        "6. Zen Studio",
+        "6. Modo Lectura",
         "7. Editar y Versionar",
         "8. Subir Archivos y Runbooks"
     ]

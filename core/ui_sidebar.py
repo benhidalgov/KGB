@@ -105,7 +105,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
             f"Historial de Mantenimientos ({total_srvs})",
             f"Documentación Técnica ({cant_docs})",
             "Plantillas y Runbooks",
-            "Zen Studio (Modo Lectura)",
+            "Modo Lectura",
         ]
 
         if st.session_state.pop("_ir_consola", False):

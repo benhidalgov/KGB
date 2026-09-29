@@ -165,11 +165,11 @@ elif "Documentación" in seccion_activa:
 elif "Plantillas" in seccion_activa or "Runbook" in seccion_activa:
     renderizar_pestana_plantillas(st.session_state.doc_store)
 
-elif "Zen" in seccion_activa:
+elif "Zen" in seccion_activa or "Lectura" in seccion_activa:
     doc_zen_def = st.session_state.get("zen_doc_sel") or (sorted(st.session_state.doc_store.keys())[0] if st.session_state.doc_store else None)
     if doc_zen_def and doc_zen_def in st.session_state.doc_store:
         st.session_state["zen_studio_activo"] = True
         st.session_state["zen_doc_sel"] = doc_zen_def
         st.rerun()
     else:
-        st.warning("No hay documentos para previsualizar en Zen Studio.")
+        st.warning("No hay documentos para previsualizar en Modo Lectura.")

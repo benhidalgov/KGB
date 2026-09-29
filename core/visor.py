@@ -221,7 +221,7 @@ def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | 
         badge = '<span class="badge-ok" style="font-size:0.72rem;padding:2px 7px;">Fuente Disponible</span>' if (ruta_original and os.path.exists(ruta_original)) else '<span class="badge-warn" style="font-size:0.72rem;padding:2px 7px;">Nativo Markdown</span>'
         st.markdown(f'<div style="text-align:center;font-size:0.78rem;opacity:0.9;"><b>Estado:</b> {badge}</div>', unsafe_allow_html=True)
     with col_zen:
-        if st.button("Abrir en Zen Studio", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el modo de lectura a pantalla completa."):
+        if st.button("Abrir en Modo Lectura", type="primary", width="stretch", key=f"btn_zen_enter_{doc_name}_{key_suffix}", help="Abre el modo de lectura a pantalla completa."):
             st.session_state["zen_studio_activo"] = True
             st.session_state["zen_doc_sel"] = doc_name
             st.rerun()
@@ -289,7 +289,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_zt_title:
         st.markdown(f"""
         <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
-            <span class="badge-ok" style="font-size:0.7rem;padding:2px 8px;font-weight:600;">[ZEN STUDIO]</span>
+            <span class="badge-ok" style="font-size:0.7rem;padding:2px 8px;font-weight:600;">[MODO LECTURA]</span>
             <span style="font-family:var(--font-serif);font-size:1.2rem;font-weight:500;color:var(--text-primary);">{normalizar_titulo_display(doc_name)}</span>
             <span class="badge-info" style="font-size:0.68rem;">v{u_ver}</span>
         </div>

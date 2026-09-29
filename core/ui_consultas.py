@@ -135,7 +135,7 @@ def renderizar_modulo_consultas(doc_store: dict):
         if not st.session_state.historial_busquedas:
             st.markdown("""
             <div class="empty-state-container">
-                <div class="empty-state-console-icon">infra::rag_engine</div>
+                <div class="empty-state-console-icon">Pregunta a Gemini :1</div>
                 <div class="empty-state-title">Asistente de Operaciones</div>
                 <div class="empty-state-subtitle">Haz preguntas sobre tu infraestructura y documentos.</div>
             </div>""", unsafe_allow_html=True)

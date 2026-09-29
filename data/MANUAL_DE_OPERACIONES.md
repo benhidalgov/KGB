@@ -206,7 +206,7 @@
                 <span class="badge-info">[MÓDULO 6 DE 8]</span>
                 <span class="badge-tag">Lectura Inmersiva</span>
             </div>
-            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Módulo 6: Lector Zen Studio con Índice Interactivo (TOC) y Buscador Interno</h3>
+            <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Módulo 6: Modo Lectura con Buscador Interno</h3>
             <div style="font-size: 0.88rem; opacity: 0.85;">
                 Entorno inmersivo de pantalla completa para navegación fluida en manuales técnicos de gran volumen.
             </div>
@@ -222,8 +222,8 @@
         ---
 
         #### 2. ¿Cómo se utiliza paso a paso?
-        1. **Entrar a Zen Studio:**
-           * En la pestaña `Documentación Técnica`, presione el botón azul **`Abrir en Zen Studio`** (o elija `Zen Studio` en la barra superior).
+        1. **Entrar al Modo lectura:**
+           * En la pestaña `Documentación Técnica`, presione el botón azul **`Abrir en Modo lectura`** (o elija `Modo lectura` en la barra superior).
         2. **Navegar por Secciones:**
            * En el panel lateral izquierdo, use el selector **`Saltar a Sección:`** para aislar un procedimiento específico (ej: *"Procedimiento de Failover"* o *"Parámetros de Red"*), o elija *"Documento Completo"*.
         3. **Buscar Palabras Clave en el Documento:**
