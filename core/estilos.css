@@ -210,12 +210,59 @@ kbd {
 }
 
 /* Envoltura de contenedores con borde de Streamlit */
-div[data-testid="stVerticalBlockBorderWrapper"],
-div[data-testid="stVerticalBlockBorderWrapper"] > div {
+div[data-testid="stVerticalBlockBorderWrapper"] {
     background-color: var(--bg-surface) !important;
     border: 1px solid var(--border-subtle) !important;
     border-radius: 8px !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
+    border: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* 3.1 Estados Vacíos (Empty States) */
+.empty-state-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 36px 20px 32px;
+    background-color: var(--bg-surface);
+    border: 1px dashed var(--border-medium);
+    border-radius: 8px;
+    margin: 14px 0;
+}
+
+.empty-state-console-icon {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background-color: var(--bg-surface-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 3px 10px;
+    margin-bottom: 12px;
+}
+
+.empty-state-title {
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+}
+
+.empty-state-subtitle {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    max-width: 480px;
+    line-height: 1.55;
 }
 
 div[data-testid="stForm"] {
@@ -322,6 +369,25 @@ li[data-baseweb="menu-item"][aria-selected="true"] {
     color: var(--text-primary) !important;
 }
 
+div[data-baseweb="tag"],
+span[data-baseweb="tag"] {
+    background-color: var(--pastel-neutral-bg) !important;
+    border: 1px solid var(--pastel-neutral-border) !important;
+    border-radius: 4px !important;
+}
+
+div[data-baseweb="tag"] *,
+span[data-baseweb="tag"] * {
+    color: var(--text-primary) !important;
+    font-size: 0.78rem !important;
+}
+
+div[data-baseweb="tag"] svg,
+span[data-baseweb="tag"] svg {
+    fill: var(--text-secondary) !important;
+    color: var(--text-secondary) !important;
+}
+
 .stTextInput input:focus,
 .stTextInput > div > div > input:focus,
 .stTextArea textarea:focus,
@@ -337,6 +403,8 @@ label[data-testid="stWidgetLabel"] p,
 .stTextInput label,
 .stTextArea label,
 .stSelectbox label,
+div[data-testid="stCheckbox"] label,
+div[data-testid="stCheckbox"] label *,
 div[data-testid="stWidgetLabel"] p {
     color: var(--text-primary) !important;
     font-weight: 500 !important;
@@ -808,7 +876,8 @@ div[data-testid="stPills"] button[aria-checked="true"] * {
 }
 
 /* 11. Tablas y DataFrames */
-div[data-testid="stDataFrame"] {
+div[data-testid="stDataFrame"],
+div[data-testid="stDataEditor"] {
     border: 1px solid var(--border-subtle) !important;
     border-radius: 6px !important;
     background-color: var(--bg-surface) !important;
@@ -950,6 +1019,12 @@ div[data-testid="stDataFrame"] {
     color: var(--text-primary);
 }
 
+.visor-source-meta-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .visor-office-notice-card {
     background: var(--bg-surface-subtle);
     border: 1px solid var(--border-subtle);
@@ -1066,6 +1141,45 @@ div[data-testid="stAlert"]:has([data-testid="stNotificationContentError"]) {
     border-color: var(--pastel-crit-border) !important;
 }
 div[data-testid="stAlert"]:has([data-testid="stNotificationContentError"]) p,
-div[data-testid="stAlert"]:has([data-testid="stNotificationContentError"]) span {
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentError"]) span,
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentError"]) div {
     color: var(--pastel-crit-text) !important;
+}
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentWarning"]) {
+    background-color: var(--pastel-amber-bg) !important;
+    border-color: var(--pastel-amber-border) !important;
+}
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentWarning"]) p,
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentWarning"]) span,
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentWarning"]) div {
+    color: var(--pastel-amber-text) !important;
+}
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentSuccess"]) {
+    background-color: var(--pastel-green-bg) !important;
+    border-color: var(--pastel-green-border) !important;
+}
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentSuccess"]) p,
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentSuccess"]) span,
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentSuccess"]) div {
+    color: var(--pastel-green-text) !important;
+}
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentInfo"]) {
+    background-color: var(--pastel-blue-bg) !important;
+    border-color: var(--pastel-blue-border) !important;
+}
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentInfo"]) p,
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentInfo"]) span,
+div[data-testid="stAlert"]:has([data-testid="stNotificationContentInfo"]) div {
+    color: var(--pastel-blue-text) !important;
+}
+
+/* Notificaciones Toast */
+div[data-testid="stToast"] {
+    background-color: var(--bg-surface) !important;
+    border: 1px solid var(--border-medium) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+div[data-testid="stToast"] * {
+    color: var(--text-primary) !important;
 }
