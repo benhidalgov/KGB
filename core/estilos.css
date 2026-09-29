@@ -561,9 +561,62 @@ button[kind="secondaryFormSubmit"] *,
     gap: 0 !important;
 }
 
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 28px !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stColumn"] {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stColumn"] > div[data-testid="stVerticalBlock"] {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    height: 100% !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="element-container"],
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+
 [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] p {
     margin: 0 !important;
-    line-height: 1.2 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    line-height: 1 !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] p:empty {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+}
+
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] .stButton {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 /* Botón Salir en Sidebar */
@@ -571,6 +624,7 @@ button[kind="secondaryFormSubmit"] *,
 [data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] {
     display: flex !important;
     justify-content: flex-end !important;
+    align-items: center !important;
     margin: 0 !important;
 }
 
