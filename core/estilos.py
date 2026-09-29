@@ -68,10 +68,36 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlo
 .bento-card, .search-result-card, [data-testid="stExpander"] {{
     background-color: {c['surface']} !important; border: 1px solid {c['border_s']} !important;
 }}
-.stTextInput input, .stTextArea textarea, .stSelectbox > div > div {{
+.stTextInput input, .stTextInput > div > div > input,
+.stTextArea textarea, .stTextArea > div > div > textarea,
+.stSelectbox > div > div, div[data-baseweb="select"], div[data-baseweb="select"] > div,
+div[data-baseweb="input"], div[data-baseweb="input"] > div,
+div[data-testid="stDateInput"] input {{
     background-color: {c['inp_bg']} !important; border-color: {c['inp_bd']} !important; color: {c['inp_tx']} !important;
 }}
-.stTextInput input:focus, .stTextArea textarea:focus {{ border-color: {c['text_p']} !important; box-shadow: 0 0 0 1px {c['text_p']} !important; }}
+div[data-baseweb="select"] *, div[data-baseweb="select"] span, div[data-baseweb="select"] div,
+div[data-testid="stSelectbox"] * {{
+    color: {c['inp_tx']} !important;
+}}
+div[data-baseweb="select"] svg {{
+    fill: {c['text_s']} !important; color: {c['text_s']} !important;
+}}
+div[data-baseweb="select"] > div > div {{
+    background-color: transparent !important;
+}}
+div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[data-baseweb="menu"], div[data-baseweb="menu"] {{
+    background-color: {c['surface']} !important; border: 1px solid {c['border_m']} !important;
+}}
+li[data-baseweb="menu-item"], li[data-baseweb="menu-item"] * {{
+    background-color: transparent !important; color: {c['text_p']} !important;
+}}
+li[data-baseweb="menu-item"]:hover, li[data-baseweb="menu-item"][aria-selected="true"] {{
+    background-color: {c['hover']} !important; color: {c['text_p']} !important;
+}}
+.stTextInput input:focus, .stTextInput > div > div > input:focus,
+.stTextArea textarea:focus, div[data-baseweb="select"]:focus-within > div {{
+    border-color: {c['border_st']} !important; box-shadow: none !important;
+}}
 [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] *, label[data-testid="stWidgetLabel"] p,
 .stTextInput label, .stTextArea label, .stSelectbox label {{ color: {c['text_p']} !important; font-weight: 500 !important; }}
 button:not([kind="primary"]):not([kind="primaryFormSubmit"]) {{

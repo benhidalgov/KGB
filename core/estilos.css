@@ -271,7 +271,12 @@ div[data-testid="stForm"] {
 .stTextInput > div > div > input,
 .stTextArea textarea,
 .stTextArea > div > div > textarea,
-.stSelectbox > div > div {
+.stSelectbox > div > div,
+div[data-baseweb="select"],
+div[data-baseweb="select"] > div,
+div[data-baseweb="input"],
+div[data-baseweb="input"] > div,
+div[data-testid="stDateInput"] input {
     background-color: var(--input-bg) !important;
     border: 1px solid var(--input-border) !important;
     border-radius: 6px !important;
@@ -281,12 +286,49 @@ div[data-testid="stForm"] {
     transition: border-color 0.15s ease !important;
 }
 
+div[data-baseweb="select"] *,
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] div,
+div[data-testid="stSelectbox"] * {
+    color: var(--input-text) !important;
+}
+
+div[data-baseweb="select"] svg {
+    fill: var(--text-secondary) !important;
+    color: var(--text-secondary) !important;
+}
+
+div[data-baseweb="select"] > div > div {
+    background-color: transparent !important;
+}
+
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] > div,
+ul[data-baseweb="menu"],
+div[data-baseweb="menu"] {
+    background-color: var(--bg-surface) !important;
+    border: 1px solid var(--border-medium) !important;
+}
+
+li[data-baseweb="menu-item"],
+li[data-baseweb="menu-item"] * {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+li[data-baseweb="menu-item"]:hover,
+li[data-baseweb="menu-item"][aria-selected="true"] {
+    background-color: var(--bg-surface-hover) !important;
+    color: var(--text-primary) !important;
+}
+
 .stTextInput input:focus,
 .stTextInput > div > div > input:focus,
 .stTextArea textarea:focus,
-.stTextArea > div > div > textarea:focus {
-    border-color: var(--text-primary) !important;
-    box-shadow: 0 0 0 1px var(--text-primary) !important;
+.stTextArea > div > div > textarea:focus,
+div[data-baseweb="select"]:focus-within > div {
+    border-color: var(--border-strong) !important;
+    box-shadow: none !important;
 }
 
 [data-testid="stWidgetLabel"],
