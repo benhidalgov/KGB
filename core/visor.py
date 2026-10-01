@@ -1,9 +1,12 @@
 import base64
 import os
 import re
+import logging
 import streamlit as st
 import pandas as pd
 from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, obtener_nombres_hojas_excel
+
+logger = logging.getLogger("infra_copilot.visor")
 from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes, normalizar_titulo_display
 from core.configuracion import DOCS_DIR
 
@@ -60,6 +63,61 @@ def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
         st.markdown(f'<iframe src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0" width="100%" height="{height}px" type="application/pdf" style="border:1px solid var(--border-subtle); border-radius:6px; background-color:var(--bg-surface);"></iframe>', unsafe_allow_html=True)
     except Exception as e:
         st.error(f"No se pudo mostrar el PDF: {str(e)}")
+
+
+@st.cache_data(show_spinner=False)
+def cargar_docx_a_html(filepath: str, mtime: float) -> str:
+    """Convierte un documento .docx a HTML semántico enriquecido utilizando mammoth."""
+    try:
+        import mammoth
+
+        def _convertir_imagen(image):
+            with image.open() as img_bytes:
+                enc = base64.b64encode(img_bytes.read()).decode("ascii")
+            return {
+                "src": f"data:{image.content_type};base64,{enc}",
+                "style": "max-width: 100%; height: auto; border-radius: 6px; margin: 12px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);"
+            }
+
+        with open(filepath, "rb") as docx_file:
+            result = mammoth.convert_to_html(
+                docx_file,
+                convert_image=mammoth.images.img_element(_convertir_imagen)
+            )
+            return result.value or ""
+    except Exception as e:
+        logger.warning(f"[Visor] Error al convertir {filepath} con mammoth: {e}")
+        return ""
+
+
+@st.cache_data(show_spinner=False)
+def cargar_pptx_a_slides(filepath: str, mtime: float) -> list:
+    """Extrae diapositivas estructuradas de un archivo .pptx con python-pptx."""
+    try:
+        from pptx import Presentation
+        prs = Presentation(filepath)
+        slides_data = []
+        for idx, slide in enumerate(prs.slides, 1):
+            title = ""
+            texts = []
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    txt = shape.text_frame.text.strip()
+                    if not txt:
+                        continue
+                    if not title and (shape == slide.shapes.title or idx == 1):
+                        title = txt
+                    else:
+                        texts.append(txt)
+            slides_data.append({
+                "numero": idx,
+                "titulo": title or f"Diapositiva {idx}",
+                "contenido": texts
+            })
+        return slides_data
+    except Exception as e:
+        logger.warning(f"[Visor] Error al leer {filepath} con python-pptx: {e}")
+        return []
 
 
 def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: str, ultima_version: int = 1, ultimo_editor: str = "Técnico Responsable", ultimo_timestamp: str = "N/A", key_suffix: str = ""):
@@ -163,13 +221,46 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
         st.dataframe(df_hoja, width="stretch", height=height)
     elif ext == ".pdf":
         mostrar_pdf_embebido(ruta_original, height=height)
-    elif ext in (".docx", ".doc", ".pptx", ".ppt"):
-        st.markdown(f"""
-        <div class="visor-office-notice-card">
-            <div class="visor-office-title">Documento Ofimático: {fname}</div>
-            <div class="visor-office-desc">El texto y las tablas están en la columna izquierda.</div>
-        </div>
-        """, unsafe_allow_html=True)
+    elif ext in (".docx", ".doc"):
+        mtime = os.path.getmtime(ruta_original) if os.path.exists(ruta_original) else 0.0
+        html_docx = cargar_docx_a_html(ruta_original, mtime) if ext == ".docx" else ""
+        if html_docx:
+            st.markdown(
+                f'<div class="visor-docx-container" style="max-height: {height}px; overflow-y: auto;">'
+                f'{html_docx}'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+        elif md_content and md_content.strip():
+            with st.container(height=height):
+                st.markdown(preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original), unsafe_allow_html=True)
+        else:
+            st.info(f"No se pudo generar la vista previa del documento {fname}.")
+    elif ext in (".pptx", ".ppt"):
+        mtime = os.path.getmtime(ruta_original) if os.path.exists(ruta_original) else 0.0
+        slides = cargar_pptx_a_slides(ruta_original, mtime) if ext == ".pptx" else []
+        if slides:
+            with st.container(height=height):
+                for s in slides:
+                    bullets_html = "".join(f"<li>{t}</li>" for t in s["contenido"]) if s["contenido"] else "<p style='color:var(--text-muted);font-style:italic;'>Sin contenido textual en la diapositiva.</p>"
+                    st.markdown(f"""
+                    <div class="visor-pptx-slide-card">
+                        <div class="visor-pptx-slide-header">
+                            <span class="badge-tag">Diapositiva {s['numero']}</span>
+                            <span class="visor-pptx-slide-title">{s['titulo']}</span>
+                        </div>
+                        <div class="visor-pptx-slide-body">
+                            <ul style="margin: 8px 0; padding-left: 20px;">
+                                {bullets_html}
+                            </ul>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        elif md_content and md_content.strip():
+            with st.container(height=height):
+                st.markdown(preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original), unsafe_allow_html=True)
+        else:
+            st.info(f"No se pudo generar la vista previa de la presentación {fname}.")
     elif ext in (".txt", ".csv", ".json", ".sql", ".py", ".md"):
         try:
             with open(ruta_original, "r", encoding="utf-8", errors="ignore") as f:
