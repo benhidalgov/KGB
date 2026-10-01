@@ -16,9 +16,8 @@ from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
 _DUCKDB_CON = None
 _DUCKDB_LAST_MTIME = -1.0
 _DUCKDB_LOCK = threading.Lock()
-_DUCKDB_FROM_PG = False
 _DUCKDB_LAST_LOAD_TS = 0.0
-_DUCKDB_RELOAD_INTERVAL = 60.0  # Refresco periódico cuando la fuente es PostgreSQL
+_DUCKDB_RELOAD_INTERVAL = 60.0  # Refresco periódico: reintenta PostgreSQL aunque la última carga fuera del CSV
 _DOC_STORE_NORM_CACHE = {}
 _QUERY_RESPONSE_CACHE = {}
 _MAX_CACHE_ENTRIES = 128
@@ -39,16 +38,17 @@ def _obtener_conexion_duckdb():
     usa su propio cursor sobre la misma base en memoria. La recarga se protege
     con un lock para que dos sesiones no reconstruyan la tabla a la vez.
     """
-    global _DUCKDB_CON, _DUCKDB_LAST_MTIME, _DUCKDB_FROM_PG, _DUCKDB_LAST_LOAD_TS
+    global _DUCKDB_CON, _DUCKDB_LAST_MTIME, _DUCKDB_LAST_LOAD_TS
     current_mtime = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
-    # El CSV invalida por mtime; PostgreSQL no toca archivos locales, así que se
-    # refresca de forma periódica para reflejar cambios en la base relacional.
-    necesita_recarga = (
-        _DUCKDB_CON is None
-        or current_mtime != _DUCKDB_LAST_MTIME
-        or (_DUCKDB_FROM_PG and time.time() - _DUCKDB_LAST_LOAD_TS > _DUCKDB_RELOAD_INTERVAL)
-    )
     with _DUCKDB_LOCK:
+        # Evaluar bajo el lock: dos hilos no deben reconstruir la tabla a la vez.
+        # El CSV invalida por mtime; PostgreSQL no toca archivos locales, así que se
+        # refresca de forma periódica para reflejar cambios en la base relacional.
+        necesita_recarga = (
+            _DUCKDB_CON is None
+            or current_mtime != _DUCKDB_LAST_MTIME
+            or time.time() - _DUCKDB_LAST_LOAD_TS > _DUCKDB_RELOAD_INTERVAL
+        )
         if necesita_recarga:
             _DUCKDB_CON = duckdb.connect(database=':memory:')
             cargado = False
@@ -76,7 +76,6 @@ def _obtener_conexion_duckdb():
                         estado VARCHAR, nagios_check VARCHAR
                     )
                 """)
-            _DUCKDB_FROM_PG = cargado
             _DUCKDB_LAST_LOAD_TS = time.time()
             _DUCKDB_LAST_MTIME = current_mtime
         return _DUCKDB_CON.cursor()
@@ -90,12 +89,11 @@ def normalizar_texto(texto: str) -> str:
 
 
 def _firma_documental(doc_store: dict) -> str:
-    """Huella barata del corpus (nombres y tamaños) para invalidar la caché de respuestas."""
+    """Huella barata del corpus (nombres y contenido) para invalidar la caché de respuestas."""
     h = hashlib.sha256()
     for nombre in sorted(doc_store):
-        contenido = doc_store[nombre]
         h.update(nombre.encode("utf-8"))
-        h.update(str(len(contenido)).encode("utf-8"))
+        h.update(hashlib.sha256(doc_store[nombre].encode("utf-8")).digest())
     return h.hexdigest()[:16]
 
 
@@ -110,17 +108,39 @@ def _clave_rol() -> str:
 
 
 def _obtener_texto_normalizado(doc_name: str, content: str) -> tuple[str, str]:
-    c_len = len(content)
+    # Hash, no longitud: una edición con igual tamaño debe invalidar la caché.
+    c_key = hashlib.sha256(content.encode("utf-8")).hexdigest()
     cached = _DOC_STORE_NORM_CACHE.get(doc_name)
-    if cached and cached[0] == c_len:
+    if cached and cached[0] == c_key:
         return cached[1], cached[2]
     name_norm, content_norm = normalizar_texto(doc_name), normalizar_texto(content)
-    _DOC_STORE_NORM_CACHE[doc_name] = (c_len, name_norm, content_norm)
+    _DOC_STORE_NORM_CACHE[doc_name] = (c_key, name_norm, content_norm)
     return name_norm, content_norm
 
 
+def _es_sql_solo_lectura(query_sql: str) -> bool:
+    """Raíz única de validación: una sola sentencia de lectura sobre DuckDB."""
+    texto = " ".join(query_sql.strip().split())
+    if not texto:
+        return False
+    cuerpo = texto[:-1].rstrip() if texto.endswith(";") else texto
+    if ";" in cuerpo or not cuerpo:
+        return False
+    partes = cuerpo.split(None, 1)
+    if partes[0].lower() not in ("select", "with", "describe", "show", "explain"):
+        return False
+    prohibidas = (
+        "insert", "update", "delete", "drop", "create", "alter",
+        "copy", "attach", "detach", "call", "install", "load",
+        "pragma", "export", "import", "set", "reset",
+    )
+    return not re.search(r"\b(?:%s)\b" % "|".join(prohibidas), cuerpo.lower())
+
+
 def ejecutar_consulta_sql(query_sql: str) -> pd.DataFrame:
-    """Ejecuta una sentencia SQL en memoria sobre mantenimientos.csv mediante DuckDB."""
+    """Ejecuta una sentencia SQL de solo lectura en memoria sobre mantenimientos."""
+    if not _es_sql_solo_lectura(query_sql):
+        return pd.DataFrame({"Error": ["Solo se permiten consultas de una sola sentencia de lectura (SELECT, WITH, DESCRIBE, SHOW o EXPLAIN)."]})
     try:
         return _obtener_conexion_duckdb().execute(query_sql).df()
     except Exception as e:
@@ -136,8 +156,11 @@ def buscar_servidores_duckdb(termino: str) -> pd.DataFrame:
     tokens = [t for t in t_norm.split() if len(t) >= 2] or [t_norm]
     cols = ["servidor_id", "numero_serie", "ip", "tecnico", "descripcion", "componente", "vcloud_vm"]
     # LIKE parametrizado: los terminos del usuario nunca se interpolan en el SQL.
-    condiciones = [" OR ".join(f"LOWER({c}) LIKE ?" for c in cols) for t in tokens]
-    params = [f"%{t}%" for t in tokens for _ in cols]
+    # % y _ se escapan también: sin ESCAPE, '100%' o 'a_b' matcheaban de mas.
+    def _esc(s: str) -> str:
+        return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    condiciones = [" OR ".join(r"LOWER({0}) LIKE ? ESCAPE '\'".format(c) for c in cols) for t in tokens]
+    params = [f"%{_esc(t)}%" for t in tokens for _ in cols]
 
     query_sql = f"""
         SELECT servidor_id, numero_serie, ip, vcloud_vm, nivel_arquitectura, componente, fecha, tipo_mantenimiento, tecnico, descripcion, estado, nagios_check
@@ -300,13 +323,14 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
     if df_srv is not None and not df_srv.empty:
         total = len(df_srv)
         row = df_srv.iloc[0]
-        st_badge = "badge-ok" if row['estado'].lower() == "operativo" else ("badge-warn" if "revision" in row['estado'].lower() else "badge-crit")
-        desc = resaltar_terminos_en_html(row['descripcion'], prompt_usuario)
+        estado = str(row.get("estado") or "")
+        st_badge = "badge-ok" if estado.lower() == "operativo" else ("badge-warn" if "revision" in estado.lower() else "badge-crit")
+        desc = resaltar_terminos_en_html(str(row.get("descripcion") or ""), prompt_usuario)
 
         html_out = f"""<div class="bento-card">
     <div class="search-header-row">
         <div><span class="badge-info">[Inventario]</span><span class="search-doc-title" style="margin-left: 8px;">{row['servidor_id']}</span></div>
-        <div><span class="{st_badge}">[{row['estado'].upper()}]</span><span class="badge-tag" style="margin-left: 6px;">{row['nivel_arquitectura']}</span></div>
+        <div><span class="{st_badge}">[{estado.upper()}]</span><span class="badge-tag" style="margin-left: 6px;">{row['nivel_arquitectura']}</span></div>
     </div>
 
 | Dato | Valor |
@@ -377,13 +401,15 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
     api_key_gemini = obtener_secreto("GEMINI_API_KEY", "")
     has_api_key = bool(api_key_gemini and api_key_gemini.strip())
 
-    cache_key = f"{normalizar_texto(prompt_limpio)}::{has_api_key}::{mtime_csv}::{_firma_documental(doc_store)}::{_clave_rol()}"
+    # _DUCKDB_LAST_LOAD_TS invalida cuando la fuente es PostgreSQL (el mtime del CSV no cambia).
+    cache_key = f"{normalizar_texto(prompt_limpio)}::{has_api_key}::{mtime_csv}::{int(_DUCKDB_LAST_LOAD_TS)}::{_firma_documental(doc_store)}::{_clave_rol()}"
     if cache_key in _QUERY_RESPONSE_CACHE:
         return _QUERY_RESPONSE_CACHE[cache_key]
 
     df_srv = buscar_servidores_duckdb(prompt_usuario)
     doc_matches = buscar_en_documentos(prompt_usuario, doc_store)
 
+    ok_gemini = False
     if has_api_key:
         contexto = construir_contexto_rag(prompt_usuario, df_srv, doc_matches)
         ok_gemini, resp_texto, modelo = consultar_gemini_rag(prompt_usuario, contexto, api_key_gemini)
@@ -402,7 +428,10 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
     else:
         resultado = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
 
-    if len(_QUERY_RESPONSE_CACHE) >= _MAX_CACHE_ENTRIES:
-        _QUERY_RESPONSE_CACHE.pop(next(iter(_QUERY_RESPONSE_CACHE)))
-    _QUERY_RESPONSE_CACHE[cache_key] = resultado
+    # Solo se cachea el acierto (o la respuesta local sin clave): un fallo 429/403
+    # cacheado no se recupera, porque cache_key no cambia con la cuota ni con la clave.
+    if ok_gemini or not has_api_key:
+        if len(_QUERY_RESPONSE_CACHE) >= _MAX_CACHE_ENTRIES:
+            _QUERY_RESPONSE_CACHE.pop(next(iter(_QUERY_RESPONSE_CACHE)))
+        _QUERY_RESPONSE_CACHE[cache_key] = resultado
     return resultado

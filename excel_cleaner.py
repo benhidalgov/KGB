@@ -146,8 +146,16 @@ def procesar_excel_limpio(filepath: str) -> str:
                     max_headers = str_count
                     header_idx = idx
 
+            # La última fila no es cabecera (es un pie/observaciones): elegirla
+            # dejaba df_table vacío y se emitía la hoja entera sin contenido.
+            if len(df_raw) > 1 and header_idx == len(df_raw) - 1:
+                header_idx = 0
+
             raw_headers = df_raw.iloc[header_idx].tolist()
             df_table = df_raw.iloc[header_idx + 1:].copy()
+            if df_table.empty:
+                # Hoja de una sola fila: la "cabecera" ES el dato.
+                df_table = df_raw.iloc[[header_idx]].copy()
 
             cols_validas = []
             clean_headers = []

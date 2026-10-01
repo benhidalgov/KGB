@@ -8,28 +8,8 @@ import pandas as pd
 import streamlit as st
 
 from core.configuracion import CSV_PATH, ES_PRODUCCION
-from core.motor import ejecutar_consulta_sql
+from core.motor import ejecutar_consulta_sql, _es_sql_solo_lectura
 from core.auth import tiene_permiso
-
-
-def _es_consulta_solo_lectura(sql: str) -> bool:
-    """Acepta una sola sentencia de lectura (SELECT/WITH/DESCRIBE/SHOW/EXPLAIN)."""
-    texto = " ".join(sql.strip().split())
-    if not texto:
-        return False
-    cuerpo = texto[:-1].rstrip() if texto.endswith(";") else texto
-    if ";" in cuerpo:
-        return False
-    primero = cuerpo.split(None, 1)[0].lower()
-    if primero not in ("select", "with", "describe", "show", "explain"):
-        return False
-    prohibidas = (
-        "insert ", "update ", "delete ", "drop ", "create ", "alter ",
-        "copy ", "attach ", "detach ", "call ", "install ", "load ",
-        "pragma ", "export ", "import ", "set ", "reset ",
-    )
-    bajo = f" {cuerpo.lower()} "
-    return not any(p in bajo for p in prohibidas)
 
 
 def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
@@ -68,14 +48,14 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
             df_filtrado = df_filtrado[
                 df_filtrado["tecnico"].astype(str).str.contains(filtro_tec.strip(), case=False, na=False, regex=False)
             ]
+        # st.date_input en modo rango devuelve (d,) mientras queda un solo extremo.
+        if isinstance(rango_fechas, (tuple, list)) and len(rango_fechas) == 1:
+            rango_fechas = (rango_fechas[0], rango_fechas[0])
         if "fecha" in df_filtrado.columns and isinstance(rango_fechas, (tuple, list)) and len(rango_fechas) == 2:
             fechas_serie = pd.to_datetime(df_filtrado["fecha"], errors="coerce")
             inicio = pd.Timestamp(rango_fechas[0])
             fin = pd.Timestamp(rango_fechas[1])
             df_filtrado = df_filtrado[(fechas_serie >= inicio) & (fechas_serie <= fin)]
-        elif "fecha" in df_filtrado.columns and isinstance(rango_fechas, datetime.date):
-            fechas_d = pd.to_datetime(df_filtrado["fecha"], errors="coerce").dt.date
-            df_filtrado = df_filtrado[fechas_d == rango_fechas]
 
     if df_mantenimientos_cache.empty and not os.path.exists(CSV_PATH):
         st.warning("No se encontró data/mantenimientos.csv.")
@@ -88,10 +68,7 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
         with st.expander("Escribir Consulta SQL (solo lectura)"):
             custom_sql = st.text_area(
                 "Consulta SQL",
-                value=f"SELECT nivel_arquitectura, count(*) as total_mantenimientos FROM read_csv_auto('{CSV_PATH}') GROUP BY nivel_arquitectura",
+                value="SELECT nivel_arquitectura, count(*) as total_mantenimientos FROM mantenimientos GROUP BY nivel_arquitectura",
             )
-            if st.button("Ejecutar") and os.path.exists(CSV_PATH):
-                if not _es_consulta_solo_lectura(custom_sql):
-                    st.error("Solo se permiten sentencias de una sola línea de lectura (SELECT, WITH, DESCRIBE, SHOW o EXPLAIN).")
-                else:
-                    st.dataframe(ejecutar_consulta_sql(custom_sql), width="stretch")
+            if st.button("Ejecutar"):
+                st.dataframe(ejecutar_consulta_sql(custom_sql), width="stretch")

@@ -6,7 +6,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import core.auth as auth
 import core.vault as vault
-from core.ui_mantenimientos import _es_consulta_solo_lectura
+import core.auditoria as aud
+from core.motor import _es_sql_solo_lectura as _es_consulta_solo_lectura
 
 
 def check_hash():
@@ -28,9 +29,12 @@ def check_sql_guard():
 
 
 def check_vault_no_destruye():
+    # Aislamiento: no pisar el data/audit_log.json real con eventos del test.
+    aud_original = aud.AUDIT_LOG_PATH
     with tempfile.TemporaryDirectory() as td:
         vault.VAULT_FILE_PATH = os.path.join(td, ".vault.enc")
         vault.VAULT_KEY_PATH = os.path.join(td, ".vault.key")
+        aud.AUDIT_LOG_PATH = os.path.join(td, "audit_log.json")
         old_env = os.environ.get("VAULT_MASTER_KEY")
         try:
             os.environ["VAULT_MASTER_KEY"] = "passphrase_vault_correcta_123"
@@ -53,6 +57,7 @@ def check_vault_no_destruye():
                 os.environ.pop("VAULT_MASTER_KEY", None)
             else:
                 os.environ["VAULT_MASTER_KEY"] = old_env
+            aud.AUDIT_LOG_PATH = aud_original
 
 
 if __name__ == "__main__":

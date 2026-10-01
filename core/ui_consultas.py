@@ -97,16 +97,20 @@ def renderizar_modulo_consultas(doc_store: dict):
             col_bt, col_bb = st.columns([3.5, 1.5], vertical_alignment="center")
             with col_bt:
                 st.caption("¿Quieres que el asistente analice este término?")
+            resp_bridge = None
             with col_bb:
                 if st.button("Analizar con Asistente", width="stretch", type="primary", key="btn_bridge_to_asistente"):
                     with st.spinner("Analizando..."):
-                        resp_c = generar_respuesta_asistente(active_duck_term, doc_store)
+                        resp_bridge = generar_respuesta_asistente(active_duck_term, doc_store)
                         st.session_state.historial_busquedas.insert(0, {
                             "query": active_duck_term,
-                            "response": resp_c,
+                            "response": resp_bridge,
                             "timestamp": pd.Timestamp.now().strftime("%H:%M:%S")
                         })
-                    st.rerun()
+                    st.toast("Respuesta guardada en el historial (pestaña Asistente).")
+            # Sin rerun: el rerun descartaba la respuesta antes de mostrarla.
+            if resp_bridge:
+                st.markdown(resp_bridge, unsafe_allow_html=True)
 
     # 2. Asistente Técnico Especializado RAG
     with subtab_asistente:

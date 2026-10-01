@@ -8,6 +8,7 @@ from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, o
 
 logger = logging.getLogger("infra_copilot.visor")
 from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes, normalizar_titulo_display
+from core.auth import tiene_permiso
 from core.configuracion import DOCS_DIR
 
 MIME_MAP = {
@@ -34,14 +35,14 @@ def actualizar_caption_en_markdown(md_content: str, nuevo_caption: str) -> str:
     """Actualiza o inserta el campo de pie de imagen (caption) en el contenido Markdown."""
     cap_str = nuevo_caption.strip()
     if re.search(r'(\*\*Pie de Imagen\s*(?:\(Caption\))?:\*\*\s*).+', md_content, re.IGNORECASE):
-        return re.sub(r'(\*\*Pie de Imagen\s*(?:\(Caption\))?:\*\*\s*).+', rf'\g<1>{cap_str}', md_content)
+        return re.sub(r'(\*\*Pie de Imagen\s*(?:\(Caption\))?:\*\*\s*).+', lambda m: m.group(1) + cap_str, md_content)
     m_bin = re.search(r'(\* \*\*Archivo Binario:\*\* `[^`]+`\n)', md_content)
     if m_bin:
-        return re.sub(r'(\* \*\*Archivo Binario:\*\* `[^`]+`\n)', rf'\g<1>* **Pie de Imagen (Caption):** {cap_str}\n', md_content)
+        return re.sub(r'(\* \*\*Archivo Binario:\*\* `[^`]+`\n)', lambda m: m.group(1) + f"* **Pie de Imagen (Caption):** {cap_str}\n", md_content)
     return f"* **Pie de Imagen (Caption):** {cap_str}\n\n" + md_content
 
 
-def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
+def mostrar_pdf_embebido(pdf_path: str, height: int = 550, key_suffix: str = ""):
     """Renderiza un visor nativo de PDF embebido mediante un iframe Base64 o boton de descarga para archivos pesados."""
     try:
         size_mb = (os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0) / (1024 * 1024)
@@ -56,7 +57,7 @@ def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
                 <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">Descárgalo para verlo sin recargar el navegador.</div>
             </div>
             """, unsafe_allow_html=True)
-            st.download_button(label=f"Descargar PDF Original ({fname})", data=pdf_bytes, file_name=fname, mime="application/pdf", width="stretch", key=f"dl_heavy_pdf_{fname}")
+            st.download_button(label=f"Descargar PDF Original ({fname})", data=pdf_bytes, file_name=fname, mime="application/pdf", width="stretch", key=f"dl_heavy_pdf_{fname}_{key_suffix}")
             return
 
         b64 = base64.b64encode(pdf_bytes).decode("utf-8")
@@ -154,7 +155,9 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
     col_btn_save, col_btn_info = st.columns([2, 3])
     with col_btn_save:
         if st.button(f"Guardar Descripción (v{ultima_version + 1})", type="primary", width="stretch", key=f"btn_save_caption_{doc_name}_{key_suffix}"):
-            if not autor_caption or not autor_caption.strip():
+            if not tiene_permiso("puede_editar_docs"):
+                st.error("Tu rol no permite editar descripciones.")
+            elif not autor_caption or not autor_caption.strip():
                 st.error("Escribe tu nombre.")
             elif not nuevo_caption_input or not nuevo_caption_input.strip():
                 st.error("La descripción no puede estar vacía.")
@@ -220,7 +223,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
         df_hoja = cargar_hoja_excel_dataframe(ruta_original, hoja_sel, mtime)
         st.dataframe(df_hoja, width="stretch", height=height)
     elif ext == ".pdf":
-        mostrar_pdf_embebido(ruta_original, height=height)
+        mostrar_pdf_embebido(ruta_original, height=height, key_suffix=key_suffix)
     elif ext in (".docx", ".doc"):
         mtime = os.path.getmtime(ruta_original) if os.path.exists(ruta_original) else 0.0
         html_docx = cargar_docx_a_html(ruta_original, mtime) if ext == ".docx" else ""
@@ -399,7 +402,9 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_zt_exit:
         if st.button("Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
             st.session_state["zen_studio_activo"] = False
-            st.session_state["top_navbar_view_selector"] = "Consola"
+            # El router (app.py) decide por nav_seccion_activa; sin esto el
+            # siguiente rerun vuelve a entrar en Zen y queda en bucle.
+            st.session_state["nav_seccion_activa"] = "Consultas y Búsqueda"
             st.rerun()
 
     font_size_val = "17px" if "Grande" in tam_fuente else ("13px" if "Compacto" in tam_fuente else "15px")
@@ -512,7 +517,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
             with st.container(border=True):
                 st.caption(f"**{len(toc_items)} secciones**:")
                 opciones_seccion = ["Documento Completo"] + [f"{'—' * (it['nivel'] - 1)} {it['titulo']}" for it in toc_items]
-                seccion_sel = st.selectbox("Saltar a Sección:", opciones_seccion, key="zen_section_jump_sel")
+                seccion_sel = st.selectbox("Saltar a Sección:", opciones_seccion, key=f"zen_section_jump_sel_{doc_name}")
 
                 toc_html_list = []
                 for it in toc_items:
@@ -551,11 +556,17 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_canvas:
         texto_a_mostrar = md_content
         if seccion_sel != "Documento Completo":
+            # El TOC limpia énfasis (*_`); comparar los encabezados igualmente limpiados.
             titulo_buscado = seccion_sel.lstrip('— ').strip()
-            patron_sec = re.compile(rf'(^#+\s+{re.escape(titulo_buscado)}[\s\S]*?)(?=^#+\s+|\Z)', re.MULTILINE)
-            m_sec = patron_sec.search(md_content)
+            m_sec = None
+            for m_h in re.finditer(r'(?m)^#+\s+(.+)$', md_content):
+                if re.sub(r'[*_`]', '', m_h.group(1)).strip() == titulo_buscado:
+                    resto = md_content[m_h.end():]
+                    sig = re.search(r'(?m)^#+\s+', resto)
+                    m_sec = md_content[m_h.start():m_h.end() + (sig.start() if sig else len(resto))]
+                    break
             if m_sec:
-                texto_a_mostrar = m_sec.group(1)
+                texto_a_mostrar = m_sec
 
         cnt_coincidencias = 0
         if zen_search_query.strip():

@@ -101,13 +101,17 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin-bottom:6px;">Menú</div>', unsafe_allow_html=True)
 
         cant_docs = len(doc_store)
+        # Opciones estables: si el contador viaja en la etiqueta, al cambiar
+        # (subida, recarga) el valor guardado deja de existir y Streamlit
+        # resetea la radio a la primera opción, arrastrando al usuario de módulo.
         opciones_nav = [
             "Consultas y Búsqueda",
-            f"Historial de Mantenimientos ({total_srvs})",
-            f"Documentación Técnica ({cant_docs})",
+            "Historial de Mantenimientos",
+            "Documentación Técnica",
             "Plantillas y Runbooks",
             "Modo Lectura",
         ]
+        contadores_nav = {"Historial de Mantenimientos": total_srvs, "Documentación Técnica": cant_docs}
 
         if st.session_state.pop("_ir_consola", False):
             st.session_state["nav_seccion_activa"] = opciones_nav[0]
@@ -115,6 +119,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         seccion_sel = st.radio(
             "Navegación Principal",
             options=opciones_nav,
+            format_func=lambda o: f"{o} ({contadores_nav[o]})" if o in contadores_nav else o,
             key="nav_seccion_activa",
             label_visibility="collapsed"
         )
@@ -127,7 +132,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
             st.markdown('<div class="sidebar-format-tags" style="margin-bottom:8px;"><span class="sidebar-format-tag">[ZIP]</span><span class="sidebar-format-tag">[PDF]</span><span class="sidebar-format-tag">[DOCX]</span><span class="sidebar-format-tag">[XLSX]</span><span class="sidebar-format-tag">[DIAGRAMAS]</span><span class="sidebar-format-tag">[MD]</span></div>', unsafe_allow_html=True)
             uploaded_files = st.file_uploader(
                 "Arrastra archivos o un paquete .zip:",
-                type=["pdf", "docx", "xlsx", "xls", "csv", "txt", "md", "pptx", "png", "jpg", "jpeg", "svg", "webp", "zip"],
+                type=["pdf", "docx", "xlsx", "csv", "txt", "md", "pptx", "png", "jpg", "jpeg", "svg", "webp", "zip"],
                 accept_multiple_files=True,
                 label_visibility="collapsed",
                 key=f"uploader_files_{st.session_state.uploader_key_ver}"
@@ -166,7 +171,9 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                         st.rerun()
 
                 if btn_confirmar_subida:
-                    if not cat_seleccionadas:
+                    if not tiene_permiso("puede_ingestar_archivos"):
+                        st.error("Tu rol no permite subir archivos.")
+                    elif not cat_seleccionadas:
                         st.warning("Elige una categoría existente o escribe una nueva para continuar.")
                     else:
                         autor_act = f"{user_act.get('username', 'Técnico')} ({user_act.get('rol', 'Operador')})"
@@ -191,14 +198,17 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                             in_cl = normalizar_nombre_archivo(in_fn)
                                             if os.path.splitext(in_cl)[1].lower() not in SUPPORTED_EXTENSIONS:
                                                 continue
-                                            datos = leer_entrada_zip_segura(z, zi, MAX_ENTRADA_BYTES)
-                                            if datos is None:
-                                                st.warning(f"Se omitió '{in_fn}': excede {MAX_ENTRADA_BYTES // (1024 * 1024)} MB descomprimidos.")
-                                                continue
-                                            bytes_lote += len(datos)
+                                            # Comprobar file_size (descomprimido declarado) ANTES de
+                                            # leer: si no, cada entrada grande se descomprime solo para
+                                            # descartarse y los bytes rechazados no suman al tope.
+                                            datos = leer_entrada_zip_segura(z, zi, MAX_ENTRADA_BYTES) if zi.file_size <= MAX_ENTRADA_BYTES else None
+                                            bytes_lote += zi.file_size or 0
                                             if bytes_lote > MAX_LOTE_BYTES:
                                                 st.error(f"El paquete '{c_name}' supera {MAX_LOTE_BYTES // (1024 * 1024)} MB descomprimidos. Carga detenida.")
                                                 break
+                                            if datos is None:
+                                                st.warning(f"Se omitió '{in_fn}': excede {MAX_ENTRADA_BYTES // (1024 * 1024)} MB descomprimidos.")
+                                                continue
                                             st_res, _ = procesar_e_ingestar_binario(
                                                 in_cl, datos, doc_store,
                                                 autor=autor_act, origen_detalle=f"Lote ZIP: {c_name}",
@@ -214,11 +224,17 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                 except Exception as e_z:
                                     st.error(f"No se pudo procesar el ZIP '{c_name}': {str(e_z)}")
                             else:
-                                st_res, msg = procesar_e_ingestar_binario(
-                                    c_name, buf, doc_store,
-                                    autor=autor_act, origen_detalle="Carga en panel lateral",
-                                    tags=cat_seleccionadas
-                                )
+                                try:
+                                    st_res, msg = procesar_e_ingestar_binario(
+                                        c_name, buf, doc_store,
+                                        autor=autor_act, origen_detalle="Carga en panel lateral",
+                                        tags=cat_seleccionadas
+                                    )
+                                except Exception as e_dir:
+                                    # Sin try, un fallo (p.ej. PG caído en la auditoría)
+                                    # abortaba el lote entero y dejaba el uploader colgado.
+                                    st.error(f"No se pudo procesar '{c_name}': {e_dir}")
+                                    continue
                                 proc_cnt += 1
                                 if st_res == "nuevo":
                                     new_cnt += 1

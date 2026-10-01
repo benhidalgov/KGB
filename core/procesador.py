@@ -12,7 +12,8 @@ from core.tags import asignar_tags_documento
 from core.auditoria import guardar_nueva_version, inicializar_version_inicial_si_no_existe
 
 IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.svg', '.webp')
-OFFICE_EXTENSIONS = ('.docx', '.pdf', '.pptx', '.xlsx', '.xls')
+# Sin '.xls': openpyxl no soporta el formato antiguo; aceptarlo generaba documentos rotos.
+OFFICE_EXTENSIONS = ('.docx', '.pdf', '.pptx', '.xlsx')
 TEXT_EXTENSIONS = ('.md', '.txt', '.csv', '.json', '.sql', '.py')
 SUPPORTED_EXTENSIONS = OFFICE_EXTENSIONS + TEXT_EXTENSIONS + IMAGE_EXTENSIONS
 
@@ -177,7 +178,7 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
                 if os.path.exists(cand):
                     return cand
 
-        m_orig = re.search(r'\*\*Ubicación Origen:\*\*\s*`([^`]+)`', md_content)
+        m_orig = re.search(r'\*\*(?:Ubicación Origen|Ruta de Origen):\*\*\s*`([^`]+)`', md_content)
         if m_orig:
             orig_s = m_orig.group(1)
             for cand in (os.path.join(INBOX_DIR, orig_s), os.path.join(ORIGINALS_DIR, orig_s), orig_s):
@@ -212,7 +213,11 @@ def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
         from markitdown import MarkItDown
         return MarkItDown().convert(filepath, keep_data_uris=False).text_content or ""
     except Exception:
-        return leer_texto_resiliente(filepath)
+        if ext in TEXT_EXTENSIONS:
+            return leer_texto_resiliente(filepath)
+        # Sin el extra [pdf] el conversor falla y el fallback decodificaba el
+        # binario como texto: metía mojibake en doc_store (búsqueda y RAG).
+        return f"> **[Texto no extraíble]** No se pudo convertir `{fname}`. Usa la vista del documento original o descarga el archivo."
 
 
 def resolver_ruta_imagen_a_base64(src_path: str, ruta_original: str | None = None) -> str:
@@ -226,15 +231,24 @@ def resolver_ruta_imagen_a_base64(src_path: str, ruta_original: str | None = Non
     if ruta_original and os.path.exists(ruta_original):
         candidatos.extend([os.path.join(os.path.dirname(ruta_original), fname), os.path.join(os.path.dirname(ruta_original), clean)])
 
+    # Raíces permitidas: sin esto, un md con ![x](../../.env) incrustaba
+    # credenciales en el DOM (fuga de .env / users.json).
+    raices = [os.path.realpath(r) + os.sep for r in (DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR)]
     for cand in candidatos:
-        if os.path.exists(cand) and os.path.isfile(cand) and os.path.getsize(cand) <= 400 * 1024:
-            ext = os.path.splitext(cand)[1].lower().replace('.', '')
-            mime = 'jpeg' if ext in ('jpg', 'jpeg') else 'svg+xml' if ext == 'svg' else ext
-            try:
-                with open(cand, "rb") as f:
-                    return f"data:image/{mime};base64,{base64.b64encode(f.read()).decode('utf-8')}"
-            except Exception:
-                pass
+        if not os.path.isfile(cand) or os.path.getsize(cand) > 400 * 1024:
+            continue
+        real = os.path.realpath(cand)
+        if not any(real.startswith(r) for r in raices):
+            continue
+        ext = os.path.splitext(real)[1].lower()
+        if ext not in IMAGE_EXTENSIONS:
+            continue
+        mime = 'jpeg' if ext in ('.jpg', '.jpeg') else 'svg+xml' if ext == '.svg' else ext.lstrip('.')
+        try:
+            with open(real, "rb") as f:
+                return f"data:image/{mime};base64,{base64.b64encode(f.read()).decode('utf-8')}"
+        except Exception:
+            pass
     return ""
 
 
@@ -336,6 +350,7 @@ def procesar_e_ingestar_binario(
     # 2. Imágenes y Diagramas
     if ext in IMAGE_EXTENSIONS:
         os.makedirs(ASSETS_DIR, exist_ok=True)
+        os.makedirs(DOCS_DIR, exist_ok=True)
         with open(os.path.join(ASSETS_DIR, clean_name), "wb") as f_asset:
             f_asset.write(buf)
 
@@ -354,7 +369,10 @@ def procesar_e_ingestar_binario(
         if os.path.exists(md_save_path):
             with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
                 ex_content = f_ex.read()
-            if calcular_sha256(ex_content.encode("utf-8")) == calcular_sha256(ficha_content.encode("utf-8")):
+            # Comparar el sha de la imagen, no la ficha completa: la ficha incluye
+            # la fecha de ingesta, así que nunca sería idéntica entre cargas.
+            m_sha = re.search(r"Firma SHA-256:\*\* `([0-9a-f]{64})`", ex_content)
+            if m_sha and m_sha.group(1) == nuevo_hash:
                 return "sin_cambios", f"Diagrama '{clean_name}' sin cambios."
             with open(md_save_path, "w", encoding="utf-8") as f_out:
                 f_out.write(ficha_content)

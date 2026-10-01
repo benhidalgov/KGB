@@ -20,18 +20,10 @@ def obtener_modulos_manual() -> dict[int, str]:
     }
 
 
-def activar_manual_en_inicio():
-    """Abre el manual completo como primera vista tras el login."""
-    st.session_state["top_navbar_view_selector"] = "Manual de Uso"
-    st.session_state["manual_lanzamiento"] = True
-    st.session_state["manual_paso_actual"] = 1
-
-
 def ir_a_consola_desde_manual():
     """Cierra el onboarding de inicio o la vista standalone y redirige a la consola."""
     st.session_state["manual_lanzamiento"] = False
     st.session_state["_ir_consola"] = True
-    st.session_state["top_navbar_view_selector"] = "Consola"
     try:
         if hasattr(st, "query_params"):
             for p in ["view", "manual"]:

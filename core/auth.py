@@ -8,7 +8,7 @@ import secrets
 from typing import Optional, Dict, Any
 import streamlit as st
 from core.auditoria import registrar_evento_auditoria
-from core.manual import activar_manual_en_inicio, renderizar_manual_lanzamiento
+from core.manual import renderizar_manual_lanzamiento
 from core.db import es_postgres_disponible, obtener_usuarios_pg, actualizar_ultimo_login_pg
 
 from core.configuracion import USERS_PATH as AUTH_USERS_PATH, ES_PRODUCCION
@@ -97,7 +97,9 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
             with open(AUTH_USERS_PATH, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
-            pass
+            # Archivo corrupto: no se sobrescribe (se perderían las cuentas
+            # personalizadas); el login fallará hasta que se repare a mano.
+            return {}
 
     claves = {u: _obtener_password_maestra(u) for u in ("admin", "operador", "auditor")}
     faltantes = [u for u, p in claves.items() if not p]
@@ -197,7 +199,8 @@ def es_usuario_autenticado() -> bool:
 
 
 def obtener_usuario_actual() -> Dict[str, Any]:
-    return st.session_state.get("usuario_actual", {"username": "anonimo", "nombre": "Invitado no autenticado", "rol": "Invitado"})
+    # `or` y no default de .get(): cerrar_sesion() guarda None explícito.
+    return st.session_state.get("usuario_actual") or {"username": "anonimo", "nombre": "Invitado no autenticado", "rol": "Invitado"}
 
 
 def es_administrador() -> bool:
@@ -214,6 +217,11 @@ def cerrar_sesion():
     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGOUT", version_ant=1, version_nueva=1, autor=user, motivo="Cierre voluntario de sesión en consola web.")
     st.session_state["auth_activa"] = False
     st.session_state["usuario_actual"] = None
+    # Estación compartida: no heredar la contraseña del formulario ni el
+    # historial de consultas/respuestas del usuario anterior.
+    for k in ("login_password_val", "login_username_val", "historial_busquedas",
+              "messages", "nav_seccion_activa", "tab4_doc_selector"):
+        st.session_state.pop(k, None)
     st.toast("Sesión cerrada.")
     st.rerun()
 
@@ -320,7 +328,6 @@ def renderizar_pantalla_login():
                 if user_info:
                     st.session_state["auth_activa"] = True
                     st.session_state["usuario_actual"] = user_info
-                    activar_manual_en_inicio()
                     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_EXITOSO", version_ant=1, version_nueva=1, autor=user_info["username"], motivo=f"Inicio exitoso [{user_info['rol']}].")
                     st.toast(f"Bienvenido, {user_info['nombre']}.")
                     st.rerun()

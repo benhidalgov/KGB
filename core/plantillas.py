@@ -32,7 +32,7 @@ def cargar_plantillas_personalizadas() -> dict:
 
 def guardar_plantilla_personalizada(nombre: str, descripcion: str, campos: list) -> bool:
     """Guarda una nueva plantilla personalizada en el catalogo local."""
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(os.path.dirname(PLANTILLAS_CUSTOM_PATH), exist_ok=True)
     plantillas = cargar_plantillas_personalizadas()
     plantillas[nombre] = {"descripcion": descripcion, "campos": campos}
     try:
@@ -103,19 +103,26 @@ ESQUEMAS_CAMPOS_PLANTILLAS = {
 
 def obtener_esquema_campos(tipo: str) -> list[tuple[str, str, str, str]]:
     """Retorna la lista de tuplas (clave, etiqueta, valor_defecto, tipo_control) para una plantilla."""
-    for clave, esquema in ESQUEMAS_CAMPOS_PLANTILLAS.items():
-        if clave in tipo:
-            return esquema
-    if "Mantenimiento de SO" in tipo:
-        return ESQUEMAS_CAMPOS_PLANTILLAS["Parchado"]
-    if "SSL" in tipo:
-        return ESQUEMAS_CAMPOS_PLANTILLAS["Certificados"]
-    if "DRP" in tipo:
-        return ESQUEMAS_CAMPOS_PLANTILLAS["Disaster Recovery"]
-    if "Base de Datos" in tipo:
-        return ESQUEMAS_CAMPOS_PLANTILLAS["Respaldo"]
-    if "Failover" in tipo:
+    # Orden idéntico a generar_doc_plantilla: si divergen, el schema pide campos
+    # que el generador jamás lee y las secciones salen vacías.
+    if "Rollback" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Rollback"]
+    if "Paso a Producción" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Paso a Producción"]
+    if "Postmortem" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Postmortem"]
+    if "Microservicio" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Microservicio"]
+    if "Contingencia" in tipo or "Failover" in tipo:
         return ESQUEMAS_CAMPOS_PLANTILLAS["Contingencia"]
+    if "Parchado" in tipo or "Mantenimiento de SO" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Parchado"]
+    if "Certificados" in tipo or "SSL" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Certificados"]
+    if "Disaster Recovery" in tipo or "DRP" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Disaster Recovery"]
+    if "Respaldo" in tipo or "Base de Datos" in tipo:
+        return ESQUEMAS_CAMPOS_PLANTILLAS["Respaldo"]
     return [
         ("objetivo", "Objetivo y Alcance", "Procedimiento para {tipo_plantilla} en {servicio}.", "area"),
         ("prerequisitos", "Requisitos Previos", "* Acceso SSH con sudo\n* Notificación a Operaciones\n* Snapshot preventivo", "area"),

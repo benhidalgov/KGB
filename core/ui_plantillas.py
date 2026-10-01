@@ -17,8 +17,9 @@ from core.tags import (
     obtener_categorias_disponibles,
     asignar_tags_documento,
 )
-from core.auditoria import inicializar_version_inicial_si_no_existe
+from core.auditoria import inicializar_version_inicial_si_no_existe, guardar_nueva_version
 from core.motor import limpiar_cache_consultas
+from core.procesador import normalizar_nombre_archivo
 from core.configuracion import DOCS_DIR
 
 
@@ -74,18 +75,19 @@ def renderizar_pestana_plantillas(doc_store: dict):
         params = {"ambiente": ambiente, "criticidad": criticidad, "ventana": ventana, "servidores": servidores}
 
         # Generación de campos específicos mediante esquema dinámico
+        # Keys con tipo: cada plantilla conserva sus propios valores al alternar.
         for f_key, f_lbl, f_def, f_tipo in obtener_esquema_campos(tipo_plantilla):
             val_def = f_def.replace("{servicio}", nombre_srv).replace("{tipo_plantilla}", tipo_plantilla)
             if f_tipo == "area":
-                params[f_key] = st.text_area(f_lbl, value=val_def, key=f"fld_param_{f_key}")
+                params[f_key] = st.text_area(f_lbl, value=val_def, key=f"fld_param_{tipo_plantilla}_{f_key}")
             else:
-                params[f_key] = st.text_input(f_lbl, value=val_def, key=f"fld_param_{f_key}")
+                params[f_key] = st.text_input(f_lbl, value=val_def, key=f"fld_param_{tipo_plantilla}_{f_key}")
 
         doc_gen_md, fname_sug = generar_doc_plantilla(tipo_plantilla, autor, nombre_srv, nivel_arq, params)
 
     with col_t2:
         st.markdown("#### 2. Vista Previa")
-        nom_f = st.text_input("Nombre del archivo (.md)", value=fname_sug, key="input_nombre_archivo_proc_final")
+        nom_f = st.text_input("Nombre del archivo (.md)", value=fname_sug, key=f"input_nombre_archivo_proc_final_{tipo_plantilla}")
 
         cats_disp_rb = obtener_categorias_disponibles()
         col_rb_c1, col_rb_c2 = st.columns([1.5, 1.5])
@@ -103,6 +105,9 @@ def renderizar_pestana_plantillas(doc_store: dict):
             if not cat_final_rb:
                 st.warning("Elige una categoría o escribe una nueva.")
             else:
+                # Nombre libre del usuario: se normaliza para evitar rutas inválidas
+                # o traversal fuera de DOCS_DIR (':', '/', '..', etc.).
+                nom_f = normalizar_nombre_archivo(nom_f.strip())
                 if not nom_f.endswith(".md"):
                     nom_f += ".md"
                 if es_nuevo_t and guardar_cat and nuevo_t_nom.strip():
@@ -110,13 +115,20 @@ def renderizar_pestana_plantillas(doc_store: dict):
 
                 ruta_dest = os.path.join(DOCS_DIR, nom_f)
                 os.makedirs(DOCS_DIR, exist_ok=True)
-                with open(ruta_dest, "w", encoding="utf-8") as f_out:
-                    f_out.write(doc_gen_md)
+                ya_existia = os.path.exists(ruta_dest)
+                if ya_existia:
+                    guardar_nueva_version(nom_f, doc_gen_md, autor, f"Regenerado desde plantilla: {tipo_plantilla}", doc_store)
+                else:
+                    with open(ruta_dest, "w", encoding="utf-8") as f_out:
+                        f_out.write(doc_gen_md)
+                    inicializar_version_inicial_si_no_existe(nom_f, doc_gen_md, autor=autor, comentario=f"Creación mediante plantilla: {tipo_plantilla}")
 
                 doc_store[nom_f] = doc_gen_md
                 asignar_tags_documento(nom_f, [cat_final_rb], autor=autor)
-                inicializar_version_inicial_si_no_existe(nom_f, doc_gen_md, autor=autor, comentario=f"Creación mediante plantilla: {tipo_plantilla}")
                 limpiar_cache_consultas()
                 st.toast(f"Guardado como {nom_f} en [{cat_final_rb}]")
-                st.success(f"Documento guardado como **{nom_f}** (v1).")
+                if ya_existia:
+                    st.success(f"Documento actualizado como **{nom_f}**.")
+                else:
+                    st.success(f"Documento guardado como **{nom_f}** (v1).")
                 st.rerun()
