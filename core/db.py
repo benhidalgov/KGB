@@ -48,8 +48,19 @@ def obtener_engine():
 
     try:
         from sqlalchemy import create_engine
+        engine_url = url
+        try:
+            import psycopg2  # noqa: F401
+        except ImportError:
+            try:
+                import psycopg  # noqa: F401
+                if engine_url.startswith("postgresql://"):
+                    engine_url = engine_url.replace("postgresql://", "postgresql+psycopg://", 1)
+            except ImportError:
+                pass
+
         _ENGINE = create_engine(
-            url,
+            engine_url,
             pool_pre_ping=True,
             pool_size=5,
             max_overflow=10,
