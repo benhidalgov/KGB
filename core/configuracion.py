@@ -1,10 +1,31 @@
 import os
 
+APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Cargar automáticamente variables de entorno desde .env si existe (desarrollo local)
+_env_path = os.path.join(APP_DIR, ".env")
+if os.path.exists(_env_path):
+    try:
+        import dotenv
+        dotenv.load_dotenv(_env_path, override=False)
+    except Exception:
+        try:
+            with open(_env_path, "r", encoding="utf-8") as _f:
+                for _line in _f:
+                    _line = _line.strip()
+                    if not _line or _line.startswith("#") or "=" not in _line:
+                        continue
+                    _k, _v = _line.split("=", 1)
+                    _k = _k.strip()
+                    _v = _v.strip().strip("'\"")
+                    if _k and _k not in os.environ:
+                        os.environ[_k] = _v
+        except Exception:
+            pass
+
 # Modo de despliegue: en producción (Docker) se exige configuración segura
 # explícita y se desactivan los respaldos silenciosos a archivos locales.
 ES_PRODUCCION = os.environ.get("PRODUCCION", "").strip().lower() in ("1", "true", "yes", "si", "sí")
-
-APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # Rutas principales de datos y recursos
 DATA_DIR = os.path.join(APP_DIR, "data")
