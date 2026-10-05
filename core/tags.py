@@ -5,8 +5,11 @@ Permite clasificar, filtrar y persistir etiquetas para la base documental corpor
 import os
 import json
 import re
+import logging
 
 from core.configuracion import CATEGORIAS_PATH
+
+logger = logging.getLogger("infra_copilot.tags")
 
 SIGLAS_COMUNES = {
     "CMDB", "DRP", "SSL", "TLS", "API", "REST", "SOAP", "BD", "SQL", "SAN",
@@ -31,14 +34,22 @@ def cargar_datos_categorias() -> dict:
         try:
             with open(CATEGORIAS_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if isinstance(data, dict):
-                    if "categorias" not in data or not isinstance(data["categorias"], list):
-                        data["categorias"] = []
-                    if "documentos" not in data or not isinstance(data["documentos"], dict):
-                        data["documentos"] = {}
-                    return data
+            if not isinstance(data, dict):
+                raise ValueError("estructura raíz no válida")
+            if "categorias" not in data or not isinstance(data["categorias"], list):
+                data["categorias"] = []
+            if "documentos" not in data or not isinstance(data["documentos"], dict):
+                data["documentos"] = {}
+            return data
         except Exception:
-            pass
+            # Ilegible (JSON truncado, edición manual fallida, disco lleno...):
+            # devolver vacío aquí y guardar después destruiría TODO el catálogo.
+            # Preservar el archivo corrupto para recuperarlo a mano.
+            logger.warning("[TAGS] categorías.json ilegible; se preserva como .corrupto y se arranca vacío.")
+            try:
+                os.replace(CATEGORIAS_PATH, CATEGORIAS_PATH + ".corrupto")
+            except OSError:
+                pass
     return {"categorias": [], "documentos": {}}
 
 
@@ -58,7 +69,7 @@ def guardar_datos_categorias(data: dict) -> bool:
 def obtener_categorias_disponibles() -> list[str]:
     """Retorna la lista ordenada de todas las categorías registradas en el sistema."""
     data = cargar_datos_categorias()
-    return sorted(list(set([normalizar_categoria(c) for c in data.get("categorias", []) if c.strip()])))
+    return sorted(list(set([normalizar_categoria(c) for c in data.get("categorias", []) if isinstance(c, str) and c.strip()])))
 
 
 def obtener_tags_documento(doc_name: str) -> list[str]:
@@ -66,12 +77,12 @@ def obtener_tags_documento(doc_name: str) -> list[str]:
     data = cargar_datos_categorias()
     docs = data.get("documentos", {})
     if doc_name in docs:
-        return docs[doc_name]
+        return docs[doc_name] if isinstance(docs[doc_name], list) else []
     # Búsqueda por coincidencia de nombre base para diagramas
     if doc_name.startswith("DIAGRAMA__"):
         base_alias = doc_name.replace("DIAGRAMA__", "").replace(".md", "")
         for k, v in docs.items():
-            if base_alias in k:
+            if base_alias in k and isinstance(v, list):
                 return v
     return []
 
@@ -84,9 +95,6 @@ def asignar_tags_documento(doc_name: str, tags: list[str], autor: str = "Técnic
         if norm and norm not in tags_limpios:
             tags_limpios.append(norm)
 
-    if not tags_limpios:
-        return False
-
     data = cargar_datos_categorias()
     # Asegurar que cada tag esté presente en la lista global de categorías
     for t in tags_limpios:
@@ -94,6 +102,7 @@ def asignar_tags_documento(doc_name: str, tags: list[str], autor: str = "Técnic
             data["categorias"].append(t)
     data["categorias"].sort()
 
+    # Lista vacía explícita = limpiar categorías del documento.
     data.setdefault("documentos", {})[doc_name] = tags_limpios
     return guardar_datos_categorias(data)
 

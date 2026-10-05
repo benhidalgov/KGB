@@ -39,6 +39,7 @@ from core.auditoria import (
     obtener_fecha_carga_documento,
 )
 from core.motor import limpiar_cache_consultas
+from core.auth import tiene_permiso
 from core.configuracion import DOCS_DIR, HISTORY_DIR
 from excel_cleaner import procesar_excel_limpio
 
@@ -145,6 +146,9 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 if filtro_cat_t3 not in tags_d_t3:
                     continue
             f_d = mapa_fechas.get(d)
+            # st.date_input devuelve (d,) mientras el usuario elige el segundo extremo.
+            if isinstance(rango_fecha_doc, (tuple, list)) and len(rango_fecha_doc) == 1:
+                rango_fecha_doc = (rango_fecha_doc[0], rango_fecha_doc[0])
             if f_d and isinstance(rango_fecha_doc, (tuple, list)) and len(rango_fecha_doc) == 2 and not (rango_fecha_doc[0] <= f_d <= rango_fecha_doc[1]):
                 continue
             docs_disp.append(d)
@@ -220,8 +224,12 @@ def renderizar_pestana_documentacion(doc_store: dict):
                     with col_rm:
                         mot_rb = st.text_input("Motivo (*)", key=f"motive_rb_{doc_sel}_{it_sel['version']}")
                     if st.button(f"Volver a la Versión v{it_sel['version']}", type="primary", key=f"btn_rb_{doc_sel}_{it_sel['version']}"):
-                        if not aut_rb.strip() or not mot_rb.strip():
+                        if not tiene_permiso("puede_rollback"):
+                            st.error("Tu rol no permite ejecutar rollbacks.")
+                        elif not aut_rb.strip() or not mot_rb.strip():
                             st.error("Escribe tu nombre y el motivo.")
+                        elif doc_sel.lower().endswith(('.docx', '.doc', '.pdf', '.pptx')):
+                            st.error("Rollback no disponible en binarios: el contenido de texto se regenera al recargar. Restaura desde el archivo original.")
                         else:
                             if ex_snap and os.path.exists(os.path.join(HISTORY_DIR, doc_sel, ex_snap)):
                                 shutil.copy2(os.path.join(HISTORY_DIR, doc_sel, ex_snap), os.path.join(DOCS_DIR, doc_sel))
@@ -270,6 +278,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
             """, unsafe_allow_html=True)
 
             es_x = doc_act_edit.lower().endswith(('.xlsx', '.xls')) and os.path.exists(os.path.join(DOCS_DIR, doc_act_edit))
+            es_binario = doc_act_edit.lower().endswith(('.docx', '.doc', '.pdf', '.pptx'))
             if es_x:
                 p_xl = os.path.join(DOCS_DIR, doc_act_edit)
                 mt_xl = os.path.getmtime(p_xl) if os.path.exists(p_xl) else 0.0
@@ -293,20 +302,35 @@ def renderizar_pestana_documentacion(doc_store: dict):
                     nueva_cat_xl = st.text_input("Agregar Nueva Categoría:", key=f"input_new_cat_edit_xl_{doc_act_edit}")
 
                 df_e = cargar_hoja_excel_dataframe(p_xl, hoja_e, mt_xl)
+                # 'cargar_hoja_excel_dataframe' devuelve {Mensaje} si falló la lectura
+                # (archivo bloqueado, hoja obsoleta): guardarlo pisaría la hoja real.
+                hoja_ilegible = list(df_e.columns) == ["Mensaje"]
                 df_mod = st.data_editor(df_e, width="stretch", num_rows="dynamic", height=450, key=f"grid_editor_{doc_act_edit}_{hoja_e}")
                 if st.button(f"Guardar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_grid_{doc_act_edit}"):
-                    if not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
+                    if hoja_ilegible:
+                        st.error("No se pudo leer la hoja correctamente; no se guardará nada.")
+                    elif not tiene_permiso("puede_editar_docs"):
+                        st.error("Tu rol no permite editar documentos.")
+                    elif not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
                         st.error("Escribe tu nombre y el motivo.")
                     else:
-                        nv = guardar_nueva_version_excel(doc_act_edit, hoja_e, df_mod, aut_e.strip(), mot_e.strip(), doc_store)
-                        tags_finales_xl = list(tags_xl_sel)
-                        if nueva_cat_xl.strip():
-                            tags_finales_xl.append(nueva_cat_xl.strip())
-                        if tags_finales_xl:
+                        try:
+                            nv = guardar_nueva_version_excel(doc_act_edit, hoja_e, df_mod, aut_e.strip(), mot_e.strip(), doc_store)
+                        except Exception as e_xl:
+                            st.error(f"No se pudo guardar la hoja: {e_xl}")
+                        else:
+                            tags_finales_xl = list(tags_xl_sel)
+                            if nueva_cat_xl.strip():
+                                tags_finales_xl.append(nueva_cat_xl.strip())
                             asignar_tags_documento(doc_act_edit, tags_finales_xl, autor=aut_e.strip())
                             limpiar_cache_consultas()
-                        st.toast(f"Versión v{nv} guardada.")
-                        st.rerun()
+                            st.toast(f"Versión v{nv} guardada.")
+                            st.rerun()
+            elif es_binario:
+                # Editar texto de un binario escribiría un gemelo .md que duplica el
+                # documento y revierte el cambio al recargar el .docx/.pdf original.
+                st.info(f"**{doc_act_edit}** es un archivo binario: la edición de texto directo no está disponible. "
+                        "Descarga el original, edítalo y vuelve a subirlo.")
             else:
                 col_e1, col_e2 = st.columns([1, 2])
                 with col_e1:
@@ -324,17 +348,22 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
                 val_txt = doc_cont_e[:100_000] if len(doc_cont_e) > 100_000 else doc_cont_e
                 txt_edit = st.text_area("Contenido (Markdown)", value=val_txt, height=450, key=f"textarea_edit_{doc_act_edit}")
+                if len(doc_cont_e) > 100_000:
+                    st.warning(f"Documento de {len(doc_cont_e):,} caracteres: el visor truncó la vista a 100.000 y la edición está bloqueada para no perder contenido.".replace(",", "."))
                 if st.button(f"Guardar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_{doc_act_edit}"):
-                    if not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
+                    if not tiene_permiso("puede_editar_docs"):
+                        st.error("Tu rol no permite editar documentos.")
+                    elif len(doc_cont_e) > 100_000:
+                        st.error("Documento mayor a 100.000 caracteres: edición bloqueada para no truncar el contenido.")
+                    elif not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
                         st.error("Escribe tu nombre y el motivo.")
                     else:
                         nv = guardar_nueva_version(doc_act_edit, txt_edit, aut_e.strip(), mot_e.strip(), doc_store)
                         tags_finales = list(tags_e_sel)
                         if nueva_cat_e.strip():
                             tags_finales.append(nueva_cat_e.strip())
-                        if tags_finales:
-                            asignar_tags_documento(doc_act_edit, tags_finales, autor=aut_e.strip())
-                            limpiar_cache_consultas()
+                        asignar_tags_documento(doc_act_edit, tags_finales, autor=aut_e.strip())
+                        limpiar_cache_consultas()
                         if nv == u_ver_e:
                             st.toast(f"Categorías actualizadas para {doc_act_edit}")
                             time.sleep(0.5)
@@ -430,7 +459,9 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 btn_label = f"Clasificar Seleccionados ({cant_marcados})" if cant_marcados > 0 else "Clasificar Seleccionados"
                 if st.button(btn_label, type="primary", width="stretch", key="btn_apply_batch_tags"):
                     df_sel = df_lote_edit[df_lote_edit["Seleccionar"] == True]
-                    if df_sel.empty:
+                    if not tiene_permiso("puede_editar_docs"):
+                        st.error("Tu rol no permite clasificar documentos.")
+                    elif df_sel.empty:
                         st.warning("Marca al menos un documento en la columna 'Seleccionar'.")
                     else:
                         doc_tags_map = {}
@@ -452,6 +483,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             limpiar_cache_consultas()
                             limpiar_cache_documentos()
                             st.session_state["batch_select_default"] = False
+                            st.session_state["batch_tagger_ver"] = st.session_state.get("batch_tagger_ver", 0) + 1
                             st.toast(f"{n_act} documentos clasificados.")
                             st.success(f"Listo: {n_act} documentos actualizados.")
                             time.sleep(0.8)

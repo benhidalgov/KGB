@@ -7,6 +7,7 @@ import os
 import time
 import logging
 from typing import Optional, Dict, Any, List
+from urllib.parse import quote
 import pandas as pd
 
 logger = logging.getLogger("infra_copilot.db")
@@ -31,7 +32,7 @@ def _obtener_database_url() -> Optional[str]:
         name = os.environ.get("DB_NAME", "infra_copilot")
         user = os.environ.get("DB_USER", "infra_admin")
         pwd = os.environ.get("DB_PASSWORD", "")
-        return f"postgresql://{user}:{pwd}@{host}:{port}/{name}"
+        return f"postgresql://{quote(user, safe='')}:{quote(pwd, safe='')}@{host}:{port}/{name}"
 
     return None
 
@@ -48,8 +49,19 @@ def obtener_engine():
 
     try:
         from sqlalchemy import create_engine
+        engine_url = url
+        try:
+            import psycopg2  # noqa: F401
+        except ImportError:
+            try:
+                import psycopg  # noqa: F401
+                if engine_url.startswith("postgresql://"):
+                    engine_url = engine_url.replace("postgresql://", "postgresql+psycopg://", 1)
+            except ImportError:
+                pass
+
         _ENGINE = create_engine(
-            url,
+            engine_url,
             pool_pre_ping=True,
             pool_size=5,
             max_overflow=10,
@@ -200,8 +212,8 @@ def obtener_eventos_auditoria_pg(limite: int = 200) -> List[Dict[str, Any]]:
         except Exception:
             pass
 
-        v_ant_num = int(row["version_anterior"] or 0)
-        v_new_num = int(row["version_nueva"] or 1)
+        v_ant_num = int(row["version_anterior"]) if pd.notna(row["version_anterior"]) else 0
+        v_new_num = int(row["version_nueva"]) if pd.notna(row["version_nueva"]) else 1
         eventos.append({
             "timestamp": ts_str,
             "documento": row["documento"],

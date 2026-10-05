@@ -3,21 +3,15 @@ Consola Principal de Infraestructura y Operaciones.
 Orquestador central con navegación lateral desacoplada para maximizar el espacio del panel principal.
 """
 import os
-import sys
-import importlib
 import logging
 import pandas as pd
 import streamlit as st
 
 logger = logging.getLogger("infra_copilot.app")
 
-# Recarga preventiva de submódulos 'core' para servidores Streamlit persistentes
-for _mod_k in list(sys.modules.keys()):
-    if _mod_k.startswith("core."):
-        try:
-            importlib.reload(sys.modules[_mod_k])
-        except Exception:
-            pass
+# Streamlit ya recarga los módulos locales al detectar cambios; un reload
+# manual en cada rerun destruiría los contadores de bloqueo de login,
+# la conexión DuckDB y todos los lru_cache de core.*.
 
 from core.estilos import cargar_estilos_css
 from core.configuracion import CSV_PATH

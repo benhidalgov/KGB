@@ -37,7 +37,7 @@ def _claves_candidatas() -> List[bytes]:
     # En producción no se genera una clave local junto a la bóveda cifrada:
     # quien acceda al volumen tendría texto y llave en el mismo lugar.
     if ES_PRODUCCION:
-        raise RuntimeError("VAULT_MASTER_KEY es obligatoria en producción (ver .env.example).")
+        raise ErrorBoveda("VAULT_MASTER_KEY es obligatoria en producción (ver .env.example).")
 
     if os.path.exists(VAULT_KEY_PATH):
         try:
@@ -96,8 +96,11 @@ def _guardar_todos_los_secretos_boveda(secretos: Dict[str, str]) -> bool:
         fernet = Fernet(obtener_clave_maestra())
         cifrado = fernet.encrypt(json.dumps(secretos, ensure_ascii=False).encode("utf-8"))
         os.makedirs(os.path.dirname(VAULT_FILE_PATH), exist_ok=True)
-        with open(VAULT_FILE_PATH, "wb") as f:
+        # Escritura atómica: un crash a mitad de escritura no corrompe la bóveda.
+        tmp_path = f"{VAULT_FILE_PATH}.tmp"
+        with open(tmp_path, "wb") as f:
             f.write(cifrado)
+        os.replace(tmp_path, VAULT_FILE_PATH)
         return True
     except Exception:
         return False

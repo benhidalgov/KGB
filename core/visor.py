@@ -1,10 +1,14 @@
 import base64
 import os
 import re
+import logging
 import streamlit as st
 import pandas as pd
 from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, obtener_nombres_hojas_excel
+
+logger = logging.getLogger("infra_copilot.visor")
 from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes, normalizar_titulo_display
+from core.auth import tiene_permiso
 from core.configuracion import DOCS_DIR
 
 MIME_MAP = {
@@ -31,14 +35,14 @@ def actualizar_caption_en_markdown(md_content: str, nuevo_caption: str) -> str:
     """Actualiza o inserta el campo de pie de imagen (caption) en el contenido Markdown."""
     cap_str = nuevo_caption.strip()
     if re.search(r'(\*\*Pie de Imagen\s*(?:\(Caption\))?:\*\*\s*).+', md_content, re.IGNORECASE):
-        return re.sub(r'(\*\*Pie de Imagen\s*(?:\(Caption\))?:\*\*\s*).+', rf'\g<1>{cap_str}', md_content)
+        return re.sub(r'(\*\*Pie de Imagen\s*(?:\(Caption\))?:\*\*\s*).+', lambda m: m.group(1) + cap_str, md_content)
     m_bin = re.search(r'(\* \*\*Archivo Binario:\*\* `[^`]+`\n)', md_content)
     if m_bin:
-        return re.sub(r'(\* \*\*Archivo Binario:\*\* `[^`]+`\n)', rf'\g<1>* **Pie de Imagen (Caption):** {cap_str}\n', md_content)
+        return re.sub(r'(\* \*\*Archivo Binario:\*\* `[^`]+`\n)', lambda m: m.group(1) + f"* **Pie de Imagen (Caption):** {cap_str}\n", md_content)
     return f"* **Pie de Imagen (Caption):** {cap_str}\n\n" + md_content
 
 
-def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
+def mostrar_pdf_embebido(pdf_path: str, height: int = 550, key_suffix: str = ""):
     """Renderiza un visor nativo de PDF embebido mediante un iframe Base64 o boton de descarga para archivos pesados."""
     try:
         size_mb = (os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0) / (1024 * 1024)
@@ -53,13 +57,68 @@ def mostrar_pdf_embebido(pdf_path: str, height: int = 550):
                 <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">Descárgalo para verlo sin recargar el navegador.</div>
             </div>
             """, unsafe_allow_html=True)
-            st.download_button(label=f"Descargar PDF Original ({fname})", data=pdf_bytes, file_name=fname, mime="application/pdf", width="stretch", key=f"dl_heavy_pdf_{fname}")
+            st.download_button(label=f"Descargar PDF Original ({fname})", data=pdf_bytes, file_name=fname, mime="application/pdf", width="stretch", key=f"dl_heavy_pdf_{fname}_{key_suffix}")
             return
 
         b64 = base64.b64encode(pdf_bytes).decode("utf-8")
         st.markdown(f'<iframe src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0" width="100%" height="{height}px" type="application/pdf" style="border:1px solid var(--border-subtle); border-radius:6px; background-color:var(--bg-surface);"></iframe>', unsafe_allow_html=True)
     except Exception as e:
         st.error(f"No se pudo mostrar el PDF: {str(e)}")
+
+
+@st.cache_data(show_spinner=False)
+def cargar_docx_a_html(filepath: str, mtime: float) -> str:
+    """Convierte un documento .docx a HTML semántico enriquecido utilizando mammoth."""
+    try:
+        import mammoth
+
+        def _convertir_imagen(image):
+            with image.open() as img_bytes:
+                enc = base64.b64encode(img_bytes.read()).decode("ascii")
+            return {
+                "src": f"data:{image.content_type};base64,{enc}",
+                "style": "max-width: 100%; height: auto; border-radius: 6px; margin: 12px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);"
+            }
+
+        with open(filepath, "rb") as docx_file:
+            result = mammoth.convert_to_html(
+                docx_file,
+                convert_image=mammoth.images.img_element(_convertir_imagen)
+            )
+            return result.value or ""
+    except Exception as e:
+        logger.warning(f"[Visor] Error al convertir {filepath} con mammoth: {e}")
+        return ""
+
+
+@st.cache_data(show_spinner=False)
+def cargar_pptx_a_slides(filepath: str, mtime: float) -> list:
+    """Extrae diapositivas estructuradas de un archivo .pptx con python-pptx."""
+    try:
+        from pptx import Presentation
+        prs = Presentation(filepath)
+        slides_data = []
+        for idx, slide in enumerate(prs.slides, 1):
+            title = ""
+            texts = []
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    txt = shape.text_frame.text.strip()
+                    if not txt:
+                        continue
+                    if not title and (shape == slide.shapes.title or idx == 1):
+                        title = txt
+                    else:
+                        texts.append(txt)
+            slides_data.append({
+                "numero": idx,
+                "titulo": title or f"Diapositiva {idx}",
+                "contenido": texts
+            })
+        return slides_data
+    except Exception as e:
+        logger.warning(f"[Visor] Error al leer {filepath} con python-pptx: {e}")
+        return []
 
 
 def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: str, ultima_version: int = 1, ultimo_editor: str = "Técnico Responsable", ultimo_timestamp: str = "N/A", key_suffix: str = ""):
@@ -96,7 +155,9 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
     col_btn_save, col_btn_info = st.columns([2, 3])
     with col_btn_save:
         if st.button(f"Guardar Descripción (v{ultima_version + 1})", type="primary", width="stretch", key=f"btn_save_caption_{doc_name}_{key_suffix}"):
-            if not autor_caption or not autor_caption.strip():
+            if not tiene_permiso("puede_editar_docs"):
+                st.error("Tu rol no permite editar descripciones.")
+            elif not autor_caption or not autor_caption.strip():
                 st.error("Escribe tu nombre.")
             elif not nuevo_caption_input or not nuevo_caption_input.strip():
                 st.error("La descripción no puede estar vacía.")
@@ -162,14 +223,47 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
         df_hoja = cargar_hoja_excel_dataframe(ruta_original, hoja_sel, mtime)
         st.dataframe(df_hoja, width="stretch", height=height)
     elif ext == ".pdf":
-        mostrar_pdf_embebido(ruta_original, height=height)
-    elif ext in (".docx", ".doc", ".pptx", ".ppt"):
-        st.markdown(f"""
-        <div class="visor-office-notice-card">
-            <div class="visor-office-title">Documento Ofimático: {fname}</div>
-            <div class="visor-office-desc">El texto y las tablas están en la columna izquierda.</div>
-        </div>
-        """, unsafe_allow_html=True)
+        mostrar_pdf_embebido(ruta_original, height=height, key_suffix=key_suffix)
+    elif ext in (".docx", ".doc"):
+        mtime = os.path.getmtime(ruta_original) if os.path.exists(ruta_original) else 0.0
+        html_docx = cargar_docx_a_html(ruta_original, mtime) if ext == ".docx" else ""
+        if html_docx:
+            st.markdown(
+                f'<div class="visor-docx-container" style="max-height: {height}px; overflow-y: auto;">'
+                f'{html_docx}'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+        elif md_content and md_content.strip():
+            with st.container(height=height):
+                st.markdown(preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original), unsafe_allow_html=True)
+        else:
+            st.info(f"No se pudo generar la vista previa del documento {fname}.")
+    elif ext in (".pptx", ".ppt"):
+        mtime = os.path.getmtime(ruta_original) if os.path.exists(ruta_original) else 0.0
+        slides = cargar_pptx_a_slides(ruta_original, mtime) if ext == ".pptx" else []
+        if slides:
+            with st.container(height=height):
+                for s in slides:
+                    bullets_html = "".join(f"<li>{t}</li>" for t in s["contenido"]) if s["contenido"] else "<p style='color:var(--text-muted);font-style:italic;'>Sin contenido textual en la diapositiva.</p>"
+                    st.markdown(f"""
+                    <div class="visor-pptx-slide-card">
+                        <div class="visor-pptx-slide-header">
+                            <span class="badge-tag">Diapositiva {s['numero']}</span>
+                            <span class="visor-pptx-slide-title">{s['titulo']}</span>
+                        </div>
+                        <div class="visor-pptx-slide-body">
+                            <ul style="margin: 8px 0; padding-left: 20px;">
+                                {bullets_html}
+                            </ul>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        elif md_content and md_content.strip():
+            with st.container(height=height):
+                st.markdown(preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original), unsafe_allow_html=True)
+        else:
+            st.info(f"No se pudo generar la vista previa de la presentación {fname}.")
     elif ext in (".txt", ".csv", ".json", ".sql", ".py", ".md"):
         try:
             with open(ruta_original, "r", encoding="utf-8", errors="ignore") as f:
@@ -308,7 +402,9 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_zt_exit:
         if st.button("Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
             st.session_state["zen_studio_activo"] = False
-            st.session_state["top_navbar_view_selector"] = "Consola"
+            # El router (app.py) decide por nav_seccion_activa; sin esto el
+            # siguiente rerun vuelve a entrar en Zen y queda en bucle.
+            st.session_state["nav_seccion_activa"] = "Consultas y Búsqueda"
             st.rerun()
 
     font_size_val = "17px" if "Grande" in tam_fuente else ("13px" if "Compacto" in tam_fuente else "15px")
@@ -421,7 +517,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
             with st.container(border=True):
                 st.caption(f"**{len(toc_items)} secciones**:")
                 opciones_seccion = ["Documento Completo"] + [f"{'—' * (it['nivel'] - 1)} {it['titulo']}" for it in toc_items]
-                seccion_sel = st.selectbox("Saltar a Sección:", opciones_seccion, key="zen_section_jump_sel")
+                seccion_sel = st.selectbox("Saltar a Sección:", opciones_seccion, key=f"zen_section_jump_sel_{doc_name}")
 
                 toc_html_list = []
                 for it in toc_items:
@@ -460,11 +556,17 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_canvas:
         texto_a_mostrar = md_content
         if seccion_sel != "Documento Completo":
+            # El TOC limpia énfasis (*_`); comparar los encabezados igualmente limpiados.
             titulo_buscado = seccion_sel.lstrip('— ').strip()
-            patron_sec = re.compile(rf'(^#+\s+{re.escape(titulo_buscado)}[\s\S]*?)(?=^#+\s+|\Z)', re.MULTILINE)
-            m_sec = patron_sec.search(md_content)
+            m_sec = None
+            for m_h in re.finditer(r'(?m)^#+\s+(.+)$', md_content):
+                if re.sub(r'[*_`]', '', m_h.group(1)).strip() == titulo_buscado:
+                    resto = md_content[m_h.end():]
+                    sig = re.search(r'(?m)^#+\s+', resto)
+                    m_sec = md_content[m_h.start():m_h.end() + (sig.start() if sig else len(resto))]
+                    break
             if m_sec:
-                texto_a_mostrar = m_sec.group(1)
+                texto_a_mostrar = m_sec
 
         cnt_coincidencias = 0
         if zen_search_query.strip():

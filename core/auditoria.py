@@ -19,6 +19,19 @@ logger = logging.getLogger("infra_copilot.auditoria")
 # verdad en producción y el log local queda solo como respaldo.
 _LOG_LOCK = threading.Lock()
 
+# Serializa el read-modify-write de metadata.json: sin él, dos sesiones que
+# guardan a la vez calculan la misma vN y la última pisa la anterior.
+# RLock porque guardar_nueva_version_excel llama a inicializar_version_inicial...
+_META_LOCK = threading.RLock()
+
+
+def _versionado_bloqueado(fn):
+    @functools.wraps(fn)
+    def _wrapper(*args, **kwargs):
+        with _META_LOCK:
+            return fn(*args, **kwargs)
+    return _wrapper
+
 
 def calcular_sha256_texto(texto: str) -> str:
     """Calcula el hash criptográfico SHA-256 de una cadena de texto en UTF-8."""
@@ -147,6 +160,7 @@ def generar_diff_texto(texto_ant: str, texto_nuevo: str, label_ant: str = "Versi
     return diff_text if diff_text.strip() else "No se detectaron diferencias de contenido entre estas dos versiones."
 
 
+@_versionado_bloqueado
 def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: str, autor: str = "Sistema", comentario: str = "Versión base inicial") -> list:
     """Inicializa la versión v1 si no existe registro histórico previo con su firma SHA-256."""
     doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
@@ -178,6 +192,7 @@ def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: st
     return obtener_historial_versiones(doc_name)
 
 
+@_versionado_bloqueado
 def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comentario: str, doc_store: dict) -> int:
     """Guarda una nueva revisión incrementando la versión (vN+1) registrando SHA-256."""
     doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
@@ -220,19 +235,22 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
     _guardar_meta(doc_name, historial)
 
     ext = os.path.splitext(doc_name)[1].lower()
-    target_path = os.path.join(DOCS_DIR, f"{os.path.splitext(doc_name)[0]}.md" if ext in ('.docx', '.pdf', '.pptx', '.xlsx', '.xls') else doc_name)
-    with open(target_path, "w", encoding="utf-8") as f:
-        f.write(nuevo_contenido)
-
     doc_store[doc_name] = nuevo_contenido
     if ext in ('.docx', '.pdf', '.pptx', '.xlsx', '.xls'):
-        doc_store[os.path.basename(target_path)] = nuevo_contenido
+        # El binario ya vive en DOCS_DIR: escribir <base>.md aquí creaba un
+        # segundo documento (contador, tags, búsqueda y RAG indexados dos veces).
+        # El contenido extraído vive en doc_store y en el snapshot del historial.
+        pass
+    else:
+        with open(os.path.join(DOCS_DIR, doc_name), "w", encoding="utf-8") as f:
+            f.write(nuevo_contenido)
 
     accion = "ROLLBACK" if "rollback" in (comentario or "").lower() else "EDICION"
     registrar_evento_auditoria(doc_name=doc_name, accion=accion, version_ant=version_ant, version_nueva=nueva_v, autor=autor, motivo=comentario)
     return nueva_v
 
 
+@_versionado_bloqueado
 def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.DataFrame, autor: str, comentario: str, doc_store: dict) -> int:
     """Guarda una nueva versión de un libro Excel modificando la hoja seleccionada."""
     excel_path = os.path.join(DOCS_DIR, doc_name)
@@ -244,12 +262,10 @@ def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.Dat
     nueva_v = version_ant + 1
     snap_excel = f"v{nueva_v}_{doc_name}"
 
-    try:
-        with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-            df_nuevo.to_excel(writer, sheet_name=sheet_name, index=False)
-    except Exception:
-        with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
-            df_nuevo.to_excel(writer, sheet_name=sheet_name, index=False)
+    # Sin fallback mode='w': ante un error recreaba el libro con UNA sola hoja
+    # y destruía el resto. Se propaga y el llamador muestra el error.
+    with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+        df_nuevo.to_excel(writer, sheet_name=sheet_name, index=False)
 
     shutil.copy2(excel_path, os.path.join(doc_hist_dir, snap_excel))
     nuevo_md = procesar_excel_limpio(excel_path)

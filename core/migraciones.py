@@ -6,6 +6,7 @@ en orden, registrándose en la tabla `schema_migrations`. Sustituye al mecanismo
 `docker-entrypoint-initdb.d`, que solo corre al crear el volumen de datos.
 """
 import os
+import re
 import glob
 import logging
 
@@ -36,8 +37,13 @@ def aplicar_migraciones(engine) -> list:
                 continue
             with open(ruta, "r", encoding="utf-8") as f:
                 ddl = f.read()
-            # exec_driver_sql evita que SQLAlchemy interprete ':' y '::' del SQL.
-            conn.exec_driver_sql(ddl)
+            # Sin comentarios: 'split(";")' partiría el ';' de un comentario
+            # (p.ej. 02_seed.sql) y el chunk resultante no es SQL válido.
+            ddl = re.sub(r"(?m)--.*$", "", ddl)
+            # Un statement por execute: psycopg3 rechaza múltiples sentencias en una sola.
+            for sentencia in (s.strip() for s in ddl.split(";")):
+                if sentencia:
+                    conn.exec_driver_sql(sentencia)
             conn.execute(text("INSERT INTO schema_migrations (version) VALUES (:v)"), {"v": version})
             aplicadas.append(version)
             logger.info(f"[MIGRACIONES] Aplicada: {version}")
