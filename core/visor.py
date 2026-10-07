@@ -21,6 +21,94 @@ MIME_MAP = {
     ".svg": "image/svg+xml", ".webp": "image/webp", ".txt": "text/plain", ".csv": "text/csv"
 }
 
+# Formatos raster que Pillow puede abrir. Streamlit delega en Pillow para
+# incrustar la imagen, asi que la extension no basta: el archivo debe ser una
+# imagen real. Un .png renombrado o una ficha Markdown rompian la pagina entera.
+EXTENSIONES_IMAGEN_RASTER = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
+
+
+def _parece_svg(ruta: str) -> bool:
+    """Comprueba la cabecera: un archivo .svg renombrado tampoco es un SVG."""
+    try:
+        with open(ruta, "rb") as f:
+            cabecera = f.read(4096).lower()
+    except OSError:
+        return False
+    return b"<svg" in cabecera
+
+
+def es_imagen_visualizable(ruta: str | None) -> bool:
+    """Indica si el archivo se puede mostrar como imagen en la consola.
+
+    Streamlit usa Pillow, que no entiende SVG y lanza UnidentifiedImageError
+    cuando el contenido no es una imagen.
+    """
+    if not ruta or not os.path.isfile(ruta):
+        return False
+    ext = os.path.splitext(ruta)[1].lower()
+    if ext == ".svg":
+        return _parece_svg(ruta)
+    if ext not in EXTENSIONES_IMAGEN_RASTER:
+        return False
+    try:
+        from PIL import Image
+    except Exception:
+        return False
+    try:
+        with Image.open(ruta) as imagen:
+            imagen.verify()
+        return True
+    except Exception:
+        return False
+
+
+def es_documento_diagrama(doc_name: str, ruta_original: str | None) -> bool:
+    """Decide si el documento se abre como diagrama: por nombre o extension, y por contenido real."""
+    if not ruta_original or not os.path.exists(ruta_original):
+        return False
+    ext = os.path.splitext(ruta_original)[1].lower()
+    if not (doc_name.startswith("DIAGRAMA__") or ext in IMAGE_EXTENSIONS):
+        return False
+    return es_imagen_visualizable(ruta_original)
+
+
+def renderizar_imagen_segura(ruta: str, caption: str) -> bool:
+    """Muestra la imagen verificada; si no se puede, avisa y deja la descarga disponible.
+
+    Devuelve True cuando la imagen quedo visible en la pagina.
+    """
+    fname = os.path.basename(ruta)
+    ext = os.path.splitext(ruta)[1].lower()
+    etiqueta = ext.upper().replace(".", "") or "desconocido"
+
+    if es_imagen_visualizable(ruta):
+        try:
+            if ext == ".svg":
+                # Pillow no abre SVG: se incrusta como Data URI y lo resuelve el navegador.
+                with open(ruta, "r", encoding="utf-8", errors="replace") as f:
+                    svg = f.read()
+                b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+                st.markdown(
+                    f'<div style="text-align:center;"><img src="data:image/svg+xml;base64,{b64}" alt="{fname}" '
+                    f'style="max-width:100%;height:auto;border-radius:6px;"/></div>'
+                    f'<div style="text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-top:6px;">{caption}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.image(ruta, caption=caption, width="stretch")
+            return True
+        except Exception as e:
+            logger.warning(f"[Visor] No se pudo mostrar la imagen {fname}: {e}")
+
+    st.markdown(f"""
+    <div class="bento-card" style="padding: 12px 14px; font-size: 0.84rem; line-height: 1.5;">
+        <span class="badge-warn">[WARN]</span> No se puede previsualizar <code>{fname}</code> como imagen
+        (formato {etiqueta}): el archivo no es una imagen valida o su contenido no coincide con la extension.
+        Use el boton de descarga para revisarlo.
+    </div>
+    """, unsafe_allow_html=True)
+    return False
+
 
 def extraer_caption_diagrama(md_content: str, default_name: str) -> str:
     """Extrae el texto del pie de imagen (caption) definido en la ficha Markdown."""
@@ -139,7 +227,7 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
     """, unsafe_allow_html=True)
 
     with st.container(border=True):
-        st.image(ruta_original, caption=caption_actual, width="stretch")
+        renderizar_imagen_segura(ruta_original, caption_actual)
 
     st.markdown("---")
     st.markdown("##### Editar Descripción del Diagrama")
@@ -214,8 +302,8 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
     </div>
     """, unsafe_allow_html=True)
 
-    if ext in IMAGE_EXTENSIONS:
-        st.image(ruta_original, caption=extraer_caption_diagrama(md_content, fname), width="stretch")
+    if ext in IMAGE_EXTENSIONS or ext in EXTENSIONES_IMAGEN_RASTER:
+        renderizar_imagen_segura(ruta_original, extraer_caption_diagrama(md_content, fname))
     elif ext in (".xlsx", ".xls"):
         mtime = os.path.getmtime(ruta_original) if os.path.exists(ruta_original) else 0.0
         sheets = obtener_nombres_hojas_excel(ruta_original, mtime)
@@ -297,8 +385,7 @@ def _render_md_tabs(md_content: str, doc_name: str, ruta_original: str | None):
 
 def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | None, ultima_version: int = 1, ultimo_editor: str = "Técnico Responsable", ultimo_timestamp: str = "N/A", key_suffix: str = ""):
     """Gestiona la visualización Lado a Lado de documentos técnicos y diagramas con Modo Enfoque inmersivo."""
-    es_diag = doc_name.startswith("DIAGRAMA__") or (ruta_original and any(ruta_original.lower().endswith(e) for e in IMAGE_EXTENSIONS))
-    if es_diag and ruta_original and os.path.exists(ruta_original):
+    if es_documento_diagrama(doc_name, ruta_original):
         renderizar_diagrama_limpio(ruta_original, doc_name, md_content, ultima_version, ultimo_editor, ultimo_timestamp, key_suffix)
         return
 

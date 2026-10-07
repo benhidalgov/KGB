@@ -146,11 +146,16 @@ def generar_ficha_diagrama(image_filename: str, orig_rel_path: str = "", sha256_
 
 def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
     """Localiza la ruta del archivo binario original asociado a un documento Markdown."""
-    # 1. Chequeo directo en DOCS_DIR y ORIGINALS_DIR
-    for base_dir in (DOCS_DIR, ORIGINALS_DIR):
-        p = os.path.join(base_dir, doc_name)
-        if os.path.exists(p) and os.path.isfile(p):
-            return p
+    # 1. Chequeo directo en DOCS_DIR y ORIGINALS_DIR.
+    # Una ficha Markdown nunca es el archivo original: es la representacion del
+    # binario del que se genero. Devolverla hacia que el visor tratara la propia
+    # ficha como imagen de diagrama y fallara al abrirla (UnidentifiedImageError).
+    es_ficha_markdown = doc_name.lower().endswith(".md")
+    if not es_ficha_markdown:
+        for base_dir in (DOCS_DIR, ORIGINALS_DIR):
+            p = os.path.join(base_dir, doc_name)
+            if os.path.exists(p) and os.path.isfile(p):
+                return p
 
     base = os.path.splitext(doc_name)[0]
     base_clean = re.sub(r'\.(png|jpg|jpeg|svg|webp|docx|pdf|xlsx|xls|pptx)$', '', re.sub(r'^(DIAGRAMA__|DOC__)', '', base, flags=re.IGNORECASE), flags=re.IGNORECASE)
@@ -184,6 +189,12 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
             for cand in (os.path.join(INBOX_DIR, orig_s), os.path.join(ORIGINALS_DIR, orig_s), orig_s):
                 if os.path.exists(cand):
                     return cand
+
+    # 4. Sin binario asociado, la ficha Markdown se muestra a si misma: el panel
+    #    "Archivo Original" sigue ofreciendo el documento y su descarga.
+    p = os.path.join(DOCS_DIR, doc_name)
+    if os.path.exists(p) and os.path.isfile(p):
+        return p
 
     return None
 

@@ -44,7 +44,29 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+Requiere Python 3.12, la misma versión del contenedor. El diagnóstico de la sección siguiente lo verifica.
+
 Acceso: `http://localhost:8501`
+
+---
+
+## Diagnóstico en una máquina nueva
+
+```cmd
+python -m core.diagnostico
+```
+
+Verifica que este equipo pueda ejecutar la consola y explica qué falta cuando no puede: versión de Python, dependencias reales frente a `requirements.txt`, permisos de escritura en `data/`, datos de arranque, bóveda y cuentas, PostgreSQL y Gemini, puerto de escucha y cadena de importación de la aplicación. Termina con `[CRIT]` y código de salida 1 si algo impide el arranque.
+
+```cmd
+REM Sembrar CMDB y documentos de ejemplo en un equipo nuevo (nunca sobrescribe)
+python -m core.diagnostico --crear-datos-ejemplo
+
+REM Guardar el informe para adjuntarlo a un ticket
+python -m core.diagnostico --informe diagnostico.txt
+```
+
+El juego de ejemplo vive en `ejemplos/` y viaja en el repositorio, porque `data/` está excluido del control de versiones.
 
 ---
 
@@ -81,7 +103,7 @@ tar czf respaldo_data_$(date +%F).tar.gz data/
 | `AUDITOR_PASSWORD` | Auditor | Solo lectura |
 
 Con `PRODUCCION=1` estas variables son obligatorias. Sin ellas la app no arranca.
-En desarrollo local sin `PRODUCCION`, se generan contraseñas aleatorias impresas una vez en consola.
+En desarrollo local sin `PRODUCCION`, si no se definen se crean las cuentas de fábrica `admin2026`, `operador2026` y `auditor2026` en el primer arranque; el diagnóstico avisa de ello.
 
 ---
 
