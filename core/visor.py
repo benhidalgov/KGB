@@ -31,18 +31,13 @@ def _parece_svg(ruta: str) -> bool:
     """Comprueba la cabecera: un archivo .svg renombrado tampoco es un SVG."""
     try:
         with open(ruta, "rb") as f:
-            cabecera = f.read(4096).lower()
+            return b"<svg" in f.read(4096).lower()
     except OSError:
         return False
-    return b"<svg" in cabecera
 
 
 def es_imagen_visualizable(ruta: str | None) -> bool:
-    """Indica si el archivo se puede mostrar como imagen en la consola.
-
-    Streamlit usa Pillow, que no entiende SVG y lanza UnidentifiedImageError
-    cuando el contenido no es una imagen.
-    """
+    """Indica si el archivo se puede mostrar como imagen en la consola."""
     if not ruta or not os.path.isfile(ruta):
         return False
     ext = os.path.splitext(ruta)[1].lower()
@@ -52,9 +47,6 @@ def es_imagen_visualizable(ruta: str | None) -> bool:
         return False
     try:
         from PIL import Image
-    except Exception:
-        return False
-    try:
         with Image.open(ruta) as imagen:
             imagen.verify()
         return True

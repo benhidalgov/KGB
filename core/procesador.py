@@ -150,8 +150,7 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
     # Una ficha Markdown nunca es el archivo original: es la representacion del
     # binario del que se genero. Devolverla hacia que el visor tratara la propia
     # ficha como imagen de diagrama y fallara al abrirla (UnidentifiedImageError).
-    es_ficha_markdown = doc_name.lower().endswith(".md")
-    if not es_ficha_markdown:
+    if not doc_name.lower().endswith(".md"):
         for base_dir in (DOCS_DIR, ORIGINALS_DIR):
             p = os.path.join(base_dir, doc_name)
             if os.path.exists(p) and os.path.isfile(p):
