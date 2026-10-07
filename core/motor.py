@@ -5,7 +5,6 @@ import time
 import hashlib
 import threading
 import unicodedata
-import functools
 import duckdb
 import pandas as pd
 from core.configuracion import CSV_PATH
@@ -20,12 +19,14 @@ _DUCKDB_LOCK = threading.Lock()
 _DUCKDB_LAST_LOAD_TS = 0.0
 _DUCKDB_RELOAD_INTERVAL = 60.0  # Refresco periódico: reintenta PostgreSQL aunque la última carga fuera del CSV
 _DOC_STORE_NORM_CACHE = {}
+_QUERY_RESPONSE_CACHE = {}
+_MAX_CACHE_ENTRIES = 128
 
 
 def limpiar_cache_consultas():
     """Invalida todas las caches en memoria del motor."""
-    global _DOC_STORE_NORM_CACHE, _DUCKDB_LAST_MTIME
-    _generar_respuesta_cached.cache_clear()
+    global _QUERY_RESPONSE_CACHE, _DOC_STORE_NORM_CACHE, _DUCKDB_LAST_MTIME
+    _QUERY_RESPONSE_CACHE.clear()
     _DOC_STORE_NORM_CACHE.clear()
     _DUCKDB_LAST_MTIME = -1.0
 
@@ -390,13 +391,6 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
 </div>"""
 
 
-<<<<<<< HEAD
-@functools.lru_cache(maxsize=128)
-def _generar_respuesta_cached(prompt_limpio: str, has_api_key: bool, mtime_csv: float, sig_doc: str, rol: str, doc_store_items: tuple) -> str:
-    doc_store = dict(doc_store_items)
-    df_srv = buscar_servidores_duckdb(prompt_limpio)
-    doc_matches = buscar_en_documentos(prompt_limpio, doc_store)
-=======
 def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
     """Genera la respuesta técnica con aceleración por caché en RAM."""
     prompt_limpio = prompt_usuario.strip()
@@ -414,15 +408,13 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
 
     df_srv = buscar_servidores_duckdb(prompt_usuario)
     doc_matches = buscar_en_documentos(prompt_usuario, doc_store)
->>>>>>> c3bab7ff8b786fd4364a745c89b1b4dbf4df2554
 
     ok_gemini = False
     if has_api_key:
-        api_key_gemini = obtener_secreto("GEMINI_API_KEY", "")
-        contexto = construir_contexto_rag(prompt_limpio, df_srv, doc_matches)
-        ok_gemini, resp_texto, modelo = consultar_gemini_rag(prompt_limpio, contexto, api_key_gemini)
+        contexto = construir_contexto_rag(prompt_usuario, df_srv, doc_matches)
+        ok_gemini, resp_texto, modelo = consultar_gemini_rag(prompt_usuario, contexto, api_key_gemini)
         if ok_gemini:
-            return f"""<div class="bento-card">
+            resultado = f"""<div class="bento-card">
     <div class="search-header-row">
         <div><span class="badge-ok">[OK]</span><span class="search-doc-title" style="margin-left: 8px;">Respuesta Técnica</span></div>
         <div><span class="badge-tag">Asistente</span></div>
@@ -430,24 +422,12 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
 {resp_texto}
 <div class="search-meta-footer"><span>Respuesta asistida por IA</span><span>Fuentes: {len(df_srv)} inventario + {len(doc_matches)} documentos</span></div>
 </div>"""
-        resp_local = generar_respuesta_asistente_local(prompt_limpio, doc_store, df_srv, doc_matches)
-        return f'<div style="font-size:0.75rem; background-color: var(--pastel-amber-bg); border: 1px solid var(--pastel-amber-border); color: var(--pastel-amber-text); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;"><span class="badge-warn">[Aviso]</span> No fue posible conectar con el asistente remoto ({resp_texto}). Se presenta la respuesta local.</div>' + resp_local
+        else:
+            resp_local = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
+            resultado = f'<div style="font-size:0.75rem; background-color: var(--pastel-amber-bg); border: 1px solid var(--pastel-amber-border); color: var(--pastel-amber-text); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;"><span class="badge-warn">[Aviso]</span> No fue posible conectar con el asistente remoto ({resp_texto}). Se presenta la respuesta local.</div>' + resp_local
+    else:
+        resultado = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
 
-<<<<<<< HEAD
-    return generar_respuesta_asistente_local(prompt_limpio, doc_store, df_srv, doc_matches)
-
-
-def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
-    """Genera la respuesta técnica con aceleración por caché en RAM."""
-    prompt_limpio = prompt_usuario.strip()
-    if not prompt_limpio:
-        return ""
-    mtime_csv = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
-    api_key_gemini = obtener_secreto("GEMINI_API_KEY", "")
-    has_api_key = bool(api_key_gemini and api_key_gemini.strip())
-    doc_tuple = tuple(sorted(doc_store.items()))
-    return _generar_respuesta_cached(prompt_limpio, has_api_key, mtime_csv, _firma_documental(doc_store), _clave_rol(), doc_tuple)
-=======
     # Solo se cachea el acierto (o la respuesta local sin clave): un fallo 429/403
     # cacheado no se recupera, porque cache_key no cambia con la cuota ni con la clave.
     if ok_gemini or not has_api_key:
@@ -455,4 +435,3 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
             _QUERY_RESPONSE_CACHE.pop(next(iter(_QUERY_RESPONSE_CACHE)))
         _QUERY_RESPONSE_CACHE[cache_key] = resultado
     return resultado
->>>>>>> c3bab7ff8b786fd4364a745c89b1b4dbf4df2554
