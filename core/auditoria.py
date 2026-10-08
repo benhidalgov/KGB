@@ -6,11 +6,11 @@ import hashlib
 import functools
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 from excel_cleaner import procesar_excel_limpio
-from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, ES_PRODUCCION
+from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, ES_PRODUCCION, MAX_AUDIT_LOG_BYTES
 from core.db import es_postgres_disponible, insertar_evento_auditoria_pg, obtener_eventos_auditoria_pg
 
 logger = logging.getLogger("infra_copilot.auditoria")
@@ -18,6 +18,16 @@ logger = logging.getLogger("infra_copilot.auditoria")
 # ponytail: lock de proceso. Con varias réplicas, PostgreSQL es la fuente de
 # verdad en producción y el log local queda solo como respaldo.
 _LOG_LOCK = threading.Lock()
+
+# Fecha/hora UTC con zona: PostgreSQL guarda timestamptz y la imagen fija TZ=UTC.
+# datetime.now() ingenuo dejaba ambigua la comparación entre log local y PG.
+def _ahora():
+    return datetime.now(timezone.utc)
+
+
+def _ahora_str() -> str:
+    return _ahora().strftime("%Y-%m-%d %H:%M:%S")
+
 
 # Serializa el read-modify-write de metadata.json: sin él, dos sesiones que
 # guardan a la vez calculan la misma vN y la última pisa la anterior.
@@ -90,7 +100,7 @@ def _obtener_fecha_carga_cached(doc_name: str, mtime: float):
                 return datetime.fromtimestamp(os.path.getmtime(p)).date()
             except Exception:
                 pass
-    return datetime.now().date()
+    return _ahora().date()
 
 
 def obtener_fecha_carga_documento(doc_name: str):
@@ -103,7 +113,7 @@ def obtener_fecha_carga_documento(doc_name: str):
 def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, version_nueva: int, autor: str, motivo: str):
     """Registra un evento de trazabilidad en el log local (append-only) y en PostgreSQL."""
     evento = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": _ahora_str(),
         "documento": doc_name,
         "accion": accion,
         "version_anterior": f"v{version_ant}" if version_ant > 0 else "-",
@@ -118,6 +128,8 @@ def registrar_evento_auditoria(doc_name: str, accion: str, version_ant: int, ver
     try:
         os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
         with _LOG_LOCK:
+            if os.path.exists(AUDIT_LOG_PATH) and os.path.getsize(AUDIT_LOG_PATH) >= MAX_AUDIT_LOG_BYTES:
+                os.replace(AUDIT_LOG_PATH, f"{AUDIT_LOG_PATH}.1")
             with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
                 f.write(json.dumps(evento, ensure_ascii=False) + "\n")
     except Exception as e:
@@ -178,7 +190,7 @@ def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: st
 
         historial = [{
             "version": 1,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": _ahora_str(),
             "autor": autor,
             "comentario": comentario,
             "archivo_snapshot": v1_name,
@@ -209,7 +221,7 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
             f.write(contenido_prev)
         historial = [{
             "version": 1,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": _ahora_str(),
             "autor": "Sistema / Creador",
             "comentario": "Versión base inicial",
             "archivo_snapshot": "v1.md",
@@ -225,7 +237,7 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
 
     historial.append({
         "version": nueva_v,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": _ahora_str(),
         "autor": (autor or "Técnico").strip(),
         "comentario": (comentario or "Actualización de contenido").strip(),
         "archivo_snapshot": snap_name,
@@ -276,7 +288,7 @@ def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.Dat
     doc_store[doc_name] = nuevo_md
     historial.append({
         "version": nueva_v,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": _ahora_str(),
         "autor": (autor or "Técnico").strip(),
         "comentario": f"[{sheet_name}] {(comentario or f'Edición de hoja {sheet_name}').strip()}",
         "archivo_snapshot": snap_md,

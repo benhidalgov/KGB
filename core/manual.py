@@ -26,9 +26,6 @@ def ir_a_consola_desde_manual():
     st.session_state["_ir_consola"] = True
     try:
         if hasattr(st, "query_params"):
-            for p in ["view", "manual"]:
-                if p in st.query_params:
-                    del st.query_params[p]
             st.query_params.clear()
     except Exception:
         pass

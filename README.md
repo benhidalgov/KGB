@@ -63,6 +63,8 @@ docker compose logs -f copilot_app
 - PostgreSQL: `localhost:5432` — DB: `infra_copilot`, Usuario: `infra_admin`
 - Migraciones aplicadas automáticamente al arrancar desde `migrations/*.sql`
 
+> La consola sirve HTTP plano: no la exponga directo a internet. Termine TLS en un proxy inverso (Nginx, Caddy, Traefik) delante del puerto 8501.
+
 **Respaldo:**
 ```bash
 docker compose exec -T postgres_db pg_dump -U infra_admin infra_copilot > respaldo_$(date +%F).sql

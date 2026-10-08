@@ -34,7 +34,7 @@ services:
     environment:
       # Modo producción: exige credenciales maestras y clave de bóveda explícitas,
       # y falla de forma visible si PostgreSQL no está disponible.
-      - PRODUCCION=1
+      - PRODUCCION=${PRODUCCION:-1}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-infra_admin}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB:-infra_copilot}
       - DB_HOST=postgres_db
       - DB_PORT=5432

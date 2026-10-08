@@ -40,6 +40,21 @@ def main():
             f.write(json.dumps({"documento": "ok"}) + "\n{no-json\n")
         assert len(aud._leer_eventos_locales()) == 1
 
+        # 4. Rotación: al superar el tope, el log rota a .1 y el evento nuevo
+        # abre un archivo fresco (sin perder el evento en curso)
+        _con_log_temporal(ruta)
+        limite_real = aud.MAX_AUDIT_LOG_BYTES
+        aud.MAX_AUDIT_LOG_BYTES = 10
+        try:
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write(json.dumps({"documento": "previo"}) + "\n")
+            aud.registrar_evento_auditoria("d4", "CREACION", 0, 1, "tester", "m4")
+            with open(ruta + ".1", encoding="utf-8") as f:
+                assert json.loads(f.read().strip())["documento"] == "previo"
+            assert [e["documento"] for e in aud._leer_eventos_locales()] == ["d4"]
+        finally:
+            aud.MAX_AUDIT_LOG_BYTES = limite_real
+
     print("[OK] check_auditoria_log")
 
 

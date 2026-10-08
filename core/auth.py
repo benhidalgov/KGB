@@ -43,18 +43,15 @@ def _limpiar_fallos(usuario: str):
 
 def _obtener_password_maestra(usuario: str) -> str:
     """Resuelve la contrasena maestra inyectada por entorno (Docker / Cloud) para el usuario indicado."""
-    claves = {"admin": "ADMIN_PASSWORD", "operador": "OPERADOR_PASSWORD", "auditor": "AUDITOR_PASSWORD"}
-    clave = claves.get(usuario)
+    clave = {"admin": "ADMIN_PASSWORD", "operador": "OPERADOR_PASSWORD", "auditor": "AUDITOR_PASSWORD"}.get(usuario, "")
     if not clave:
         return ""
-    valor = os.environ.get(clave, "").strip()
-    if not valor:
-        try:
-            if hasattr(st, "secrets") and clave in st.secrets:
-                valor = str(st.secrets[clave]).strip()
-        except Exception:
-            pass
-    return valor
+    sec = ""
+    try:
+        sec = str(st.secrets[clave]).strip() if hasattr(st, "secrets") and clave in st.secrets else ""
+    except Exception:
+        pass
+    return os.environ.get(clave, "").strip() or sec
 
 
 ROLES_PERMISOS = {

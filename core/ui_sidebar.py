@@ -6,15 +6,7 @@ ingesta documental con categorización obligatoria y bóveda de credenciales.
 import os
 import io
 import zipfile
-import importlib
 import streamlit as st
-
-try:
-    _mod_proc = importlib.import_module("core.procesador")
-    if not hasattr(_mod_proc, "procesar_e_ingestar_binario"):
-        importlib.reload(_mod_proc)
-except Exception:
-    pass
 
 from core.procesador import (
     SUPPORTED_EXTENSIONS,
@@ -42,15 +34,7 @@ from core.vault import (
 def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> str:
     """Renderiza el panel lateral: navegación principal por módulos, usuario, ingesta y bóveda."""
     with st.sidebar:
-        # 1. Cabecera de Marca y Estado
-        st.markdown('''
-        <div style="padding:2px 0 8px 0; border-bottom:1px solid var(--border-subtle); margin-bottom:8px;">
-            <div style="font-size:0.88rem; font-weight:600; color:var(--text-primary); letter-spacing:0.2px;">
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
-
-        # 1.1 Selector de Modo Claro / Modo Oscuro
+        # 1. Selector de Modo Claro / Modo Oscuro
         def _cb_cambiar_tema_sidebar():
             nuevo = st.session_state.get("segmented_theme_sidebar")
             if nuevo in ("Claro", "Oscuro"):
@@ -197,17 +181,18 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                             in_cl = normalizar_nombre_archivo(in_fn)
                                             if os.path.splitext(in_cl)[1].lower() not in SUPPORTED_EXTENSIONS:
                                                 continue
-                                            # Comprobar file_size (descomprimido declarado) ANTES de
-                                            # leer: si no, cada entrada grande se descomprime solo para
-                                            # descartarse y los bytes rechazados no suman al tope.
-                                            datos = leer_entrada_zip_segura(z, zi, MAX_ENTRADA_BYTES) if zi.file_size <= MAX_ENTRADA_BYTES else None
-                                            bytes_lote += zi.file_size or 0
-                                            if bytes_lote > MAX_LOTE_BYTES:
-                                                st.error(f"El paquete '{c_name}' supera {MAX_LOTE_BYTES // (1024 * 1024)} MB descomprimidos. Carga detenida.")
-                                                break
+                                            # Sin pre-chequeo de file_size declarado: es un dato del
+                                            # paquete y puede mentir. leer_entrada_zip_segura limita
+                                            # los bytes reales descomprimidos; el tope del lote suma
+                                            # esos bytes, no los declarados.
+                                            datos = leer_entrada_zip_segura(z, zi, MAX_ENTRADA_BYTES)
                                             if datos is None:
                                                 st.warning(f"Se omitió '{in_fn}': excede {MAX_ENTRADA_BYTES // (1024 * 1024)} MB descomprimidos.")
                                                 continue
+                                            bytes_lote += len(datos)
+                                            if bytes_lote > MAX_LOTE_BYTES:
+                                                st.error(f"El paquete '{c_name}' supera {MAX_LOTE_BYTES // (1024 * 1024)} MB descomprimidos. Carga detenida.")
+                                                break
                                             st_res, _ = procesar_e_ingestar_binario(
                                                 in_cl, datos, doc_store,
                                                 autor=autor_act, origen_detalle=f"Lote ZIP: {c_name}",
