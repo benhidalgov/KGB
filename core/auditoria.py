@@ -276,8 +276,20 @@ def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.Dat
 
     # Sin fallback mode='w': ante un error recreaba el libro con UNA sola hoja
     # y destruía el resto. Se propaga y el llamador muestra el error.
-    with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-        df_nuevo.to_excel(writer, sheet_name=sheet_name, index=False)
+    # Se edita una copia: si openpyxl falla a mitad de escritura, el libro
+    # original en DOCS_DIR queda intacto (sin versión ni bitácora que registrar).
+    tmp_xl = f"{excel_path}.{os.getpid()}.tmp"
+    shutil.copy2(excel_path, tmp_xl)
+    try:
+        with pd.ExcelWriter(tmp_xl, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+            df_nuevo.to_excel(writer, sheet_name=sheet_name, index=False)
+    except Exception:
+        try:
+            os.remove(tmp_xl)
+        except OSError:
+            pass
+        raise
+    os.replace(tmp_xl, excel_path)
 
     shutil.copy2(excel_path, os.path.join(doc_hist_dir, snap_excel))
     nuevo_md = procesar_excel_limpio(excel_path)

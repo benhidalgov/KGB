@@ -174,6 +174,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                     with zipfile.ZipFile(io.BytesIO(buf)) as z:
                                         zip_cnt = 0
                                         bytes_lote = 0
+                                        zip_detenido = False
                                         for zi in [i for i in z.infolist() if not i.is_dir()]:
                                             in_fn = os.path.basename(zi.filename)
                                             if not in_fn or in_fn.startswith(".") or "__MACOSX" in zi.filename:
@@ -192,6 +193,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                             bytes_lote += len(datos)
                                             if bytes_lote > MAX_LOTE_BYTES:
                                                 st.error(f"El paquete '{c_name}' supera {MAX_LOTE_BYTES // (1024 * 1024)} MB descomprimidos. Carga detenida.")
+                                                zip_detenido = True
                                                 break
                                             st_res, _ = procesar_e_ingestar_binario(
                                                 in_cl, datos, doc_store,
@@ -204,7 +206,10 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                                 new_cnt += 1
                                             elif st_res == "actualizado":
                                                 upd_cnt += 1
-                                        st.toast(f"ZIP '{c_name}': {zip_cnt} archivos cargados.")
+                                        # Sin la bandera, tras "Carga detenida" se
+                                        # mostraba también el toast verde de éxito.
+                                        if not zip_detenido:
+                                            st.toast(f"ZIP '{c_name}': {zip_cnt} archivos cargados.")
                                 except Exception as e_z:
                                     st.error(f"No se pudo procesar el ZIP '{c_name}': {str(e_z)}")
                             else:

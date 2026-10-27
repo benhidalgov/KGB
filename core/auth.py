@@ -34,6 +34,18 @@ def _esta_bloqueado(usuario: str) -> bool:
 
 
 def _registrar_fallo(usuario: str):
+    global _INTENTOS_FALLIDOS
+    if len(_INTENTOS_FALLIDOS) >= 1024:
+        # Un atacante que envía usuarios aleatorios nunca vuelve a consultar
+        # usuario alguno, así que el podado en _esta_bloqueado no lo alcanza.
+        ahora = time.time()
+        _INTENTOS_FALLIDOS = {
+            k: [t for t in v if ahora - t < _VENTANA_BLOQUEO_S]
+            for k, v in _INTENTOS_FALLIDOS.items()
+            if any(ahora - t < _VENTANA_BLOQUEO_S for t in v)
+        }
+        if len(_INTENTOS_FALLIDOS) >= 1024:
+            _INTENTOS_FALLIDOS = {}
     _INTENTOS_FALLIDOS.setdefault(usuario, []).append(time.time())
 
 
@@ -91,7 +103,7 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
     """Carga o inicializa data/users.json con cuentas base seguras."""
     if os.path.exists(AUTH_USERS_PATH):
         try:
-            with open(AUTH_USERS_PATH, "r", encoding="utf-8") as f:
+            with open(AUTH_USERS_PATH, "r", encoding="utf-8-sig") as f:
                 return json.load(f)
         except Exception:
             # Archivo corrupto: no se sobrescribe (se perderían las cuentas
@@ -159,15 +171,27 @@ def verificar_credenciales(username_input: str, password_input: str) -> Optional
     # 0. Contraseñas maestras inyectadas por entorno (Docker / Streamlit Cloud)
     master = _obtener_password_maestra(u)
     if master and hmac.compare_digest(p.encode("utf-8"), master.encode("utf-8")):
+        # La clave maestra no debe bypasear la desactivación del usuario en PG.
+        if es_postgres_disponible():
+            try:
+                usuarios_pg = obtener_usuarios_pg()
+                if u in usuarios_pg and not usuarios_pg[u].get("activo", True):
+                    _registrar_fallo(u)
+                    return None
+            except Exception:
+                pass
         _limpiar_fallos(u)
         return {"username": u, "nombre": _NOMBRES_MAESTROS.get(u, u.capitalize()), "rol": _ROLES_MAESTROS.get(u, "Operador"), "activo": True}
 
     # 1. Verificación primaria contra PostgreSQL si está disponible
+    desactivado_en_pg = False
     if es_postgres_disponible():
         try:
             usuarios_pg = obtener_usuarios_pg()
-            if u in usuarios_pg and usuarios_pg[u].get("activo", True):
-                if _verificar_hash(p, usuarios_pg[u].get("hash")):
+            if u in usuarios_pg:
+                if not usuarios_pg[u].get("activo", True):
+                    desactivado_en_pg = True
+                elif _verificar_hash(p, usuarios_pg[u].get("hash")):
                     _limpiar_fallos(u)
                     actualizar_ultimo_login_pg(u)
                     return {
@@ -179,8 +203,9 @@ def verificar_credenciales(username_input: str, password_input: str) -> Optional
         except Exception:
             pass
 
-    # 2. Fallback automático a archivo local users.json (deshabilitado en producción)
-    if not ES_PRODUCCION:
+    # 2. Fallback automático a archivo local users.json (deshabilitado en producción).
+    # Un usuario desactivado en PG no debe revivir vía el users.json local.
+    if not ES_PRODUCCION and not desactivado_en_pg:
         usuarios = inicializar_almacen_usuarios()
         if u in usuarios and usuarios[u].get("activo", True):
             if _verificar_hash(p, usuarios[u].get("hash")):
@@ -211,7 +236,8 @@ def tiene_permiso(permiso_clave: str) -> bool:
 def cerrar_sesion():
     """Cierra la sesión del usuario, limpiando el estado de autenticación."""
     user = obtener_usuario_actual().get("username", "desconocido")
-    registrar_evento_auditoria(doc_name="autenticacion", accion="LOGOUT", version_ant=1, version_nueva=1, autor=user, motivo="Cierre voluntario de sesión en consola web.")
+    # Limpiar el estado ANTES de auditar: registrar_evento_auditoria lanza en
+    # producción si PG falla, y el logout no debe dejar la sesión abierta.
     st.session_state["auth_activa"] = False
     st.session_state["usuario_actual"] = None
     # Estación compartida: no heredar la contraseña del formulario ni el
@@ -219,6 +245,11 @@ def cerrar_sesion():
     for k in ("login_password_val", "login_username_val", "historial_busquedas",
               "messages", "nav_seccion_activa", "tab4_doc_selector"):
         st.session_state.pop(k, None)
+    try:
+        registrar_evento_auditoria(doc_name="autenticacion", accion="LOGOUT", version_ant=1, version_nueva=1, autor=user, motivo="Cierre voluntario de sesión en consola web.")
+    except Exception:
+        # El cierre ya es efectivo; un fallo de bitácora no debe reabrir la sesión.
+        pass
     st.toast("Sesión cerrada.")
     st.rerun()
 
@@ -322,9 +353,11 @@ def renderizar_pantalla_login():
             if btn_login:
                 user_info = verificar_credenciales(username_in, password_in)
                 if user_info:
+                    # Auditar ANTES de autenticar: si la bitácora falla en
+                    # producción, no debe quedar una sesión activa sin evento.
+                    registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_EXITOSO", version_ant=1, version_nueva=1, autor=user_info["username"], motivo=f"Inicio exitoso [{user_info['rol']}].")
                     st.session_state["auth_activa"] = True
                     st.session_state["usuario_actual"] = user_info
-                    registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_EXITOSO", version_ant=1, version_nueva=1, autor=user_info["username"], motivo=f"Inicio exitoso [{user_info['rol']}].")
                     st.toast(f"Bienvenido, {user_info['nombre']}.")
                     st.rerun()
                 else:

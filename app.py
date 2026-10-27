@@ -62,14 +62,12 @@ def obtener_dataframe_mantenimientos(mtime: float) -> pd.DataFrame:
 # 1. CONFIGURACIÓN Y ESTILOS
 # -------------------------------------------------------------
 @st.cache_resource(show_spinner=False)
-def _aplicar_migraciones_una_vez() -> list:
-    """Aplica las migraciones de esquema una sola vez por proceso."""
-    from core.db import es_postgres_disponible, obtener_engine
+def _aplicar_migraciones_core() -> list:
+    """Aplica las migraciones de esquema una sola vez por proceso (solo con PG activo)."""
+    from core.db import obtener_engine
     from core.migraciones import aplicar_migraciones
     from core.configuracion import ES_PRODUCCION
 
-    if not es_postgres_disponible():
-        return []
     engine = obtener_engine()
     if engine is None:
         return []
@@ -80,6 +78,15 @@ def _aplicar_migraciones_una_vez() -> list:
         if ES_PRODUCCION:
             raise
         return []
+
+
+def _aplicar_migraciones_una_vez() -> list:
+    """No cachear el resultado con PG caído: Docker levanta la app y la BD a la vez
+    y el primer sondeo (timeout 3s) puede perderse; se reintenta en el próximo rerun."""
+    from core.db import es_postgres_disponible
+    if not es_postgres_disponible():
+        return []
+    return _aplicar_migraciones_core()
 
 
 st.set_page_config(page_title="Consola de Infraestructura y Operaciones", layout="wide", initial_sidebar_state="expanded")

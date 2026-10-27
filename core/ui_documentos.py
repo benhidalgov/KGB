@@ -44,13 +44,18 @@ from core.configuracion import DOCS_DIR, HISTORY_DIR
 from excel_cleaner import procesar_excel_limpio
 
 
-def _renderizar_boton_descarga(doc_name: str, version: int, contenido_md: str = "", snapshot_excel: str | None = None, key: str = ""):
-    """Helper unificado para renderizado de botones de descarga de archivos Markdown y Excel."""
+def _renderizar_boton_descarga(doc_name: str, version: int, contenido_md: str = "", snapshot_excel: str | None = None, key: str = "", desde_historial: bool = False):
+    """Helper unificado para renderizado de botones de descarga de archivos Markdown y Excel.
+
+    `desde_historial` impide el fallback al archivo actual: una versión antigua
+    sin snapshot de Excel entregaría los bytes de HOY etiquetados como vN.
+    """
     es_x = doc_name.lower().endswith(('.xlsx', '.xls'))
     if es_x:
+        b_xl = None
         if snapshot_excel:
             b_xl = obtener_bytes_snapshot(doc_name, snapshot_excel)
-        else:
+        elif not desde_historial:
             p = os.path.join(DOCS_DIR, doc_name)
             b_xl = open(p, "rb").read() if os.path.exists(p) else None
         if b_xl:
@@ -62,6 +67,8 @@ def _renderizar_boton_descarga(doc_name: str, version: int, contenido_md: str = 
                 width="stretch",
                 key=key
             )
+        elif desde_historial:
+            st.caption("Esta versión no conserva el archivo Excel.")
     else:
         st.download_button(
             label=f"Descargar Versión v{version} (.md)",
@@ -100,16 +107,18 @@ def renderizar_pestana_documentacion(doc_store: dict):
         mapa_fechas = {d: obtener_fecha_carga_documento(d) for d in doc_store.keys()}
         fechas_v = [f for f in mapa_fechas.values() if f]
         min_doc_d = min(fechas_v) if fechas_v else datetime.date.today()
-        max_doc_d = max(fechas_v) if fechas_v else datetime.date.today()
 
-        opts_cat_t3 = ["Todas"]
-        if docs_pendientes:
-            opts_cat_t3.append(f"[Sin Categoría] ({len(docs_pendientes)})")
+        opts_cat_t3 = ["Todas", "[Sin Categoría]"]
         opts_cat_t3.extend(cats_disp_t3)
+
+        # Valor estable: el recuento dentro del label cambiaba la opción guardada
+        # y Streamlit volvía a "Todas" sin avisar al clasificar un documento.
+        def _fmt_cat_op(c):
+            return f"[Sin Categoría] ({len(docs_pendientes)} pendientes)" if c == "[Sin Categoría]" else c
 
         col_t4_s, col_t4_c, col_t4_t, col_t4_d = st.columns([3.2, 1.3, 1.1, 0.8], gap="small", vertical_alignment="bottom")
         with col_t4_c:
-            filtro_cat_t3 = st.selectbox("Categoría:", opts_cat_t3, key="tab4_cat_selector")
+            filtro_cat_t3 = st.selectbox("Categoría:", opts_cat_t3, key="tab4_cat_selector", format_func=_fmt_cat_op)
         with col_t4_t:
             filtro_t4 = st.selectbox(
                 "Tipo:",
@@ -118,11 +127,13 @@ def renderizar_pestana_documentacion(doc_store: dict):
             )
         with col_t4_d:
             with st.popover("Fecha", use_container_width=True):
+                # Rango vacío por defecto: el rango sembrado con el max del día
+                # de arranque filtraba fuera cualquier documento subido después.
                 rango_fecha_doc = st.date_input(
                     "Rango de Fechas:",
-                    value=(min_doc_d, max_doc_d),
+                    value=(),
                     min_value=min_doc_d,
-                    max_value=max_doc_d,
+                    max_value=datetime.date.today(),
                     key="tab4_date_range_selector"
                 )
 
@@ -211,7 +222,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
                 col_hv1, col_hv2 = st.columns(2)
                 with col_hv1:
-                    _renderizar_boton_descarga(doc_sel, it_sel["version"], c_snap, ex_snap, key=f"btn_dl_h_{doc_sel}_{it_sel['version']}")
+                    _renderizar_boton_descarga(doc_sel, it_sel["version"], c_snap, ex_snap, key=f"btn_dl_h_{doc_sel}_{it_sel['version']}", desde_historial=True)
                 with col_hv2:
                     st.caption(f"Guardado el **{it_sel['timestamp']}** por **{it_sel['autor']}**.")
 
@@ -231,14 +242,24 @@ def renderizar_pestana_documentacion(doc_store: dict):
                         elif doc_sel.lower().endswith(('.docx', '.doc', '.pdf', '.pptx')):
                             st.error("Rollback no disponible en binarios: el contenido de texto se regenera al recargar. Restaura desde el archivo original.")
                         else:
-                            if ex_snap and os.path.exists(os.path.join(HISTORY_DIR, doc_sel, ex_snap)):
-                                shutil.copy2(os.path.join(HISTORY_DIR, doc_sel, ex_snap), os.path.join(DOCS_DIR, doc_sel))
-                                nuevo_m = procesar_excel_limpio(os.path.join(DOCS_DIR, doc_sel))
+                            es_libro = doc_sel.lower().endswith(('.xlsx', '.xls'))
+                            snap_xl_path = os.path.join(HISTORY_DIR, doc_sel, ex_snap) if ex_snap else ""
+                            if es_libro and not (snap_xl_path and os.path.exists(snap_xl_path)):
+                                # Restaurar solo el texto dejaba el .xlsx actual en
+                                # disco y el toast "Restaurado" mentía.
+                                st.error("Esta versión no conserva el snapshot del libro Excel: no se puede restaurar sin desincronizar el archivo. Elige otra versión.")
                             else:
-                                nuevo_m = c_snap
-                            nv = guardar_nueva_version(doc_sel, nuevo_m, aut_rb.strip(), f"[Rollback a v{it_sel['version']}] {mot_rb.strip()}", doc_store)
-                            st.toast(f"Restaurado a v{it_sel['version']} (v{nv})")
-                            st.rerun()
+                                if es_libro:
+                                    shutil.copy2(snap_xl_path, os.path.join(DOCS_DIR, doc_sel))
+                                    nuevo_m = procesar_excel_limpio(os.path.join(DOCS_DIR, doc_sel))
+                                else:
+                                    nuevo_m = c_snap
+                                nv = guardar_nueva_version(doc_sel, nuevo_m, aut_rb.strip(), f"[Rollback a v{it_sel['version']}] {mot_rb.strip()}", doc_store)
+                                # El text_area del editor conservaba el texto previo
+                                # al rollback y "Guardar Versión" lo revertía.
+                                st.session_state.pop(f"textarea_edit_{doc_sel}", None)
+                                st.toast(f"Restaurado a v{it_sel['version']} (v{nv})")
+                                st.rerun()
 
                 if len(historial) >= 2:
                     with st.expander("Comparar dos versiones (Diff)", expanded=False):
@@ -262,7 +283,11 @@ def renderizar_pestana_documentacion(doc_store: dict):
     # SUBPESTAÑA 2: EDITAR DOCUMENTO ACTIVO
     # -------------------------------------------------------------
     with subtab_editor:
-        doc_act_edit = st.session_state.get("tab4_doc_selector") or (docs_disp[0] if docs_disp else None)
+        doc_act_edit = st.session_state.get("tab4_doc_selector")
+        # El selector no se renderiza si el filtro dejó la lista vacía: sin esta
+        # validación el editor seguía abriendo el último documento filtrado fuera.
+        if doc_act_edit not in docs_disp:
+            doc_act_edit = docs_disp[0] if docs_disp else None
         if not doc_act_edit:
             st.info("Selecciona un documento en 'Ver Documentos' para editarlo.")
         else:
@@ -304,7 +329,13 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 df_e = cargar_hoja_excel_dataframe(p_xl, hoja_e, mt_xl)
                 # 'cargar_hoja_excel_dataframe' devuelve {Mensaje} si falló la lectura
                 # (archivo bloqueado, hoja obsoleta): guardarlo pisaría la hoja real.
-                hoja_ilegible = list(df_e.columns) == ["Mensaje"]
+                # La columna "Mensaje" sola no basta: una hoja real de una columna
+                # llamada Mensaje no se podía guardar nunca.
+                hoja_ilegible = (
+                    list(df_e.columns) == ["Mensaje"]
+                    and len(df_e) == 1
+                    and str(df_e.iloc[0, 0]).startswith("No se pudo cargar la hoja")
+                )
                 df_mod = st.data_editor(df_e, width="stretch", num_rows="dynamic", height=450, key=f"grid_editor_{doc_act_edit}_{hoja_e}")
                 if st.button(f"Guardar Versión v{u_ver_e + 1}", type="primary", key=f"btn_save_grid_{doc_act_edit}"):
                     if hoja_ilegible:
@@ -386,12 +417,15 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
         col_bl_f, col_bl_s = st.columns([2.2, 1.8], vertical_alignment="bottom")
         with col_bl_f:
+            # Valores estables: los recuentos van en format_func, no en la opción;
+            # al cambiar el recuento Streamlit perdía la selección y el editor.
             filtro_lote = st.radio(
                 "Alcance de clasificación:",
-                options=[f"Solo pendientes ({len(docs_pendientes)})", f"Todos los documentos ({len(todos_docs)})"],
+                options=["pendientes", "todos"],
                 index=0 if docs_pendientes else 1,
                 horizontal=True,
-                key="radio_batch_scope"
+                key="radio_batch_scope",
+                format_func=lambda v: f"Solo pendientes ({len(docs_pendientes)})" if v == "pendientes" else f"Todos los documentos ({len(todos_docs)})"
             )
         with col_bl_s:
             col_bs1, col_bs2 = st.columns(2)
@@ -406,7 +440,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                     st.session_state["batch_tagger_ver"] = st.session_state.get("batch_tagger_ver", 0) + 1
                     st.rerun()
 
-        docs_a_gestionar = docs_pendientes if filtro_lote.startswith("Solo pendientes") else todos_docs
+        docs_a_gestionar = docs_pendientes if filtro_lote == "pendientes" else todos_docs
 
         if docs_a_gestionar:
             default_sel = st.session_state.get("batch_select_default", False)
@@ -482,6 +516,11 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             n_act = asignar_tags_en_lote(doc_tags_map, autor="Operaciones")
                             limpiar_cache_consultas()
                             limpiar_cache_documentos()
+                            # Los multiselect del editor conservaban la selección
+                            # previa al lote y "Guardar Versión" la pisaba.
+                            for d_lote in doc_tags_map:
+                                st.session_state.pop(f"ms_tags_edit_{d_lote}", None)
+                                st.session_state.pop(f"ms_tags_edit_xl_{d_lote}", None)
                             st.session_state["batch_select_default"] = False
                             st.session_state["batch_tagger_ver"] = st.session_state.get("batch_tagger_ver", 0) + 1
                             st.toast(f"{n_act} documentos clasificados.")

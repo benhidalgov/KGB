@@ -21,8 +21,7 @@ def obtener_modulos_manual() -> dict[int, str]:
 
 
 def ir_a_consola_desde_manual():
-    """Cierra el onboarding de inicio o la vista standalone y redirige a la consola."""
-    st.session_state["manual_lanzamiento"] = False
+    """Cierra la vista standalone del manual y redirige a la consola."""
     st.session_state["_ir_consola"] = True
     try:
         if hasattr(st, "query_params"):
@@ -90,20 +89,10 @@ def renderizar_manual_lanzamiento():
 
 def renderizar_manual_usuario():
     """Renderiza el manual exhaustivo y detallado estructurado en 8 módulos técnicos y operativos."""
-    es_inicio = bool(st.session_state.get("manual_lanzamiento"))
-
+    # `manual_lanzamiento` nunca se pone en True en ninguna parte de la app:
+    # el bloque CTA de "es_inicio" era código muerto y se eliminó.
     st.markdown('<p class="main-title" style="margin-bottom:2px;">Manual de Uso</p>', unsafe_allow_html=True)
-
-    if es_inicio:
-        st.caption("Guía del sistema. Revisa los pasos o entra directo a la consola.")
-        col_cta, col_hint = st.columns([1.2, 2.8], gap="small", vertical_alignment="center")
-        with col_cta:
-            renderizar_boton_entrar_consola("btn_manual_ir_consola", 0, label="Ir a la Consola")
-        with col_hint:
-            st.caption("Puedes cambiar entre Consola, el modo lectura y este manual desde la barra superior.")
-        st.markdown("---")
-    else:
-        st.caption("Explicación de cada parte y cómo usarla.")
+    st.caption("Explicación de cada parte y cómo usarla.")
 
     if "manual_paso_actual" not in st.session_state:
         st.session_state["manual_paso_actual"] = 1

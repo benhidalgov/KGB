@@ -6,10 +6,15 @@ import os
 import json
 import re
 import logging
+import threading
 
 from core.configuracion import CATEGORIAS_PATH
 
 logger = logging.getLogger("infra_copilot.tags")
+
+# Serializa el ciclo leer-modificar-escribir del catálogo entre sesiones/threads
+# del mismo proceso (la ingesta en lote pisa asignaciones concurrentes sin esto).
+_CATEGORIAS_LOCK = threading.Lock()
 
 SIGLAS_COMUNES = {
     "CMDB", "DRP", "SSL", "TLS", "API", "REST", "SOAP", "BD", "SQL", "SAN",
@@ -41,15 +46,22 @@ def cargar_datos_categorias() -> dict:
             if "documentos" not in data or not isinstance(data["documentos"], dict):
                 data["documentos"] = {}
             return data
-        except Exception:
+        except (json.JSONDecodeError, ValueError, TypeError):
             # Ilegible (JSON truncado, edición manual fallida, disco lleno...):
             # devolver vacío aquí y guardar después destruiría TODO el catálogo.
-            # Preservar el archivo corrupto para recuperarlo a mano.
+            # Preservar el archivo corrupto para recuperarlo a mano, sin pisar un
+            # .corrupto anterior (sería el único backup recuperable).
             logger.warning("[TAGS] categorías.json ilegible; se preserva como .corrupto y se arranca vacío.")
+            destino = CATEGORIAS_PATH + ".corrupto"
             try:
-                os.replace(CATEGORIAS_PATH, CATEGORIAS_PATH + ".corrupto")
+                if not os.path.exists(destino):
+                    os.replace(CATEGORIAS_PATH, destino)
             except OSError:
                 pass
+        except OSError:
+            # Fallo transitorio de lectura (permiso/archivo bloqueado en Windows):
+            # NO renombrar el catálogo por eso; se reintenta en la próxima carga.
+            logger.warning("[TAGS] No se pudo leer categorías.json (error transitorio); se ignora por esta pasada.")
     return {"categorias": [], "documentos": {}}
 
 
@@ -95,16 +107,17 @@ def asignar_tags_documento(doc_name: str, tags: list[str], autor: str = "Técnic
         if norm and norm not in tags_limpios:
             tags_limpios.append(norm)
 
-    data = cargar_datos_categorias()
-    # Asegurar que cada tag esté presente en la lista global de categorías
-    for t in tags_limpios:
-        if t not in data["categorias"]:
-            data["categorias"].append(t)
-    data["categorias"].sort()
+    with _CATEGORIAS_LOCK:
+        data = cargar_datos_categorias()
+        # Asegurar que cada tag esté presente en la lista global de categorías
+        for t in tags_limpios:
+            if t not in data["categorias"]:
+                data["categorias"].append(t)
+        data["categorias"].sort()
 
-    # Lista vacía explícita = limpiar categorías del documento.
-    data.setdefault("documentos", {})[doc_name] = tags_limpios
-    return guardar_datos_categorias(data)
+        # Lista vacía explícita = limpiar categorías del documento.
+        data.setdefault("documentos", {})[doc_name] = tags_limpios
+        return guardar_datos_categorias(data)
 
 
 REGLAS_SUGERENCIA = [
@@ -171,25 +184,26 @@ def asignar_tags_en_lote(doc_tags_map: dict[str, list[str]], autor: str = "Opera
     if not doc_tags_map:
         return 0
 
-    data = cargar_datos_categorias()
-    categorias_set = set(data.get("categorias", []))
-    docs_map = data.setdefault("documentos", {})
+    with _CATEGORIAS_LOCK:
+        data = cargar_datos_categorias()
+        categorias_set = set(data.get("categorias", []))
+        docs_map = data.setdefault("documentos", {})
 
-    actualizados = 0
-    for doc_name, tags in doc_tags_map.items():
-        tags_limpios = []
-        for t in tags:
-            norm = normalizar_categoria(t)
-            if norm and norm not in tags_limpios:
-                tags_limpios.append(norm)
+        actualizados = 0
+        for doc_name, tags in doc_tags_map.items():
+            tags_limpios = []
+            for t in tags:
+                norm = normalizar_categoria(t)
+                if norm and norm not in tags_limpios:
+                    tags_limpios.append(norm)
 
-        if tags_limpios:
-            for t in tags_limpios:
-                categorias_set.add(t)
-            docs_map[doc_name] = tags_limpios
-            actualizados += 1
+            if tags_limpios:
+                for t in tags_limpios:
+                    categorias_set.add(t)
+                docs_map[doc_name] = tags_limpios
+                actualizados += 1
 
-    data["categorias"] = sorted(list(categorias_set))
-    guardar_datos_categorias(data)
-    return actualizados
+        data["categorias"] = sorted(list(categorias_set))
+        # 0 si el guardado falla: no reportar "N clasificados" por cambios perdidos.
+        return actualizados if guardar_datos_categorias(data) else 0
 

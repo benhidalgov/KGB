@@ -6,10 +6,15 @@ import os
 import json
 import base64
 import hashlib
+import threading
 from typing import Dict, List
 from cryptography.fernet import Fernet
 from core.configuracion import VAULT_FILE_PATH, VAULT_KEY_PATH, ES_PRODUCCION
 from core.auditoria import registrar_evento_auditoria
+
+# Serializa el ciclo leer-modificar-escribir de la bóveda entre sesiones/threads
+# del mismo proceso. Réplicas multi-proceso seguirían necesitando un lock externo.
+_BOVEDA_LOCK = threading.Lock()
 
 CLAVES_ESTANDAR_RECOMENDADAS = [
     "GEMINI_API_KEY", "SAP_ENDPOINT", "SAP_CLIENT_ID", "SAP_CLIENT_SECRET", "NAGIOS_API_TOKEN", "VCLOUD_API_TOKEN"
@@ -43,11 +48,17 @@ def _claves_candidatas() -> List[bytes]:
         try:
             with open(VAULT_KEY_PATH, "rb") as f:
                 kb = f.read().strip()
-                if kb:
-                    Fernet(kb)
-                    return [kb]
-        except Exception:
-            pass
+        except OSError as e:
+            # Un fallo de LECTURA no debe destruir la clave: generar una nueva
+            # aquí sobrescribiría .vault.key y dejaría .vault.enc irrecuperable.
+            raise ErrorBoveda(f"No se pudo leer {VAULT_KEY_PATH}: {e}") from e
+        if not kb:
+            raise ErrorBoveda(f"{VAULT_KEY_PATH} está vacío; no se sobrescribirá.")
+        try:
+            Fernet(kb)
+        except Exception as e:
+            raise ErrorBoveda(f"{VAULT_KEY_PATH} no contiene una clave Fernet válida; no se sobrescribirá.") from e
+        return [kb]
 
     nueva_clave = Fernet.generate_key()
     try:
@@ -55,7 +66,10 @@ def _claves_candidatas() -> List[bytes]:
         with open(VAULT_KEY_PATH, "wb") as f:
             f.write(nueva_clave)
     except Exception:
-        pass
+        # Cifrar con una clave que no se pudo persistir = secretos perdidos al
+        # próximo arranque. Solo se tolera si aún no hay bóveda que descifrar.
+        if os.path.exists(VAULT_FILE_PATH):
+            raise ErrorBoveda(f"No se pudo persistir la clave en {VAULT_KEY_PATH}.")
     return [nueva_clave]
 
 
@@ -97,7 +111,8 @@ def _guardar_todos_los_secretos_boveda(secretos: Dict[str, str]) -> bool:
         cifrado = fernet.encrypt(json.dumps(secretos, ensure_ascii=False).encode("utf-8"))
         os.makedirs(os.path.dirname(VAULT_FILE_PATH), exist_ok=True)
         # Escritura atómica: un crash a mitad de escritura no corrompe la bóveda.
-        tmp_path = f"{VAULT_FILE_PATH}.tmp"
+        # Nombre único por proceso: dos sesiones no pisan el .tmp la una a la otra.
+        tmp_path = f"{VAULT_FILE_PATH}.{os.getpid()}.tmp"
         with open(tmp_path, "wb") as f:
             f.write(cifrado)
         os.replace(tmp_path, VAULT_FILE_PATH)
@@ -134,10 +149,15 @@ def guardar_secreto(nombre_secreto: str, valor: str, autor: str = "Operador / Co
     k = nombre_secreto.strip().upper()
     if not k:
         return False
-    secretos = _leer_todos_los_secretos_boveda()
-    es_nuevo = k not in secretos
-    secretos[k] = valor.strip()
-    if _guardar_todos_los_secretos_boveda(secretos):
+    with _BOVEDA_LOCK:
+        secretos = _leer_todos_los_secretos_boveda()
+        es_nuevo = k not in secretos
+        secretos[k] = valor.strip()
+        if _guardar_todos_los_secretos_boveda(secretos):
+            guardar_ok = True
+        else:
+            guardar_ok = False
+    if guardar_ok:
         registrar_evento_auditoria(doc_name="vault", accion="CREACION_CREDENCIAL_VAULT" if es_nuevo else "ACTUALIZACION_CREDENCIAL_VAULT", version_ant=1, version_nueva=1, autor=autor, motivo=f"Gestión de credencial [{k}] en bóveda.")
         return True
     return False
@@ -149,13 +169,15 @@ def eliminar_secreto(nombre_secreto: str, autor: str = "Operador / Consola") -> 
     Si la bóveda no se puede descifrar, lanza ErrorBoveda y no escribe nada.
     """
     k = nombre_secreto.strip().upper()
-    secretos = _leer_todos_los_secretos_boveda()
-    if k in secretos:
+    with _BOVEDA_LOCK:
+        secretos = _leer_todos_los_secretos_boveda()
+        if k not in secretos:
+            return False
         del secretos[k]
-        if _guardar_todos_los_secretos_boveda(secretos):
-            registrar_evento_auditoria(doc_name="vault", accion="REVOCACION_CREDENCIAL_VAULT", version_ant=1, version_nueva=1, autor=autor, motivo=f"Eliminación de credencial [{k}].")
-            return True
-    return False
+        if not _guardar_todos_los_secretos_boveda(secretos):
+            return False
+    registrar_evento_auditoria(doc_name="vault", accion="REVOCACION_CREDENCIAL_VAULT", version_ant=1, version_nueva=1, autor=autor, motivo=f"Eliminación de credencial [{k}].")
+    return True
 
 
 def listar_secretos_disponibles() -> List[Dict[str, str]]:

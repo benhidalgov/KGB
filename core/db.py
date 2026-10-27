@@ -139,8 +139,12 @@ def ejecutar_escritura(query_sql: str, params: Optional[Dict[str, Any]] = None) 
 # -------------------------------------------------------------
 
 def obtener_usuarios_pg() -> Dict[str, Any]:
-    """Recupera el catálogo de usuarios desde PostgreSQL."""
-    df = ejecutar_consulta_df("SELECT username, nombre, rol, hash_password, activo FROM usuarios WHERE activo = true")
+    """Recupera el catálogo de usuarios desde PostgreSQL (incluye inactivos).
+
+    auth.py decide quién puede entrar; filtrar `activo` aquí ocultaba los
+    usuarios desactivados y el fallback local los revivía.
+    """
+    df = ejecutar_consulta_df("SELECT username, nombre, rol, hash_password, activo FROM usuarios")
     if df.empty:
         return {}
     usuarios = {}

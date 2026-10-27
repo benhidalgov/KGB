@@ -6,7 +6,7 @@ APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _env_path = os.path.join(APP_DIR, ".env")
 if os.path.exists(_env_path):
     try:
-        with open(_env_path, "r", encoding="utf-8") as _f:
+        with open(_env_path, "r", encoding="utf-8-sig") as _f:
             for _line in _f:
                 _line = _line.strip()
                 if _line and not _line.startswith("#") and "=" in _line:

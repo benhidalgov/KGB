@@ -2,6 +2,7 @@ import hashlib
 import os
 import re
 import glob
+import logging
 import unicodedata
 import base64
 from datetime import datetime
@@ -10,6 +11,8 @@ from excel_cleaner import procesar_excel_limpio
 from core.configuracion import DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR
 from core.tags import asignar_tags_documento
 from core.auditoria import guardar_nueva_version, inicializar_version_inicial_si_no_existe
+
+logger = logging.getLogger("infra_copilot.procesador")
 
 IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.svg', '.webp')
 # Sin '.xls': openpyxl no soporta el formato antiguo; aceptarlo generaba documentos rotos.
@@ -144,6 +147,19 @@ def generar_ficha_diagrama(image_filename: str, orig_rel_path: str = "", sha256_
 """
 
 
+def _ruta_contenida_en_datos(cand: str) -> str | None:
+    """Devuelve la ruta resuelta solo si cae dentro de las raíces de datos permitidas.
+
+    Sin esto, un md editado a mano con `**Archivo Binario:** ..\\..\\.env`
+    exfiltraba cualquier archivo del servidor vía botón de descarga del visor.
+    """
+    raices = [os.path.realpath(r) + os.sep for r in (DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR)]
+    real = os.path.realpath(cand)
+    if any(real.startswith(r) for r in raices) and os.path.isfile(real):
+        return real
+    return None
+
+
 def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
     """Localiza la ruta del archivo binario original asociado a un documento Markdown."""
     # 1. Chequeo directo en DOCS_DIR y ORIGINALS_DIR.
@@ -172,21 +188,22 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
                 if os.path.exists(cand):
                     return cand
 
-    # 3. Extracción de metadatos desde el Markdown
+    # 3. Extracción de metadatos desde el Markdown (siempre confinado a data/)
     if md_content:
         for pattern in (r'\*\*Archivo Binario:\*\*\s*`([^`]+)`', r'!\[.*?\]\((assets/[^\)]+)\)'):
             m = re.search(pattern, md_content)
             if m:
                 rel = m.group(1).replace("/", os.sep)
-                cand = os.path.join(DOCS_DIR, rel) if not os.path.isabs(rel) else rel
-                if os.path.exists(cand):
+                cand = _ruta_contenida_en_datos(os.path.join(DOCS_DIR, rel))
+                if cand:
                     return cand
 
         m_orig = re.search(r'\*\*(?:Ubicación Origen|Ruta de Origen):\*\*\s*`([^`]+)`', md_content)
         if m_orig:
             orig_s = m_orig.group(1)
-            for cand in (os.path.join(INBOX_DIR, orig_s), os.path.join(ORIGINALS_DIR, orig_s), orig_s):
-                if os.path.exists(cand):
+            for base_dir in (INBOX_DIR, ORIGINALS_DIR, ""):
+                cand = _ruta_contenida_en_datos(os.path.join(base_dir, orig_s))
+                if cand:
                     return cand
 
     # 4. Sin binario asociado, la ficha Markdown se muestra a si misma: el panel
@@ -206,7 +223,9 @@ def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
     ext = os.path.splitext(filepath)[1].lower()
     fname = os.path.basename(filepath)
 
-    if ext in (".xlsx", ".xls"):
+    # Sin ".xls": openpyxl no soporta el formato antiguo (BadZipFile); el error
+    # se convertía en "contenido" del documento y se indexaba en búsqueda/RAG.
+    if ext == ".xlsx":
         return procesar_excel_limpio(filepath)
     if ext in IMAGE_EXTENSIONS:
         target = os.path.join(ASSETS_DIR, fname)
@@ -215,7 +234,9 @@ def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
             shutil.copy2(filepath, target)
         with open(filepath, "rb") as f:
             fhash = calcular_sha256(f.read())
-        return generar_ficha_diagrama(image_filename=fname, orig_rel_path=filepath, sha256_hash=fhash)
+        # Ruta relativa, no absoluta: la ficha indexada y persistida no debe
+        # exponer la estructura del filesystem del servidor.
+        return generar_ficha_diagrama(image_filename=fname, orig_rel_path=f"assets/{fname}", sha256_hash=fhash)
     if ext in (".md", ".txt", ".csv", ".json", ".sql", ".py"):
         return leer_texto_resiliente(filepath)
 
@@ -322,21 +343,27 @@ def cargar_documentos_locales(doc_store: dict, force: bool = False) -> dict:
 
         for doc_file in glob.glob(os.path.join(DOCS_DIR, "*.*")):
             fname = os.path.basename(doc_file)
+            # Solo tipos soportados: un ~$lockfile_office.bak o un .db suelto
+            # entraba a doc_store como documento con placeholder "[Texto no extraíble]".
+            if os.path.splitext(fname)[1].lower() not in SUPPORTED_EXTENSIONS:
+                continue
             if fname not in doc_store:
                 try:
                     doc_store[fname] = cargar_documento_individual(doc_file)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("[PROCESADOR] No se pudo cargar '%s': %s", fname, e)
 
         if os.path.exists(ASSETS_DIR):
             for asset_file in glob.glob(os.path.join(ASSETS_DIR, "*.*")):
                 if os.path.splitext(asset_file)[1].lower() in IMAGE_EXTENSIONS:
-                    ficha_name = f"DIAGRAMA__{os.path.splitext(os.path.basename(asset_file))[0]}.md"
+                    # Misma clave que genera la ingesta (extensión incluida): con el
+                    # stem se duplicaba el mismo diagrama en búsqueda, RAG y tags.
+                    ficha_name = f"DIAGRAMA__{os.path.basename(asset_file)}.md"
                     if ficha_name not in doc_store:
                         try:
                             doc_store[ficha_name] = cargar_documento_individual(asset_file)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning("[PROCESADOR] No se pudo cargar el activo '%s': %s", asset_file, e)
     return doc_store
  
 

@@ -32,13 +32,16 @@ def renderizar_modulo_consultas(doc_store: dict):
                 query_duckdb_in = st.text_input(
                     "Término:",
                     value=st.session_state.get("duckdb_active_term", ""),
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
+                    key="duckdb_search_input"
                 )
             with col_dbtn:
                 sub_duckdb = st.form_submit_button("Buscar", type="primary", width="stretch")
 
-        active_duck_term = query_duckdb_in.strip() if sub_duckdb and query_duckdb_in.strip() else st.session_state.get("duckdb_active_term", "")
-        st.session_state["duckdb_active_term"] = active_duck_term
+            # Vaciar la caja y pulsar Buscar limpia la búsqueda: antes un envío
+            # vacío re-adoptaba el término anterior y nunca se podía limpiar.
+            active_duck_term = query_duckdb_in.strip() if sub_duckdb else st.session_state.get("duckdb_active_term", "")
+            st.session_state["duckdb_active_term"] = active_duck_term
 
         if not active_duck_term:
             st.markdown("""

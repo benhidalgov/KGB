@@ -3,6 +3,7 @@ import re
 import html
 import time
 import hashlib
+import logging
 import threading
 import unicodedata
 import duckdb
@@ -21,6 +22,8 @@ _DUCKDB_RELOAD_INTERVAL = 60.0  # Refresco periódico: reintenta PostgreSQL aunq
 _DOC_STORE_NORM_CACHE = {}
 _QUERY_RESPONSE_CACHE = {}
 _MAX_CACHE_ENTRIES = 128
+
+logger = logging.getLogger("infra_copilot.motor")
 
 
 def limpiar_cache_consultas():
@@ -88,6 +91,18 @@ def normalizar_texto(texto: str) -> str:
     return unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('utf-8').lower()
 
 
+_ACENTOS = {"a": "áàâ", "e": "éèê", "i": "íìî", "o": "óòô", "u": "úùû"}
+_DATA_URI_RE = re.compile(r"data:image/[^;,\s]+;base64,[A-Za-z0-9+/=\s]+")
+
+
+def _patron_con_acentos(token: str) -> str:
+    """Token sin acentos → regex que matchea también su versión acentuada en el texto original."""
+    return "".join(
+        "[%s%s]" % (ch, _ACENTOS[ch]) if ch in _ACENTOS else re.escape(ch)
+        for ch in token.lower()
+    )
+
+
 def _firma_documental(doc_store: dict) -> str:
     """Huella barata del corpus (nombres y contenido) para invalidar la caché de respuestas."""
     h = hashlib.sha256()
@@ -129,12 +144,19 @@ def _es_sql_solo_lectura(query_sql: str) -> bool:
     partes = cuerpo.split(None, 1)
     if partes[0].lower() not in ("select", "with", "describe", "show", "explain"):
         return False
+    # Tablas-función que leen el filesystem: SELECT * FROM read_text('.vault.key')
+    # es "solo lectura" pero exfiltraría archivos del servidor.
+    if re.search(r"\b(?:read_\w+|glob|parquet_scan|csv_scan|iceberg_scan|delta_scan)\s*\(", cuerpo.lower()):
+        return False
     prohibidas = (
         "insert", "update", "delete", "drop", "create", "alter",
         "copy", "attach", "detach", "call", "install", "load",
         "pragma", "export", "import", "set", "reset",
     )
-    return not re.search(r"\b(?:%s)\b" % "|".join(prohibidas), cuerpo.lower())
+    # Chequeo sobre el cuerpo sin literales de cadena: 'WHERE descripcion LIKE
+    # '%update%'' es lectura legítima y no debe rechazarse.
+    sin_literals = re.sub(r"'[^']*'", "''", cuerpo.lower())
+    return not re.search(r"\b(?:%s)\b" % "|".join(prohibidas), sin_literals)
 
 
 def ejecutar_consulta_sql(query_sql: str) -> pd.DataFrame:
@@ -165,12 +187,15 @@ def buscar_servidores_duckdb(termino: str) -> pd.DataFrame:
     query_sql = f"""
         SELECT servidor_id, numero_serie, ip, vcloud_vm, nivel_arquitectura, componente, fecha, tipo_mantenimiento, tecnico, descripcion, estado, nagios_check
         FROM mantenimientos
-        WHERE {' OR '.join(f'({c})' for c in condiciones)}
+        WHERE {' AND '.join(f'({c})' for c in condiciones)}
         ORDER BY fecha DESC
     """
     try:
         return _obtener_conexion_duckdb().execute(query_sql, params).df()
-    except Exception:
+    except Exception as e:
+        # No devolver "sin resultados" como si fuera un éxito: un esquema
+        # desalineado quedaría invisible tras este except.
+        logger.warning("[MOTOR] Error buscando en DuckDB con termino %r: %s", termino, e)
         return pd.DataFrame()
 
 
@@ -218,19 +243,34 @@ def limpiar_encabezados_snippet(snippet: str) -> str:
 def resaltar_terminos_en_html(texto: str, query: str) -> str:
     """Envuelve los términos de búsqueda con etiquetas de resaltado visual."""
     tokens = sorted(list(set([t for t in normalizar_texto(query).split() if len(t) >= 2] or ([normalizar_texto(query)] if query else []))), key=len, reverse=True)
-    res = texto
+    # Enmascarar data URIs base64: resaltar dentro rompería el src de la imagen
+    # y contaría coincidencias ficticias dentro del binario.
+    uris = []
+
+    def _mascara(m):
+        uris.append(m.group(0))
+        return "\x00%s\x00" % chr(0xE000 + len(uris) - 1)
+
+    res = _DATA_URI_RE.sub(_mascara, texto)
     for token in tokens:
         if token.strip():
-            res = re.sub(rf'(\b{re.escape(token)}\w*)', r'<span class="search-highlight">\1</span>', res, flags=re.IGNORECASE)
+            res = re.sub(rf'(\b{_patron_con_acentos(token)}\w*)', r'<span class="search-highlight">\1</span>', res, flags=re.IGNORECASE)
+    for i, uri in enumerate(uris):
+        res = res.replace("\x00%s\x00" % chr(0xE000 + i), uri)
     return res
 
 
 def extraer_fragmento_relevante(content: str, query: str, max_chars: int = 900) -> str:
     """Extrae el fragmento más relevante del documento alrededor de la primera coincidencia."""
     tokens = [t for t in normalizar_texto(query).split() if len(t) >= 2]
-    content_norm = normalizar_texto(content)
 
-    idx_list = [content_norm.find(t) for t in tokens if content_norm.find(t) != -1]
+    # Buscar el token (tolerante a acentos) en el texto ORIGINAL: los índices del
+    # texto normalizado no se alinean cuando NFKD cambia la longitud (emojis, ﬁ, ½).
+    idx_list = []
+    for t in tokens:
+        m = re.search(_patron_con_acentos(t), content, re.IGNORECASE)
+        if m:
+            idx_list.append(m.start())
     primer_idx = min(idx_list) if idx_list else -1
 
     if primer_idx == -1:
@@ -324,7 +364,8 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         total = len(df_srv)
         row = df_srv.iloc[0]
         estado = str(row.get("estado") or "")
-        st_badge = "badge-ok" if estado.lower() == "operativo" else ("badge-warn" if "revision" in estado.lower() else "badge-crit")
+        estado_n = normalizar_texto(estado)
+        st_badge = "badge-ok" if estado_n == "operativo" else ("badge-warn" if "revision" in estado_n else "badge-crit")
         desc = resaltar_terminos_en_html(str(row.get("descripcion") or ""), prompt_usuario)
 
         html_out = f"""<div class="bento-card">

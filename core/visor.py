@@ -176,6 +176,7 @@ def cargar_pptx_a_slides(filepath: str, mtime: float) -> list:
     """Extrae diapositivas estructuradas de un archivo .pptx con python-pptx."""
     try:
         from pptx import Presentation
+        from pptx.enum.shapes import PP_PLACEHOLDER
         prs = Presentation(filepath)
         slides_data = []
         for idx, slide in enumerate(prs.slides, 1):
@@ -186,7 +187,13 @@ def cargar_pptx_a_slides(filepath: str, mtime: float) -> list:
                     txt = shape.text_frame.text.strip()
                     if not txt:
                         continue
-                    if not title and (shape == slide.shapes.title or idx == 1):
+                    # Comparar con `==` contra slide.shapes.title nunca era True:
+                    # cada acceso crea un proxy nuevo (identidad, no igualdad).
+                    es_titulo = idx == 1 or (
+                        shape.is_placeholder
+                        and shape.placeholder_format.type in (PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE)
+                    )
+                    if not title and es_titulo:
                         title = txt
                     else:
                         texts.append(txt)
@@ -437,15 +444,30 @@ def extraer_tabla_de_contenidos(md_content: str) -> list[dict]:
     return toc
 
 
+# Igual que en procesador: no resaltar dentro de data URIs base64.
+_DATA_URI_RE = re.compile(r"data:image/[^;,\s]+;base64,[A-Za-z0-9+/=\s]+")
+
+
 def resaltar_termino_en_html(html_o_md: str, termino: str) -> tuple[str, int]:
     """Resalta con etiqueta mark las ocurrencias de una palabra clave."""
     if not termino or not termino.strip():
         return html_o_md, 0
+    # Resaltar dentro de un data URI rompería el src de la imagen incrustada
+    # y contaría coincidencias ficticias dentro del binario ("de", "red"...).
+    uris = []
+
+    def _mascara(m):
+        uris.append(m.group(0))
+        return "\x00%s\x00" % chr(0xE000 + len(uris) - 1)
+
+    base = _DATA_URI_RE.sub(_mascara, html_o_md)
     t_clean = re.escape(termino.strip())
     patron = re.compile(rf'(?i)({t_clean})')
-    coincidencias = len(patron.findall(html_o_md))
+    coincidencias = len(patron.findall(base))
     if coincidencias > 0:
-        res = patron.sub(r'<mark style="background-color: var(--pastel-amber-bg); color: var(--pastel-amber-text); padding: 2px 4px; border-radius: 3px; font-weight: 600;">\1</mark>', html_o_md)
+        res = patron.sub(r'<mark style="background-color: var(--pastel-amber-bg); color: var(--pastel-amber-text); padding: 2px 4px; border-radius: 3px; font-weight: 600;">\1</mark>', base)
+        for i, uri in enumerate(uris):
+            res = res.replace("\x00%s\x00" % chr(0xE000 + i), uri)
         return res, coincidencias
     return html_o_md, 0
 

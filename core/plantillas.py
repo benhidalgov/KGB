@@ -24,7 +24,9 @@ def cargar_plantillas_personalizadas() -> dict:
     if os.path.exists(PLANTILLAS_CUSTOM_PATH):
         try:
             with open(PLANTILLAS_CUSTOM_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+            # Un JSON válido pero no-dict ([] o un string) crasheaba .keys() en la pestaña.
+            return data if isinstance(data, dict) else {}
         except Exception:
             return {}
     return {}
