@@ -6,6 +6,7 @@ import hashlib
 import logging
 import threading
 import unicodedata
+from functools import lru_cache
 import duckdb
 import pandas as pd
 from core.configuracion import CSV_PATH
@@ -300,13 +301,36 @@ def construir_contexto_rag(prompt_usuario: str, df_srv: pd.DataFrame, doc_matche
     return "\n\n".join(secciones) or "No hay información disponible."
 
 
+_MODELO_GEMINI = "gemini-2.5-flash"
+_MODELO_GEMINI_ALT = "gemini-flash-latest"
+
+
+@lru_cache(maxsize=4)
+def _obtener_cliente_gemini(api_key: str):
+    """Cliente reutilizable por clave: evita el handshake por consulta y acota
+    timeout/reintentos del SDK. El 429 excluye de la lista para no quemar cuota."""
+    from google import genai
+    from google.genai import types
+
+    return genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(
+            timeout=20_000,
+            retry_options=types.HttpRetryOptions(
+                attempts=2,
+                initial_delay=1.0,
+                http_status_codes=[500, 502, 503, 504],
+            ),
+        ),
+    )
+
+
 def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -> tuple[bool, str, str]:
     """Ejecuta la inferencia RAG sobre el SDK oficial de Google Gemini respetando directrices."""
     try:
-        from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=api_key.strip())
+        client = _obtener_cliente_gemini(api_key.strip())
         instruccion = (
             "Eres el asistente de esta consola de operaciones. Ayudas a quien usa la aplicación.\n"
             "Reglas:\n"
@@ -317,15 +341,16 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
         )
 
         prompt_full = f"PREGUNTA:\n{prompt_usuario}\n\nINFORMACION DISPONIBLE (inventario y documentos):\n{contexto_rag}\n\nResponde basándote en la información disponible."
+        config = types.GenerateContentConfig(
+            system_instruction=instruccion,
+            temperature=0.2,
+            max_output_tokens=600,
+        )
 
         ultimo_error = ""
-        for modelo in ["gemini-2.5-flash", "gemini-flash-latest"]:
+        for modelo in (_MODELO_GEMINI, _MODELO_GEMINI_ALT):
             try:
-                res = client.models.generate_content(
-                    model=modelo,
-                    contents=prompt_full,
-                    config=types.GenerateContentConfig(system_instruction=instruccion, temperature=0.2)
-                )
+                res = client.models.generate_content(model=modelo, contents=prompt_full, config=config)
                 if res and res.text:
                     return True, res.text.strip(), modelo
             except Exception as e:
@@ -335,7 +360,11 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
                     return False, "403 PERMISSION_DENIED: Sin permisos en Google Cloud / AI Studio", ""
                 if "429" in err_s:
                     return False, "429 Cuota agotada en la API de Google", ""
-                continue
+                # Solo un modelo retirado justifica probar el alias: cambiar de
+                # modelo en silencio ante cualquier error ocultaba la causa.
+                if "404" in err_s or "not found" in err_s.lower():
+                    continue
+                break
 
         return False, f"Servicio Gemini no disponible ({ultimo_error[:90]})", ""
     except Exception as e:

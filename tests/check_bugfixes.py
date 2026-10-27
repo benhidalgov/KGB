@@ -106,6 +106,60 @@ def check_excel_version_historica():
             aud._obtener_historial_versiones_cached.cache_clear()
 
 
+def check_gemini_fallback_y_cuota():
+    """El fallback de modelo solo aplica si el modelo no existe (404); un 429 corta
+    de inmediato, el cliente se reutiliza por clave y lleva timeout/retry acotados."""
+    from types import SimpleNamespace as NS
+
+    estado = {"respuestas": [], "llamadas": [], "clientes": 0, "http": None}
+
+    class _Modelos:
+        def generate_content(self, model, contents, config):
+            estado["llamadas"].append(model)
+            paso = estado["respuestas"].pop(0)
+            if isinstance(paso, Exception):
+                raise paso
+            return NS(text=paso)
+
+    class _Cliente:
+        def __init__(self, api_key=None, http_options=None):
+            estado["clientes"] += 1
+            estado["http"] = http_options
+            self.models = _Modelos()
+
+    fake_types = NS(
+        GenerateContentConfig=lambda **kw: NS(**kw),
+        HttpOptions=lambda **kw: NS(**kw),
+        HttpRetryOptions=lambda **kw: NS(**kw),
+    )
+    fake_genai = NS(Client=_Cliente, types=fake_types)
+
+    import google
+
+    motor._obtener_cliente_gemini.cache_clear()
+    try:
+        with mock.patch.dict(sys.modules, {"google.genai": fake_genai, "google.genai.types": fake_types}), \
+             mock.patch.object(google, "genai", fake_genai, create=True):
+            # Modelo primario retirado (404): usa el alias.
+            estado["respuestas"] = [Exception("404 NOT_FOUND: model retired"), "respuesta ok"]
+            ok, texto, modelo = motor.consultar_gemini_rag("p", "c", "clave_prueba")
+            assert ok and texto == "respuesta ok" and modelo == "gemini-flash-latest", (ok, texto, modelo)
+            assert estado["llamadas"] == ["gemini-2.5-flash", "gemini-flash-latest"], estado["llamadas"]
+
+            # Cuota agotada (429): error inmediato, sin probar el alias.
+            estado["respuestas"] = [Exception("429 RESOURCE_EXHAUSTED: quota")]
+            ok, texto, _m = motor.consultar_gemini_rag("p", "c", "clave_prueba")
+            assert not ok and "429" in texto, texto
+            assert estado["llamadas"][2:] == ["gemini-2.5-flash"], estado["llamadas"]
+
+            # Misma clave -> mismo cliente, con timeout y reintentos acotados.
+            assert estado["clientes"] == 1, f"cliente recreado por consulta ({estado['clientes']})"
+            assert estado["http"].timeout == 20_000
+            assert estado["http"].retry_options.attempts == 2
+    finally:
+        motor._obtener_cliente_gemini.cache_clear()
+
+
 def check_vault_no_destruye_clave():
     """Un fallo de lectura de .vault.key no sobrescribe la clave; sin clave previa sí genera."""
     with tempfile.TemporaryDirectory() as td:
@@ -181,6 +235,7 @@ if __name__ == "__main__":
     check_fragmento_indice_original()
     check_visor_resaltado_base64()
     check_excel_version_historica()
+    check_gemini_fallback_y_cuota()
     check_vault_no_destruye_clave()
     check_tags_cuarentena_no_destruye_backup()
     check_plantillas_tipo_raiz()
