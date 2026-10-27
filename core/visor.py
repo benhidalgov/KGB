@@ -7,7 +7,7 @@ import pandas as pd
 from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, obtener_nombres_hojas_excel
 
 logger = logging.getLogger("infra_copilot.visor")
-from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes, normalizar_titulo_display
+from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes, normalizar_titulo_display, enmascarar_data_uris, restaurar_data_uris
 from core.auth import tiene_permiso
 from core.configuracion import DOCS_DIR
 
@@ -444,31 +444,17 @@ def extraer_tabla_de_contenidos(md_content: str) -> list[dict]:
     return toc
 
 
-# Igual que en procesador: no resaltar dentro de data URIs base64.
-_DATA_URI_RE = re.compile(r"data:image/[^;,\s]+;base64,[A-Za-z0-9+/=\s]+")
-
-
 def resaltar_termino_en_html(html_o_md: str, termino: str) -> tuple[str, int]:
     """Resalta con etiqueta mark las ocurrencias de una palabra clave."""
     if not termino or not termino.strip():
         return html_o_md, 0
-    # Resaltar dentro de un data URI rompería el src de la imagen incrustada
-    # y contaría coincidencias ficticias dentro del binario ("de", "red"...).
-    uris = []
-
-    def _mascara(m):
-        uris.append(m.group(0))
-        return "\x00%s\x00" % chr(0xE000 + len(uris) - 1)
-
-    base = _DATA_URI_RE.sub(_mascara, html_o_md)
+    base, uris = enmascarar_data_uris(html_o_md)
     t_clean = re.escape(termino.strip())
     patron = re.compile(rf'(?i)({t_clean})')
     coincidencias = len(patron.findall(base))
     if coincidencias > 0:
         res = patron.sub(r'<mark style="background-color: var(--pastel-amber-bg); color: var(--pastel-amber-text); padding: 2px 4px; border-radius: 3px; font-weight: 600;">\1</mark>', base)
-        for i, uri in enumerate(uris):
-            res = res.replace("\x00%s\x00" % chr(0xE000 + i), uri)
-        return res, coincidencias
+        return restaurar_data_uris(res, uris), coincidencias
     return html_o_md, 0
 
 

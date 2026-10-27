@@ -9,7 +9,7 @@ import unicodedata
 import duckdb
 import pandas as pd
 from core.configuracion import CSV_PATH
-from core.procesador import normalizar_titulo_display
+from core.procesador import enmascarar_data_uris, restaurar_data_uris, normalizar_titulo_display
 from core.vault import obtener_secreto
 from core.tags import obtener_tags_documento
 from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
@@ -92,7 +92,6 @@ def normalizar_texto(texto: str) -> str:
 
 
 _ACENTOS = {"a": "áàâ", "e": "éèê", "i": "íìî", "o": "óòô", "u": "úùû"}
-_DATA_URI_RE = re.compile(r"data:image/[^;,\s]+;base64,[A-Za-z0-9+/=\s]+")
 
 
 def _patron_con_acentos(token: str) -> str:
@@ -243,21 +242,11 @@ def limpiar_encabezados_snippet(snippet: str) -> str:
 def resaltar_terminos_en_html(texto: str, query: str) -> str:
     """Envuelve los términos de búsqueda con etiquetas de resaltado visual."""
     tokens = sorted(list(set([t for t in normalizar_texto(query).split() if len(t) >= 2] or ([normalizar_texto(query)] if query else []))), key=len, reverse=True)
-    # Enmascarar data URIs base64: resaltar dentro rompería el src de la imagen
-    # y contaría coincidencias ficticias dentro del binario.
-    uris = []
-
-    def _mascara(m):
-        uris.append(m.group(0))
-        return "\x00%s\x00" % chr(0xE000 + len(uris) - 1)
-
-    res = _DATA_URI_RE.sub(_mascara, texto)
+    res, uris = enmascarar_data_uris(texto)
     for token in tokens:
         if token.strip():
             res = re.sub(rf'(\b{_patron_con_acentos(token)}\w*)', r'<span class="search-highlight">\1</span>', res, flags=re.IGNORECASE)
-    for i, uri in enumerate(uris):
-        res = res.replace("\x00%s\x00" % chr(0xE000 + i), uri)
-    return res
+    return restaurar_data_uris(res, uris)
 
 
 def extraer_fragmento_relevante(content: str, query: str, max_chars: int = 900) -> str:

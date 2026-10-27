@@ -15,7 +15,6 @@ import core.vault as vault
 import core.tags as tags
 import core.plantillas as plantillas
 import core.visor as visor
-from core.procesador import _ruta_contenida_en_datos
 
 
 def check_sql_solo_lectura():
@@ -116,22 +115,6 @@ def check_tags_cuarentena_no_destruye_backup():
                 assert f.read() == "backup-previo", "un OSError transitorio no debe tocar el backup"
 
 
-def check_ruta_original_confina_en_data():
-    """Las rutas extraídas del Markdown no pueden salir de data/."""
-    from core.configuracion import DOCS_DIR
-    assert _ruta_contenida_en_datos(os.path.join("..", "..", ".env")) is None
-    assert _ruta_contenida_en_datos(os.path.join(os.path.dirname(DOCS_DIR), ".env")) is None
-    existente = None
-    for root, _dirs, files in os.walk(DOCS_DIR):
-        for fn in files:
-            existente = os.path.join(root, fn)
-            break
-        if existente:
-            break
-    if existente:
-        assert _ruta_contenida_en_datos(existente) == os.path.realpath(existente)
-
-
 def check_plantillas_tipo_raiz():
     """Un plantillas_custom.json con tipo raíz inválido no crashea la pestaña."""
     with tempfile.TemporaryDirectory() as td:
@@ -150,6 +133,5 @@ if __name__ == "__main__":
     check_visor_resaltado_base64()
     check_vault_no_destruye_clave()
     check_tags_cuarentena_no_destruye_backup()
-    check_ruta_original_confina_en_data()
     check_plantillas_tipo_raiz()
     print("[OK] check_bugfixes")

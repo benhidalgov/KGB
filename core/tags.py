@@ -33,6 +33,16 @@ def normalizar_categoria(cat: str) -> str:
     )
 
 
+def _limpiar_tags(tags: list[str]) -> list[str]:
+    """Normaliza, descarta vacíos y deduplica conservando el orden."""
+    limpios = []
+    for t in tags:
+        norm = normalizar_categoria(t)
+        if norm and norm not in limpios:
+            limpios.append(norm)
+    return limpios
+
+
 def cargar_datos_categorias() -> dict:
     """Carga el catálogo de categorías y mapeo de documentos desde data/categorias.json."""
     if os.path.exists(CATEGORIAS_PATH):
@@ -46,7 +56,7 @@ def cargar_datos_categorias() -> dict:
             if "documentos" not in data or not isinstance(data["documentos"], dict):
                 data["documentos"] = {}
             return data
-        except (json.JSONDecodeError, ValueError, TypeError):
+        except (ValueError, TypeError):
             # Ilegible (JSON truncado, edición manual fallida, disco lleno...):
             # devolver vacío aquí y guardar después destruiría TODO el catálogo.
             # Preservar el archivo corrupto para recuperarlo a mano, sin pisar un
@@ -101,11 +111,7 @@ def obtener_tags_documento(doc_name: str) -> list[str]:
 
 def asignar_tags_documento(doc_name: str, tags: list[str], autor: str = "Técnico") -> bool:
     """Asocia una lista de tags/categorías a un documento y asegura su registro en el catálogo."""
-    tags_limpios = []
-    for t in tags:
-        norm = normalizar_categoria(t)
-        if norm and norm not in tags_limpios:
-            tags_limpios.append(norm)
+    tags_limpios = _limpiar_tags(tags)
 
     with _CATEGORIAS_LOCK:
         data = cargar_datos_categorias()
@@ -191,11 +197,7 @@ def asignar_tags_en_lote(doc_tags_map: dict[str, list[str]], autor: str = "Opera
 
         actualizados = 0
         for doc_name, tags in doc_tags_map.items():
-            tags_limpios = []
-            for t in tags:
-                norm = normalizar_categoria(t)
-                if norm and norm not in tags_limpios:
-                    tags_limpios.append(norm)
+            tags_limpios = _limpiar_tags(tags)
 
             if tags_limpios:
                 for t in tags_limpios:

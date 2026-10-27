@@ -14,6 +14,28 @@ from core.auditoria import guardar_nueva_version, inicializar_version_inicial_si
 
 logger = logging.getLogger("infra_copilot.procesador")
 
+_DATA_URI_RE = re.compile(r"data:image/[^;,\s]+;base64,[A-Za-z0-9+/=\s]+")
+
+
+def enmascarar_data_uris(texto: str) -> tuple[str, list[str]]:
+    """Sustituye los data URIs base64 por marcadores para no resaltar dentro del
+    binario: rompería el src de la imagen y contaría coincidencias ficticias."""
+    uris = []
+
+    def _mascara(m):
+        uris.append(m.group(0))
+        return "\x00%s\x00" % chr(0xE000 + len(uris) - 1)
+
+    return _DATA_URI_RE.sub(_mascara, texto), uris
+
+
+def restaurar_data_uris(texto: str, uris: list[str]) -> str:
+    """Devuelve a su sitio los data URIs sustituidos por enmascarar_data_uris."""
+    for i, uri in enumerate(uris):
+        texto = texto.replace("\x00%s\x00" % chr(0xE000 + i), uri)
+    return texto
+
+
 IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.svg', '.webp')
 # Sin '.xls': openpyxl no soporta el formato antiguo; aceptarlo generaba documentos rotos.
 OFFICE_EXTENSIONS = ('.docx', '.pdf', '.pptx', '.xlsx')

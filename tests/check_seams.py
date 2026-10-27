@@ -16,12 +16,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import logging
 
-# Sin runtime de Streamlit, sus avisos (cache_data "No runtime found" y
-# "missing ScriptRunContext") van a stderr y PowerShell los convierte en un
-# falso "Exited with code 1" tras el [OK]. Van por logging normal, pero sus
-# loggers hijas tienen nivel propio y propagate=False: solo sirve el corte
-# global de stdlib, y ANTES de importar core.* (que ya avisa al importar).
-# ERROR sigue visible; los fallos de AppTest llegan por at.exception.
+# Los avisos de Streamlit ("No runtime found", "missing ScriptRunContext") van a
+# stderr y PowerShell los vuelve un falso "Exited with code 1"; sus loggers hijas
+# tienen propagate=False: solo sirve este corte global, antes de importar core.*.
 logging.disable(logging.WARNING)
 
 import core.auth as auth

@@ -153,10 +153,7 @@ def guardar_secreto(nombre_secreto: str, valor: str, autor: str = "Operador / Co
         secretos = _leer_todos_los_secretos_boveda()
         es_nuevo = k not in secretos
         secretos[k] = valor.strip()
-        if _guardar_todos_los_secretos_boveda(secretos):
-            guardar_ok = True
-        else:
-            guardar_ok = False
+        guardar_ok = _guardar_todos_los_secretos_boveda(secretos)
     if guardar_ok:
         registrar_evento_auditoria(doc_name="vault", accion="CREACION_CREDENCIAL_VAULT" if es_nuevo else "ACTUALIZACION_CREDENCIAL_VAULT", version_ant=1, version_nueva=1, autor=autor, motivo=f"Gestión de credencial [{k}] en bóveda.")
         return True
