@@ -1,6 +1,7 @@
 import base64
 import os
 import re
+import html
 import logging
 import streamlit as st
 import pandas as pd
@@ -81,9 +82,9 @@ def renderizar_imagen_segura(ruta: str, caption: str) -> bool:
                     svg = f.read()
                 b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
                 st.markdown(
-                    f'<div style="text-align:center;"><img src="data:image/svg+xml;base64,{b64}" alt="{fname}" '
+                    f'<div style="text-align:center;"><img src="data:image/svg+xml;base64,{b64}" alt="{html.escape(fname)}" '
                     f'style="max-width:100%;height:auto;border-radius:6px;"/></div>'
-                    f'<div style="text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-top:6px;">{caption}</div>',
+                    f'<div style="text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-top:6px;">{html.escape(caption)}</div>',
                     unsafe_allow_html=True,
                 )
             else:
@@ -659,7 +660,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
         if zen_search_query.strip():
             texto_preparado = preparar_markdown_con_imagenes(texto_a_mostrar, doc_name=doc_name, ruta_original=ruta_original)
             html_resaltado, cnt_coincidencias = resaltar_termino_en_html(texto_preparado, zen_search_query)
-            st.markdown(f"<div style='font-size:0.8rem;margin-bottom:6px;'><span class='badge-ok'>[{cnt_coincidencias} Coincidencias]</span> para '<b>{zen_search_query}</b>'</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:0.8rem;margin-bottom:6px;'><span class='badge-ok'>[{cnt_coincidencias} Coincidencias]</span> para '<b>{html.escape(zen_search_query)}</b>'</div>", unsafe_allow_html=True)
         else:
             html_resaltado = preparar_markdown_con_imagenes(texto_a_mostrar, doc_name=doc_name, ruta_original=ruta_original)
 

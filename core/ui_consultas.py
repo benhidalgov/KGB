@@ -58,7 +58,7 @@ def renderizar_modulo_consultas(doc_store: dict):
 
             st.markdown(f"""
             <div class="bento-card" style="padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                <div><b>Término:</b> <code>{active_duck_term}</code></div>
+                <div><b>Término:</b> <code>{html.escape(active_duck_term)}</code></div>
                 <div><b>Servidores:</b> <span class="badge-ok">{len(df_srv_found)}</span></div>
                 <div><b>Documentos:</b> <span class="badge-info">{len(doc_matches_found)}</span></div>
                 <div><b>Tiempo:</b> <span class="badge-tag">{t_ms:.2f} ms</span></div>
@@ -90,7 +90,7 @@ def renderizar_modulo_consultas(doc_store: dict):
                     snip = resaltar_terminos_en_html(html.escape(extraer_fragmento_relevante(cont, active_duck_term, max_chars=350)), active_duck_term)
                     st.markdown(f"""
                     <div class="search-result-card" style="margin-bottom:10px;padding:12px 14px;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div><b>Documento:</b> <code>{doc_n}</code></div><span class="badge-info">{sc} pts</span></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div><b>Documento:</b> <code>{html.escape(doc_n)}</code></div><span class="badge-info">{sc} pts</span></div>
                         <div style="font-size:0.83rem;line-height:1.55;color:var(--text-secondary);background:var(--bg-surface-subtle);padding:10px 12px;border-radius:6px;border:1px solid var(--border-subtle);">{snip}</div>
                     </div>""", unsafe_allow_html=True)
             else:
@@ -159,5 +159,5 @@ def renderizar_modulo_consultas(doc_store: dict):
 
             for idx, it in enumerate(st.session_state.historial_busquedas):
                 badge_o = '<span class="badge-ok">[Reciente]</span>' if idx == 0 else f'<span class="badge-tag">[{it["timestamp"]}]</span>'
-                st.markdown(f'<div style="margin-top:12px;margin-bottom:4px;font-size:0.9rem;">{badge_o} <span style="font-weight:600;margin-left:6px;">Consulta:</span> <code>{it["query"]}</code></div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="margin-top:12px;margin-bottom:4px;font-size:0.9rem;">{badge_o} <span style="font-weight:600;margin-left:6px;">Consulta:</span> <code>{html.escape(it["query"])}</code></div>', unsafe_allow_html=True)
                 st.markdown(it["response"], unsafe_allow_html=True)

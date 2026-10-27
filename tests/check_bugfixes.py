@@ -12,10 +12,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import core.motor as motor
 import core.auditoria as aud
+import core.procesador as procesador
 import core.vault as vault
 import core.tags as tags
 import core.plantillas as plantillas
 import core.visor as visor
+import pandas as pd
 
 
 def check_sql_solo_lectura():
@@ -28,6 +30,65 @@ def check_sql_solo_lectura():
     assert motor._es_sql_solo_lectura("SELECT * FROM mantenimientos WHERE descripcion LIKE '%update%'"), "un literal con palabra prohibida es lectura válida"
     assert motor._es_sql_solo_lectura("SELECT * FROM mantenimientos WHERE estado = 'set'"), "un literal 'set' es lectura válida"
     assert motor._es_sql_solo_lectura("SELECT count(*) FROM mantenimientos")
+
+
+def check_sql_sin_acceso_externo():
+    """El SQL libre no puede leer archivos ni URLs: DuckDB corre sin acceso externo."""
+    leak = motor.ejecutar_consulta_sql("SELECT * FROM 'data/users.json'")
+    assert "Error" in leak.columns, "la lectura de users.json debe fallar"
+    assert "hash" not in str(leak.to_dict()), f"no debe filtrarse el hash: {str(leak.to_dict())[:120]}"
+
+    remote = motor.ejecutar_consulta_sql("SELECT * FROM 'http://127.0.0.1:9/datos.csv'")
+    assert "Error" in remote.columns, "las URLs remotas deben bloquearse"
+
+    ok = motor.ejecutar_consulta_sql("SELECT count(*) AS n FROM mantenimientos")
+    assert "Error" not in ok.columns, f"la consulta interna debe funcionar: {ok}"
+    assert int(ok.iloc[0, 0]) >= 0
+
+
+def check_xss_escapado():
+    """El HTML no confiable (documentos, captions, inventario y salida del LLM) se
+    escapa antes de renderizarse; el markdown legítimo sigue intacto."""
+    payload = '<img src=x onerror="alert(1)"><script>alert(2)</script>'
+
+    prep = procesador.preparar_markdown_con_imagenes(
+        f"# Título\n\n{payload}\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+    )
+    assert "<img src=x" not in prep.lower(), prep[:200]
+    assert "<script" not in prep.lower()
+    assert "&lt;img" in prep and "&lt;script" in prep
+    assert "# Título" in prep and "| a | b |" in prep, "el markdown legítimo debe conservarse"
+
+    with tempfile.TemporaryDirectory() as td:
+        docs = os.path.join(td, "docs")
+        assets = os.path.join(td, "assets")
+        os.makedirs(docs)
+        os.makedirs(assets)
+        with open(os.path.join(assets, "topologia.png"), "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\nfake")
+        ficha = f"# Ficha\n**Archivo Binario:** `topologia.png`\n**Pie de Imagen (Caption):** {payload}\n"
+        with mock.patch.object(procesador, "DOCS_DIR", docs), \
+             mock.patch.object(procesador, "ASSETS_DIR", assets), \
+             mock.patch.object(procesador, "ORIGINALS_DIR", os.path.join(td, "originals")), \
+             mock.patch.object(procesador, "INBOX_DIR", os.path.join(td, "inbox")):
+            card = procesador.preparar_markdown_con_imagenes(ficha)
+        assert "<img src=x" not in card.lower() and "<script" not in card.lower()
+        assert "data:image/png;base64," in card, "el card legítimo de la imagen debe conservarse"
+
+    local = motor.generar_respuesta_asistente_local(
+        "balancer001", {}, df_srv=pd.DataFrame(), doc_matches=[("doc.md", payload + " BALANCER001", 30)]
+    )
+    assert "<img src=x" not in local.lower() and "<script" not in local.lower()
+    assert "&lt;img" in local
+
+    motor._QUERY_RESPONSE_CACHE.clear()
+    with mock.patch.object(motor, "obtener_secreto", lambda *a, **k: "clave_prueba"), \
+         mock.patch.object(motor, "buscar_servidores_duckdb", lambda t: pd.DataFrame()), \
+         mock.patch.object(motor, "buscar_en_documentos", lambda t, d: []), \
+         mock.patch.object(motor, "consultar_gemini_rag", lambda p, c, k: (True, payload, "fake")):
+        out_llm = motor.generar_respuesta_asistente("consulta xss", {})
+    assert "<img src=x" not in out_llm.lower() and "<script" not in out_llm.lower()
+    assert "&lt;img" in out_llm
 
 
 def check_resaltado_acentos_y_base64():
@@ -231,6 +292,8 @@ def check_plantillas_tipo_raiz():
 
 if __name__ == "__main__":
     check_sql_solo_lectura()
+    check_sql_sin_acceso_externo()
+    check_xss_escapado()
     check_resaltado_acentos_y_base64()
     check_fragmento_indice_original()
     check_visor_resaltado_base64()

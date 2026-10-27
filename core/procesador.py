@@ -2,6 +2,7 @@ import hashlib
 import os
 import re
 import glob
+import html
 import logging
 import unicodedata
 import base64
@@ -309,6 +310,10 @@ def preparar_markdown_con_imagenes(md_content: str, doc_name: str = "", ruta_ori
     """Prepara el contenido Markdown para la pestaña de Vista Formateada protegiendo el DOM."""
     if not md_content:
         return ""
+    # El contenido viene de archivos subidos: se escapa el HTML crudo y se deja
+    # solo markdown (encabezados, tablas, imágenes). El chrome de la app se
+    # agrega después, ya confiable.
+    md_content = html.escape(md_content)
     res = re.sub(r'!\[([^\]]*)\]\((?:data:image/[^;]+;base64\.\.\.)\)', r'<span class="badge-tag" style="margin: 4px 0; display: inline-block;">[Gráfico / Diagrama en Documento Original]</span>', md_content)
 
     if not re.search(r'!\[.*?\]\(.*?\)|<img\s+[^>]*src=', res):

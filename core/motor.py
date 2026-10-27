@@ -82,6 +82,10 @@ def _obtener_conexion_duckdb():
                 """)
             _DUCKDB_LAST_LOAD_TS = time.time()
             _DUCKDB_LAST_MTIME = current_mtime
+            # Bloqueo a nivel de motor: el SQL del usuario no puede leer archivos
+            # ni URLs (replacement scans, read_*, httpfs, COPY). Es irreversible
+            # en runtime, por eso va después de construir la tabla.
+            _DUCKDB_CON.execute("SET enable_external_access=false")
         return _DUCKDB_CON.cursor()
 
 
@@ -382,26 +386,30 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         total = len(df_srv)
         row = df_srv.iloc[0]
         estado = str(row.get("estado") or "")
+        def _e(valor) -> str:
+            """Escapa datos de inventario antes de interpolarlos en HTML."""
+            return html.escape(str(valor if valor is not None else "-"))
+
         estado_n = normalizar_texto(estado)
         st_badge = "badge-ok" if estado_n == "operativo" else ("badge-warn" if "revision" in estado_n else "badge-crit")
-        desc = resaltar_terminos_en_html(str(row.get("descripcion") or ""), prompt_usuario)
+        desc = resaltar_terminos_en_html(html.escape(str(row.get("descripcion") or "")), prompt_usuario)
 
         html_out = f"""<div class="bento-card">
     <div class="search-header-row">
-        <div><span class="badge-info">[Inventario]</span><span class="search-doc-title" style="margin-left: 8px;">{row['servidor_id']}</span></div>
-        <div><span class="{st_badge}">[{estado.upper()}]</span><span class="badge-tag" style="margin-left: 6px;">{row['nivel_arquitectura']}</span></div>
+        <div><span class="badge-info">[Inventario]</span><span class="search-doc-title" style="margin-left: 8px;">{_e(row['servidor_id'])}</span></div>
+        <div><span class="{st_badge}">[{_e(estado.upper())}]</span><span class="badge-tag" style="margin-left: 6px;">{_e(row['nivel_arquitectura'])}</span></div>
     </div>
 
 | Dato | Valor |
 | :--- | :--- |
-| **Servidor** | `{row['servidor_id']}` |
-| **N° Serie** | `{row['numero_serie']}` |
-| **IP / VM** | `{row['ip']}` ({row['vcloud_vm']}) |
-| **Componente** | {row['componente']} |
-| **Fecha** | {row['fecha']} |
-| **Mantenimiento** | {row['tipo_mantenimiento']} |
-| **Técnico** | `{row['tecnico']}` |
-| **Monitoreo** | `{row['nagios_check']}` |
+| **Servidor** | `{_e(row['servidor_id'])}` |
+| **N° Serie** | `{_e(row['numero_serie'])}` |
+| **IP / VM** | `{_e(row['ip'])}` ({_e(row['vcloud_vm'])}) |
+| **Componente** | {_e(row['componente'])} |
+| **Fecha** | {_e(row['fecha'])} |
+| **Mantenimiento** | {_e(row['tipo_mantenimiento'])} |
+| **Técnico** | `{_e(row['tecnico'])}` |
+| **Monitoreo** | `{_e(row['nagios_check'])}` |
 
 <div style="margin-top: 12px; font-size: 0.88rem; line-height: 1.55; color: var(--text-secondary);"><b>Descripción:</b><br/>{desc}</div>
 <div class="search-meta-footer"><span>Origen: Inventario CMDB</span><span>{total} registro(s)</span></div>
@@ -412,15 +420,15 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
 
     if doc_matches:
         doc_name, content, score = doc_matches[0]
-        frag = resaltar_terminos_en_html(limpiar_encabezados_snippet(extraer_fragmento_relevante(content, prompt_usuario)), prompt_usuario)
+        frag = resaltar_terminos_en_html(html.escape(limpiar_encabezados_snippet(extraer_fragmento_relevante(content, prompt_usuario))), prompt_usuario)
         tipo_badge = "[Diagrama]" if doc_name.startswith("DIAGRAMA__") else "[Documento]"
         score_label = "Alta" if score >= 20 else "Media"
         tags_doc0 = obtener_tags_documento(doc_name)
-        tag_badge0 = f'<span class="badge-tag" style="margin-left: 6px;">[{tags_doc0[0]}]</span>' if tags_doc0 else ""
+        tag_badge0 = f'<span class="badge-tag" style="margin-left: 6px;">[{html.escape(tags_doc0[0])}]</span>' if tags_doc0 else ""
 
         html_out = f"""<div class="bento-card">
     <div class="search-header-row">
-        <div><span class="badge-info">{tipo_badge}</span>{tag_badge0}<span class="search-doc-title" style="margin-left: 8px;">{normalizar_titulo_display(doc_name)}</span><span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">({doc_name})</span></div>
+        <div><span class="badge-info">{tipo_badge}</span>{tag_badge0}<span class="search-doc-title" style="margin-left: 8px;">{html.escape(normalizar_titulo_display(doc_name))}</span><span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">({html.escape(doc_name)})</span></div>
         <div><span class="badge-ok">Coincidencia: {score_label}</span></div>
     </div>
     <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Fragmento:</div>
@@ -431,12 +439,12 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
             html_out += f"\n\n**Otros documentos relacionados ({len(doc_matches) - 1}):**\n"
             for sec_name, sec_content, sec_score in doc_matches[1:3]:
                 sec_tags = obtener_tags_documento(sec_name)
-                sec_tag_b = f'<span class="badge-tag" style="margin-left: 6px;">[{sec_tags[0]}]</span>' if sec_tags else ""
-                sec_frag = resaltar_terminos_en_html(limpiar_encabezados_snippet(extraer_fragmento_relevante(sec_content, prompt_usuario, max_chars=250)), prompt_usuario)
+                sec_tag_b = f'<span class="badge-tag" style="margin-left: 6px;">[{html.escape(sec_tags[0])}]</span>' if sec_tags else ""
+                sec_frag = resaltar_terminos_en_html(html.escape(limpiar_encabezados_snippet(extraer_fragmento_relevante(sec_content, prompt_usuario, max_chars=250))), prompt_usuario)
                 sec_b = "[Diagrama]" if sec_name.startswith("DIAGRAMA__") else "[Documento]"
                 html_out += f"""\n<div style="background-color: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px 12px; margin-top: 8px; font-size: 0.85rem;">
     <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-        <span><b>{sec_b} {normalizar_titulo_display(sec_name)}</b>{sec_tag_b} <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">({sec_name})</span></span>
+        <span><b>{sec_b} {html.escape(normalizar_titulo_display(sec_name))}</b>{sec_tag_b} <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">({html.escape(sec_name)})</span></span>
         <span class="badge-tag">Puntos: {sec_score}</span>
     </div>
     <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45;">{sec_frag}</div>
@@ -478,12 +486,12 @@ def generar_respuesta_asistente(prompt_usuario: str, doc_store: dict) -> str:
         <div><span class="badge-ok">[OK]</span><span class="search-doc-title" style="margin-left: 8px;">Respuesta Técnica</span></div>
         <div><span class="badge-tag">Asistente</span></div>
     </div>
-{resp_texto}
+{html.escape(resp_texto)}
 <div class="search-meta-footer"><span>Respuesta asistida por IA</span><span>Fuentes: {len(df_srv)} inventario + {len(doc_matches)} documentos</span></div>
 </div>"""
         else:
             resp_local = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
-            resultado = f'<div style="font-size:0.75rem; background-color: var(--pastel-amber-bg); border: 1px solid var(--pastel-amber-border); color: var(--pastel-amber-text); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;"><span class="badge-warn">[Aviso]</span> No fue posible conectar con el asistente remoto ({resp_texto}). Se presenta la respuesta local.</div>' + resp_local
+            resultado = f'<div style="font-size:0.75rem; background-color: var(--pastel-amber-bg); border: 1px solid var(--pastel-amber-border); color: var(--pastel-amber-text); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;"><span class="badge-warn">[Aviso]</span> No fue posible conectar con el asistente remoto ({html.escape(resp_texto)}). Se presenta la respuesta local.</div>' + resp_local
     else:
         resultado = generar_respuesta_asistente_local(prompt_usuario, doc_store, df_srv, doc_matches)
 
