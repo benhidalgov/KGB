@@ -278,7 +278,9 @@ def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.Dat
     # y destruía el resto. Se propaga y el llamador muestra el error.
     # Se edita una copia: si openpyxl falla a mitad de escritura, el libro
     # original en DOCS_DIR queda intacto (sin versión ni bitácora que registrar).
-    tmp_xl = f"{excel_path}.{os.getpid()}.tmp"
+    # La copia conserva la extensión: pandas rechaza un ExcelWriter sobre '*.tmp'.
+    raiz_xl, ext_xl = os.path.splitext(excel_path)
+    tmp_xl = f"{raiz_xl}.{os.getpid()}.tmp{ext_xl}"
     shutil.copy2(excel_path, tmp_xl)
     try:
         with pd.ExcelWriter(tmp_xl, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:

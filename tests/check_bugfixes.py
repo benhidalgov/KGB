@@ -11,6 +11,7 @@ from unittest import mock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import core.motor as motor
+import core.auditoria as aud
 import core.vault as vault
 import core.tags as tags
 import core.plantillas as plantillas
@@ -55,6 +56,54 @@ def check_visor_resaltado_base64():
     res, cnt = visor.resaltar_termino_en_html(html_in, "data")
     assert f"base64,{b64}'" in res, "el src base64 no debe romperse"
     assert cnt == 2, f"las coincidencias deben ser solo texto visible, no el binario (cnt={cnt})"
+
+
+def check_excel_version_historica():
+    """El snapshot de una versión Excel entrega los bytes de esa versión (no los
+    actuales) y conserva las demás hojas del libro."""
+    import io
+    from openpyxl import Workbook, load_workbook
+    import pandas as pd
+
+    with tempfile.TemporaryDirectory() as td:
+        docs = os.path.join(td, "docs")
+        os.makedirs(docs)
+        h_orig, d_orig, l_orig = aud.HISTORY_DIR, aud.DOCS_DIR, aud.AUDIT_LOG_PATH
+        try:
+            aud.DOCS_DIR = docs
+            aud.HISTORY_DIR = os.path.join(td, "history")
+            aud.AUDIT_LOG_PATH = os.path.join(td, "audit_log.json")
+            aud._obtener_historial_versiones_cached.cache_clear()
+
+            libro = os.path.join(docs, "libro.xlsx")
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Datos"
+            ws.append(["servidor", "estado"])
+            ws.append(["BALANCER001", "Operativo"])
+            wb.create_sheet("Resumen").append(["total", "1"])
+            wb.save(libro)
+
+            aud.inicializar_version_inicial_si_no_existe("libro.xlsx", "")
+            v = aud.guardar_nueva_version_excel(
+                "libro.xlsx", "Datos",
+                pd.DataFrame([["BALANCER001", "En revision"]], columns=["servidor", "estado"]),
+                autor="QA", comentario="prueba", doc_store={},
+            )
+            assert v == 2, f"la edición debe crear v2 (v={v})"
+
+            hist = aud.obtener_historial_versiones("libro.xlsx")
+            bytes_v1 = aud.obtener_bytes_snapshot("libro.xlsx", hist[0]["archivo_excel_snapshot"])
+            with open(libro, "rb") as f:
+                assert bytes_v1 and bytes_v1 != f.read(), "el snapshot histórico no debe ser el archivo actual"
+
+            wb_v1 = load_workbook(io.BytesIO(bytes_v1))
+            assert wb_v1.sheetnames == ["Datos", "Resumen"], "el snapshot debe conservar las hojas"
+            filas_v1 = [[c.value for c in r] for r in wb_v1["Datos"].iter_rows()]
+            assert ["BALANCER001", "Operativo"] in filas_v1, f"v1 debe conservar el estado original ({filas_v1})"
+        finally:
+            aud.HISTORY_DIR, aud.DOCS_DIR, aud.AUDIT_LOG_PATH = h_orig, d_orig, l_orig
+            aud._obtener_historial_versiones_cached.cache_clear()
 
 
 def check_vault_no_destruye_clave():
@@ -131,6 +180,7 @@ if __name__ == "__main__":
     check_resaltado_acentos_y_base64()
     check_fragmento_indice_original()
     check_visor_resaltado_base64()
+    check_excel_version_historica()
     check_vault_no_destruye_clave()
     check_tags_cuarentena_no_destruye_backup()
     check_plantillas_tipo_raiz()
