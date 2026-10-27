@@ -48,3 +48,6 @@ Thumbs.db
 dist/
 build/
 
+# Artefactos generados por la skill archify
+.archify/
+
