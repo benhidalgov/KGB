@@ -20,17 +20,38 @@
   .ext { stroke-dasharray: 6 4; }
   .ops { fill: none; stroke-dasharray: 4 4; }
   .t { font-size: 19px; font-weight: 700; }
-  .h { font-size: 15px; font-weight: 700; }
+  .h { font-size: 17px; font-weight: 700; }
   .s { font-size: 11.5px; }
-  .b { font-size: 11px; fill: var(--muted); }
+  .b { font-size: 11.5px; fill: var(--muted); }
   .m { font-size: 10.5px; fill: var(--muted); }
   .fl { stroke: var(--accent); stroke-width: 2; fill: none; marker-end: url(#flecha); }
   .fld { stroke: var(--muted); stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; marker-end: url(#flecha-m); }
   .crit { fill: var(--crit); } .int { fill: var(--int); } .extc { fill: var(--ext); }
+
+  /* Estado de foco: capa enfocada se agranda y centra; el resto atenúa. */
+  .capa { cursor: pointer; transform-box: view-box; transform-origin: 0 0;
+          transition: transform .4s ease, opacity .3s ease; outline: none; }
+  .capa.off { opacity: .25; }
+  .capa.on .band { stroke: var(--accent); stroke-width: 2; }
+  .capa:focus-visible .band { stroke: var(--accent); stroke-width: 2.5; }
+  .flecha { transition: opacity .3s ease; }
+  .flecha.off { opacity: .15; }
+  .servicios { display: none; }
+
+  #volver { position: fixed; top: 10px; right: 14px; display: none; z-index: 5;
+            font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer;
+            padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line);
+            background: var(--panel); color: var(--text); }
+  body.foco #volver { display: inline-block; }
+  body.foco .stamp { opacity: 0; }
+  .stamp { transition: opacity .3s ease; }
+  body.foco .pista { opacity: 0; }
+  .pista { transition: opacity .3s ease; }
 </style>
 </head>
 <body>
-<svg viewBox="0 0 1240 1015" role="img" aria-label="Esquema de arquitectura por capas">
+<button id="volver" type="button">← Volver</button>
+<svg id="svg" viewBox="0 0 1240 840" role="img" aria-label="Esquema de arquitectura por capas">
   <defs>
     <marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
@@ -40,130 +61,253 @@
     </marker>
   </defs>
 
-  <text class="t" x="30" y="30">Arquitectura de plataforma SMUCORP</text>
-  <text class="m" x="1210" y="28" text-anchor="end">Actualizado: 2 de noviembre de 2026 · Fuente: Inventario_Servidores_SMUCORP.xlsx (58 servidores · 70 servicios)</text>
+  <g id="escena">
+    <rect id="fondo" x="0" y="0" width="1240" height="840" fill="transparent"/>
+    <text class="t" x="30" y="30">Arquitectura de plataforma SMUCORP</text>
+    <text class="m stamp" x="1210" y="28" text-anchor="end">Actualizado: 2 de noviembre de 2026 · Fuente: Inventario_Servidores_SMUCORP.xlsx (58 servidores · 70 servicios)</text>
 
-  <!-- 1. Canales de entrada -->
-  <rect class="band" x="30" y="55" width="730" height="130" rx="10"/>
-  <text class="h" x="52" y="81">1 · Canales de entrada</text>
-  <text class="b" x="738" y="81" text-anchor="end">12 servicios · 6 externos · sin servidores propios</text>
-  <text class="s" x="130" y="107">•  Portal Web Clientes Unipay</text>
-  <text class="s" x="130" y="124">•  App Móvil Unipay (Wallet)</text>
-  <text class="s" x="130" y="141">•  POS Geocom / BBR SW de Cajas</text>
-  <text class="s" x="130" y="158">•  Tablets de autoservicio</text>
-  <text class="s" x="430" y="107">•  Call Center / IVR (Atento / TrustCorp)</text>
-  <text class="s" x="430" y="124">•  Chatbot WhatsApp (Chattigo)</text>
-  <text class="s" x="430" y="141">•  Fuerza de ventas SMU</text>
-  <text class="s" x="430" y="158">•  WebServices REST y lotes SFTP diarios  <tspan class="m">(+4)</tspan></text>
+    <!-- Flechas entre capas (tocadas por el foco, el resto se atenúa) -->
+    <g class="flecha" data-desde="1" data-hasta="2">
+      <line class="fl" x1="62" y1="153" x2="62" y2="169"/>
+      <text class="m" x="74" y="165">HTTPS</text>
+    </g>
+    <g class="flecha" data-desde="2" data-hasta="3">
+      <line class="fl" x1="62" y1="269" x2="62" y2="285"/>
+      <text class="m" x="74" y="281">IPSec</text>
+    </g>
+    <g class="flecha" data-desde="3" data-hasta="4">
+      <line class="fl" x1="62" y1="385" x2="62" y2="401"/>
+      <text class="m" x="74" y="397">ISO 8583</text>
+    </g>
+    <g class="flecha" data-desde="4" data-hasta="5">
+      <line class="fl" x1="62" y1="501" x2="62" y2="517"/>
+      <text class="m" x="74" y="513">JDBC</text>
+    </g>
+    <g class="flecha" data-desde="1" data-hasta="6">
+      <line class="fl" x1="762" y1="100" x2="818" y2="100"/>
+      <text class="m" x="790" y="93" text-anchor="middle">REST</text>
+    </g>
+    <g class="flecha" data-desde="3" data-hasta="6">
+      <line class="fl" x1="762" y1="330" x2="818" y2="330"/>
+      <text class="m" x="790" y="323" text-anchor="middle">ISO 8583</text>
+    </g>
+    <g class="flecha" data-desde="4" data-hasta="6">
+      <line class="fl" x1="762" y1="450" x2="818" y2="450"/>
+      <text class="m" x="790" y="443" text-anchor="middle">JDBC</text>
+    </g>
+    <g class="flecha" data-desde="7" data-hasta="5">
+      <line class="fld" x1="350" y1="647" x2="350" y2="621"/>
+      <text class="m" x="362" y="644">monitorea</text>
+    </g>
+    <g class="flecha" data-desde="7" data-hasta="4">
+      <line class="fld" x1="650" y1="647" x2="650" y2="621"/>
+    </g>
 
-  <line class="fl" x1="62" y1="187" x2="62" y2="213"/>
-  <text class="m" x="74" y="203">HTTPS</text>
+    <!-- 1. Canales de entrada -->
+    <g class="capa" data-capa="1" data-h0="96" data-h1="146" tabindex="0" role="button"
+       aria-label="Capa 1, Canales de entrada, 12 servicios">
+      <rect class="band" x="30" y="55" width="730" height="96" rx="10"/>
+      <text class="h" x="52" y="85">1 · Canales de entrada</text>
+      <text class="b" x="738" y="85" text-anchor="end">12 servicios · 6 externos · sin servidores propios</text>
+      <g class="servicios">
+        <text class="s" x="130" y="117">•  Portal Web Clientes Unipay</text>
+        <text class="s" x="130" y="134">•  App Móvil Unipay (Wallet)</text>
+        <text class="s" x="130" y="151">•  POS Geocom / BBR SW de Cajas</text>
+        <text class="s" x="130" y="168">•  Tablets de autoservicio</text>
+        <text class="s" x="430" y="117">•  Call Center / IVR (Atento / TrustCorp)</text>
+        <text class="s" x="430" y="134">•  Chatbot WhatsApp (Chattigo)</text>
+        <text class="s" x="430" y="151">•  Fuerza de ventas SMU</text>
+        <text class="s" x="430" y="168">•  WebServices REST y lotes SFTP diarios  <tspan class="m">(+4)</tspan></text>
+      </g>
+    </g>
 
-  <!-- 2. Perímetro -->
-  <rect class="band" x="30" y="215" width="730" height="110" rx="10"/>
-  <text class="h" x="52" y="241">2 · Perímetro de seguridad y red core</text>
-  <text class="b" x="738" y="241" text-anchor="end">6 servicios · 1 externo · 2 servidores · 2 críticos</text>
-  <text class="s" x="130" y="267">•  Firewalls FortiGate 100E (HA)</text>
-  <text class="s" x="130" y="284">•  VPN IPSec Site-to-Site (17 túneles)</text>
-  <text class="s" x="130" y="301">•  HAProxy (balanceo L7)</text>
-  <text class="s" x="430" y="267">•  Switches core HSRP (Lídice y Panamericana)</text>
-  <text class="s" x="430" y="284">•  VLANs 10/3280/3282/3328/3329</text>
-  <text class="s" x="430" y="301">•  Enlaces dedicados GTD</text>
+    <!-- 2. Perímetro -->
+    <g class="capa" data-capa="2" data-h0="96" data-h1="129" tabindex="0" role="button"
+       aria-label="Capa 2, Perímetro de seguridad y red core, 6 servicios">
+      <rect class="band" x="30" y="171" width="730" height="96" rx="10"/>
+      <text class="h" x="52" y="201">2 · Perímetro de seguridad y red core</text>
+      <text class="b" x="738" y="201" text-anchor="end">6 servicios · 1 externo · 2 servidores · 2 críticos</text>
+      <g class="servicios">
+        <text class="s" x="130" y="233">•  Firewalls FortiGate 100E (HA)</text>
+        <text class="s" x="130" y="250">•  VPN IPSec Site-to-Site (17 túneles)</text>
+        <text class="s" x="130" y="267">•  HAProxy (balanceo L7)</text>
+        <text class="s" x="430" y="233">•  Switches core HSRP (Lídice y Panamericana)</text>
+        <text class="s" x="430" y="250">•  VLANs 10/3280/3282/3328/3329</text>
+        <text class="s" x="430" y="267">•  Enlaces dedicados GTD</text>
+      </g>
+    </g>
 
-  <line class="fl" x1="62" y1="327" x2="62" y2="348"/>
-  <text class="m" x="74" y="340">IPSec</text>
+    <!-- 3. Integración -->
+    <g class="capa" data-capa="3" data-h0="96" data-h1="129" tabindex="0" role="button"
+       aria-label="Capa 3, Integración y bus de servicios, 6 servicios">
+      <rect class="band" x="30" y="287" width="730" height="96" rx="10"/>
+      <text class="h" x="52" y="317">3 · Integración y bus de servicios</text>
+      <text class="b" x="738" y="317" text-anchor="end">6 servicios · 12 servidores · 12 críticos</text>
+      <g class="servicios">
+        <text class="s" x="130" y="349">•  WSO2 API Manager &amp; ESB (clúster)</text>
+        <text class="s" x="130" y="366">•  Switch transaccional Unicard (ISO 8583)</text>
+        <text class="s" x="130" y="383">•  WSO2 Identity Server</text>
+        <text class="s" x="430" y="349">•  Active Directory (Domain Controllers)</text>
+        <text class="s" x="430" y="366">•  Servidor SFTP</text>
+        <text class="s" x="430" y="383">•  WSO2 Monitoring &amp; Analytics</text>
+      </g>
+    </g>
 
-  <!-- 3. Integración -->
-  <rect class="band" x="30" y="355" width="730" height="110" rx="10"/>
-  <text class="h" x="52" y="381">3 · Integración y bus de servicios</text>
-  <text class="b" x="738" y="381" text-anchor="end">6 servicios · 12 servidores · 12 críticos</text>
-  <text class="s" x="130" y="407">•  WSO2 API Manager &amp; ESB (clúster)</text>
-  <text class="s" x="130" y="424">•  Switch transaccional Unicard (ISO 8583)</text>
-  <text class="s" x="130" y="441">•  WSO2 Identity Server</text>
-  <text class="s" x="430" y="407">•  Active Directory (Domain Controllers)</text>
-  <text class="s" x="430" y="424">•  Servidor SFTP</text>
-  <text class="s" x="430" y="441">•  WSO2 Monitoring &amp; Analytics</text>
+    <!-- 4. Aplicaciones -->
+    <g class="capa" data-capa="4" data-h0="96" data-h1="146" tabindex="0" role="button"
+       aria-label="Capa 4, Aplicaciones de negocio y core financiero, 12 servicios">
+      <rect class="band" x="30" y="403" width="730" height="96" rx="10"/>
+      <text class="h" x="52" y="433">4 · Aplicaciones de negocio y core financiero</text>
+      <text class="b" x="738" y="433" text-anchor="end">12 servicios · 25 servidores · 15 críticos</text>
+      <g class="servicios">
+        <text class="s" x="130" y="465">•  CRM Engage</text>
+        <text class="s" x="130" y="482">•  Brider</text>
+        <text class="s" x="130" y="499">•  Credit Maker</text>
+        <text class="s" x="130" y="516">•  Be Clever</text>
+        <text class="s" x="430" y="465">•  Control de Gestión</text>
+        <text class="s" x="430" y="482">•  SAP BO</text>
+        <text class="s" x="430" y="499">•  App Booking Unicard Transaccional</text>
+        <text class="s" x="430" y="516">•  Pasarelas de canales  <tspan class="m">(+4)</tspan></text>
+      </g>
+    </g>
 
-  <line class="fl" x1="62" y1="467" x2="62" y2="488"/>
-  <text class="m" x="74" y="480">ISO 8583</text>
+    <!-- 5. Persistencia -->
+    <g class="capa" data-capa="5" data-h0="96" data-h1="163" tabindex="0" role="button"
+       aria-label="Capa 5, Persistencia, BD y batch, 9 servicios">
+      <rect class="band" x="30" y="519" width="730" height="96" rx="10"/>
+      <text class="h" x="52" y="549">5 · Persistencia, BD y batch</text>
+      <text class="b" x="738" y="549" text-anchor="end">9 servicios · 11 servidores · 8 críticos</text>
+      <g class="servicios">
+        <text class="s" x="130" y="581">•  SQL Server – BD Engage</text>
+        <text class="s" x="130" y="598">•  SQL Server – BD Brider</text>
+        <text class="s" x="130" y="615">•  SQL Server – BD Canales</text>
+        <text class="s" x="130" y="632">•  SQL Server – BD Prodapps108</text>
+        <text class="s" x="130" y="649">•  MySQL – BD Credit Maker</text>
+        <text class="s" x="430" y="581">•  SAP HANA</text>
+        <text class="s" x="430" y="598">•  Datamart BI</text>
+        <text class="s" x="430" y="615">•  Jenkins (malla batch nocturna)</text>
+        <text class="s" x="430" y="632">•  File Server SCL012 y ETLs diarios</text>
+      </g>
+    </g>
 
-  <!-- 4. Aplicaciones -->
-  <rect class="band" x="30" y="495" width="730" height="150" rx="10"/>
-  <text class="h" x="52" y="521">4 · Aplicaciones de negocio y core financiero</text>
-  <text class="b" x="738" y="521" text-anchor="end">12 servicios · 25 servidores · 15 críticos</text>
-  <text class="s" x="130" y="547">•  CRM Engage</text>
-  <text class="s" x="130" y="564">•  Brider</text>
-  <text class="s" x="130" y="581">•  Credit Maker</text>
-  <text class="s" x="130" y="598">•  Be Clever</text>
-  <text class="s" x="430" y="547">•  Control de Gestión</text>
-  <text class="s" x="430" y="564">•  SAP BO</text>
-  <text class="s" x="430" y="581">•  App Booking Unicard Transaccional</text>
-  <text class="s" x="430" y="598">•  Pasarelas de canales  <tspan class="m">(+4)</tspan></text>
+    <!-- 6. Ecosistema externo -->
+    <g class="capa" data-capa="6" data-h0="560" data-h1="560" tabindex="0" role="button"
+       aria-label="Capa 6, Ecosistema externo, 19 servicios">
+      <rect class="band ext" x="820" y="55" width="390" height="560" rx="10"/>
+      <text class="h" x="842" y="85">6 · Ecosistema externo</text>
+      <text class="b" x="1188" y="105" text-anchor="end">19 servicios · 19 externos</text>
+      <text class="m pista" x="842" y="330">Clic para ver los 19 servicios</text>
+      <g class="servicios">
+        <text class="s" x="842" y="131">•  Minsait Payments / NUEK (Switch Core)</text>
+        <text class="s" x="842" y="149">•  Transbank</text>
+        <text class="s" x="842" y="167">•  Banchile</text>
+        <text class="s" x="842" y="185">•  Unired</text>
+        <text class="s" x="842" y="203">•  Nexus</text>
+        <text class="s" x="842" y="221">•  Equifax (Dicom) · Sinacofi · TransUnion</text>
+        <text class="s" x="842" y="239">•  CMF (Comisión para el Mercado Financiero)</text>
+        <text class="s" x="842" y="257">•  AWS (Unicard VPN)</text>
+        <text class="m" x="842" y="289">+11 adicionales: seguros (Bci, American Assist,</text>
+        <text class="m" x="842" y="305">Mok), cobranza (Colektia), Previred, VPN (MV,</text>
+        <text class="m" x="842" y="321">ZCC), POS Chile / Uruguay</text>
+      </g>
+    </g>
 
-  <line class="fl" x1="62" y1="647" x2="62" y2="668"/>
-  <text class="m" x="74" y="660">JDBC</text>
+    <!-- 7. Operación -->
+    <g class="capa" data-capa="7" data-h0="110" data-h1="112" tabindex="0" role="button"
+       aria-label="Capa 7, Operación y monitoreo, 6 servicios">
+      <rect class="band ops" x="30" y="651" width="1180" height="110" rx="10"/>
+      <text class="h" x="52" y="681">7 · Operación y monitoreo</text>
+      <text class="b" x="1188" y="681" text-anchor="end">6 servicios · 3 internos / 3 externos · 8 servidores · 6 críticos</text>
+      <g class="servicios">
+        <text class="s" x="52" y="713">•  Nagios XI</text>
+        <text class="s" x="52" y="730">•  Vzor Suite</text>
+        <text class="s" x="420" y="713">•  New Relic</text>
+        <text class="s" x="420" y="730">•  PRTG Network Monitor</text>
+        <text class="s" x="790" y="713">•  Azure DevOps</text>
+        <text class="s" x="790" y="730">•  vCloud GTD (IaaS 2.0 / 2.1)</text>
+      </g>
+    </g>
 
-  <!-- 5. Persistencia -->
-  <rect class="band" x="30" y="675" width="730" height="130" rx="10"/>
-  <text class="h" x="52" y="701">5 · Persistencia, BD y batch</text>
-  <text class="b" x="738" y="701" text-anchor="end">9 servicios · 11 servidores · 8 críticos</text>
-  <text class="s" x="130" y="727">•  SQL Server – BD Engage</text>
-  <text class="s" x="130" y="744">•  SQL Server – BD Brider</text>
-  <text class="s" x="130" y="761">•  SQL Server – BD Canales</text>
-  <text class="s" x="130" y="778">•  SQL Server – BD Prodapps108</text>
-  <text class="s" x="130" y="795">•  MySQL – BD Credit Maker</text>
-  <text class="s" x="430" y="727">•  SAP HANA</text>
-  <text class="s" x="430" y="744">•  Datamart BI</text>
-  <text class="s" x="430" y="761">•  Jenkins (malla batch nocturna)</text>
-  <text class="s" x="430" y="778">•  File Server SCL012 y ETLs diarios</text>
-
-  <!-- 6. Ecosistema externo -->
-  <rect class="band ext" x="820" y="55" width="390" height="750" rx="10"/>
-  <text class="h" x="842" y="81">6 · Ecosistema externo</text>
-  <text class="b" x="1188" y="101" text-anchor="end">19 servicios · 19 externos</text>
-  <text class="s" x="842" y="131">•  Minsait Payments / NUEK (Switch Core)</text>
-  <text class="s" x="842" y="149">•  Transbank</text>
-  <text class="s" x="842" y="167">•  Banchile</text>
-  <text class="s" x="842" y="185">•  Unired</text>
-  <text class="s" x="842" y="203">•  Nexus</text>
-  <text class="s" x="842" y="221">•  Equifax (Dicom) · Sinacofi · TransUnion</text>
-  <text class="s" x="842" y="239">•  CMF (Comisión para el Mercado Financiero)</text>
-  <text class="s" x="842" y="257">•  AWS (Unicard VPN)</text>
-  <text class="m" x="842" y="289">+11 adicionales: seguros (Bci, American Assist,</text>
-  <text class="m" x="842" y="305">Mok), cobranza (Colektia), Previred, VPN (MV,</text>
-  <text class="m" x="842" y="321">ZCC), POS Chile / Uruguay</text>
-
-  <line class="fl" x1="762" y1="150" x2="818" y2="150"/>
-  <text class="m" x="790" y="143" text-anchor="middle">REST</text>
-  <line class="fl" x1="762" y1="420" x2="818" y2="420"/>
-  <text class="m" x="790" y="413" text-anchor="middle">ISO 8583</text>
-  <line class="fl" x1="762" y1="560" x2="818" y2="560"/>
-  <text class="m" x="790" y="553" text-anchor="middle">JDBC</text>
-
-  <!-- 7. Operación -->
-  <rect class="band ops" x="30" y="835" width="1180" height="140" rx="10"/>
-  <text class="h" x="52" y="861">7 · Operación y monitoreo</text>
-  <text class="b" x="1188" y="861" text-anchor="end">6 servicios · 3 internos / 3 externos · 8 servidores · 6 críticos</text>
-  <text class="s" x="52" y="889">•  Nagios XI</text>
-  <text class="s" x="52" y="906">•  Vzor Suite</text>
-  <text class="s" x="420" y="889">•  New Relic</text>
-  <text class="s" x="420" y="906">•  PRTG Network Monitor</text>
-  <text class="s" x="790" y="889">•  Azure DevOps</text>
-  <text class="s" x="790" y="906">•  vCloud GTD (IaaS 2.0 / 2.1)</text>
-
-  <line class="fld" x1="350" y1="831" x2="350" y2="810"/>
-  <text class="m" x="362" y="828">monitorea</text>
-  <line class="fld" x1="650" y1="831" x2="650" y2="810"/>
-
-  <!-- Leyenda -->
-  <circle class="crit" cx="36" cy="1000" r="5"/>
-  <text class="m" x="48" y="1004">Servidor crítico (43)</text>
-  <circle class="int" cx="196" cy="1000" r="5"/>
-  <text class="m" x="208" y="1004">Interno</text>
-  <circle class="extc" cx="280" cy="1000" r="5"/>
-  <text class="m" x="292" y="1004">Externo (borde punteado)</text>
-  <text class="m" x="470" y="1004">Mapeo de servidores: Nivel infraestructura + Sistema (los 12 "Transversal" y 1 sin dato, repartidos por Sistema) · total 58</text>
-  <text class="m" x="1210" y="1004" text-anchor="end">Esquema v1 · pendiente de iteración</text>
+    <!-- Leyenda -->
+    <circle class="crit" cx="36" cy="793" r="5"/>
+    <text class="m" x="48" y="797">Servidor crítico (43)</text>
+    <circle class="int" cx="196" cy="793" r="5"/>
+    <text class="m" x="208" y="797">Interno</text>
+    <circle class="extc" cx="280" cy="793" r="5"/>
+    <text class="m" x="292" y="797">Externo (borde punteado)</text>
+    <text class="m" x="470" y="797">Mapeo de servidores: Nivel infraestructura + Sistema (los 12 "Transversal" y 1 sin dato, repartidos por Sistema) · total 58</text>
+    <text class="m" x="1210" y="797" text-anchor="end">Clic en una capa para ver sus servicios</text>
+  </g>
 </svg>
+
+<script>
+(function () {
+  var escena = document.getElementById('escena');
+  var capas = Array.prototype.slice.call(document.querySelectorAll('.capa'));
+  var flechas = Array.prototype.slice.call(document.querySelectorAll('.flecha'));
+  var activa = null;
+
+  function ordenar() {
+    capas.forEach(function (c) { escena.appendChild(c); });
+    if (activa) {
+      var on = capas.filter(function (c) { return c.dataset.capa === activa; })[0];
+      if (on) escena.appendChild(on);
+    }
+  }
+
+  function enfocar(id) {
+    activa = id;
+    document.body.classList.add('foco');
+    capas.forEach(function (c) {
+      var on = c.dataset.capa === id;
+      c.classList.toggle('on', on);
+      c.classList.toggle('off', !on);
+      c.querySelector('rect').setAttribute('height', on ? c.dataset.h1 : c.dataset.h0);
+      c.querySelector('.servicios').style.display = on ? '' : 'none';
+      if (!on) c.style.transform = '';
+    });
+    flechas.forEach(function (f) {
+      f.classList.toggle('off', f.dataset.desde !== id && f.dataset.hasta !== id);
+    });
+    var foco = capas.filter(function (c) { return c.dataset.capa === id; })[0];
+    var b = foco.getBBox();
+    var s = Math.min(1200 / b.width, 780 / b.height, 1.4);
+    foco.style.transform = 'translate(' + (620 - s * (b.x + b.width / 2)) + 'px,' +
+                            (420 - s * (b.y + b.height / 2)) + 'px) scale(' + s + ')';
+    ordenar();
+    foco.focus({ preventScroll: true });
+  }
+
+  function volver() {
+    if (!activa) return;
+    activa = null;
+    document.body.classList.remove('foco');
+    capas.forEach(function (c) {
+      c.classList.remove('on', 'off');
+      c.style.transform = '';
+      c.querySelector('rect').setAttribute('height', c.dataset.h0);
+      c.querySelector('.servicios').style.display = 'none';
+    });
+    flechas.forEach(function (f) { f.classList.remove('off'); });
+    ordenar();
+  }
+
+  capas.forEach(function (c) {
+    var id = c.dataset.capa;
+    var accion = function () {
+      if (!activa) enfocar(id);
+      else if (activa !== id) volver();   // clic fuera del foco vuelve al esquema
+    };
+    c.addEventListener('click', accion);
+    c.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); accion(); }
+    });
+  });
+
+  document.getElementById('fondo').addEventListener('click', volver);
+  document.getElementById('volver').addEventListener('click', volver);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') volver(); });
+})();
+</script>
 </body>
 </html>
