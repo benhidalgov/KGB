@@ -53,7 +53,7 @@
 </head>
 <body>
 <button id="volver" type="button">← Volver</button>
-<svg id="svg" viewBox="0 0 1240 840" role="img" aria-label="Esquema de arquitectura por capas">
+<svg id="svg" viewBox="0 0 1240 960" role="img" aria-label="Esquema de arquitectura por capas">
   <defs>
     <marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
@@ -64,7 +64,7 @@
   </defs>
 
   <g id="escena">
-    <rect id="fondo" x="0" y="0" width="1240" height="840" fill="transparent"/>
+    <rect id="fondo" x="0" y="0" width="1240" height="960" fill="transparent"/>
     <text class="t" x="30" y="30">Arquitectura de plataforma SMUCORP</text>
     <text class="m stamp" x="1210" y="28" text-anchor="end">Actualizado: 2 de noviembre de 2026 · Fuente: Inventario_Servidores_SMUCORP.xlsx (58 servidores · 70 servicios)</text>
 
@@ -214,30 +214,45 @@
       </g>
     </g>
 
-    <!-- 7. Operación -->
-    <g class="capa" data-capa="7" data-h0="110" data-h1="112" tabindex="0" role="button"
-       aria-label="Capa 7, Operación y monitoreo, 6 servicios">
-      <rect class="band ops" x="30" y="651" width="1180" height="110" rx="10"/>
+    <!-- 7. Operación y monitoreo -->
+    <g class="capa" data-capa="7" data-h0="96" data-h1="112" tabindex="0" role="button"
+       aria-label="Capa 7, Operación y monitoreo, 4 servicios">
+      <rect class="band ops" x="30" y="651" width="1180" height="96" rx="10"/>
       <text class="h" x="52" y="681">7 · Operación y monitoreo</text>
-      <text class="b" x="1188" y="681" text-anchor="end">6 servicios · 3 internos / 3 externos · 8 servidores · 6 críticos</text>
+      <text class="b" x="1188" y="681" text-anchor="end">4 servicios · 1 externo · 4 servidores · 1 crítico</text>
       <g class="servicios">
         <text class="s" x="52" y="713">•  Nagios XI</text>
         <text class="s" x="52" y="730">•  Vzor Suite</text>
-        <text class="s" x="420" y="713">•  New Relic</text>
-        <text class="s" x="420" y="730">•  PRTG Network Monitor</text>
-        <text class="s" x="790" y="713">•  Azure DevOps</text>
-        <text class="s" x="790" y="730">•  vCloud GTD (IaaS 2.0 / 2.1)</text>
+        <text class="s" x="420" y="713">•  PRTG Network Monitor</text>
+        <text class="s" x="420" y="730">•  New Relic (SaaS)</text>
+        <text class="m" x="790" y="713">Observa y opera las capas 1–6.</text>
+        <text class="m" x="790" y="730">Hosts: VZOR · CGESTION01 · PRODAPPS108 · PRODRISK01</text>
+      </g>
+    </g>
+
+    <!-- 8. Hosting e IaaS -->
+    <g class="capa" data-capa="8" data-h0="80" data-h1="96" tabindex="0" role="button"
+       aria-label="Capa 8, Hosting y entrega, 2 servicios">
+      <rect class="band ops" x="30" y="771" width="1180" height="80" rx="10"/>
+      <text class="h" x="52" y="801">8 · Hosting, entrega y despliegue</text>
+      <text class="b" x="1188" y="801" text-anchor="end">2 servicios · 1 externo · 4 servidores · 4 críticos</text>
+      <text class="m pista" x="52" y="833">Clic para ver el detalle</text>
+      <g class="servicios">
+        <text class="s" x="52" y="833">•  vCloud GTD — IaaS 2.0 / 2.1 (tenant SMUCORP)</text>
+        <text class="s" x="420" y="833">•  Azure DevOps (CI/CD, SaaS)</text>
+        <text class="m" x="790" y="833">Hosts GTD: ADM-Intesis-001 · COLECTOR-UNICARD</text>
+        <text class="m" x="790" y="850">FORTISIEM-COLLECTOR-UNICARD · Vzor01-001</text>
       </g>
     </g>
 
     <!-- Leyenda -->
-    <circle class="crit" cx="36" cy="793" r="5"/>
-    <text class="m" x="48" y="797">Servidor crítico (43)</text>
-    <circle class="int" cx="196" cy="793" r="5"/>
-    <text class="m" x="208" y="797">Interno</text>
-    <circle class="extc" cx="280" cy="793" r="5"/>
-    <text class="m" x="292" y="797">Externo (borde punteado)</text>
-    <text class="m" x="470" y="797">Mapeo de servidores por Nivel infraestructura + Sistema (los 12 "Transversal" y 1 sin dato, repartidos por Sistema) · total 58</text>
+    <circle class="crit" cx="36" cy="913" r="5"/>
+    <text class="m" x="48" y="917">Servidor crítico (43)</text>
+    <circle class="int" cx="196" cy="913" r="5"/>
+    <text class="m" x="208" y="917">Interno</text>
+    <circle class="extc" cx="280" cy="913" r="5"/>
+    <text class="m" x="292" y="917">Externo (borde punteado)</text>
+    <text class="m" x="470" y="917">Mapeo de servidores por Nivel infraestructura + Sistema (los 12 "Transversal" y 1 sin dato, repartidos por Sistema) · total 58</text>
   </g>
 </svg>
 
@@ -271,9 +286,9 @@
     });
     var foco = capas.filter(function (c) { return c.dataset.capa === id; })[0];
     var b = foco.getBBox();
-    var s = Math.min(1200 / b.width, 780 / b.height, 1.4);
+    var s = Math.min(1200 / b.width, 900 / b.height, 1.4);
     foco.style.transform = 'translate(' + (620 - s * (b.x + b.width / 2)) + 'px,' +
-                            (420 - s * (b.y + b.height / 2)) + 'px) scale(' + s + ')';
+                            (480 - s * (b.y + b.height / 2)) + 'px) scale(' + s + ')';
     ordenar();
     foco.focus({ preventScroll: true });
   }

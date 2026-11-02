@@ -31,4 +31,4 @@ def renderizar_seccion_arquitectura():
         st.info("No se encontró el diagrama de arquitectura en `assets/arquitectura/arquitectura.html`.")
         return
     st.caption("Arquitectura de plataforma · versión del repositorio")
-    st.components.v1.html(contenido, height=1020, scrolling=False)
+    st.components.v1.html(contenido, height=1120, scrolling=False)
