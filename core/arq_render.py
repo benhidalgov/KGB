@@ -37,6 +37,7 @@ CSS = """
   :root {
     --bg: #f7f7f5; --panel: #ffffff; --panel2: #efefea; --text: #1a1a1a; --muted: #6b6b6b;
     --line: #d8d8d4; --accent: #2f6feb; --crit: #c2410c; --int: #0f766e; --ext: #7c3aed;
+    --dur-rapida: .16s; --dur-media: .28s; --ease: cubic-bezier(.2, .6, .2, 1);
   }
   html.tema-oscuro {
     --bg: #131313; --panel: #1d1d20; --panel2: #232327; --text: #e9e9e7; --muted: #9a9a98;
@@ -48,6 +49,22 @@ CSS = """
   svg.vista { flex: 1 1 auto; width: 100%; min-height: 0; }
   svg text { fill: var(--text); }
   svg[hidden] { display: none; }
+
+  /* Movimiento: solo lo que explica algo. Una curva, dos duraciones. */
+  @keyframes aparecer { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes trazar { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
+  .servicios, .preview { animation: aparecer var(--dur-media) var(--ease) both; }
+  .flujo.on .paso { animation: aparecer var(--dur-rapida) var(--ease) both;
+                    animation-delay: calc(var(--i, 0) * 45ms); }
+  .flujo.on .ff { animation: trazar var(--dur-media) var(--ease) both;
+                  stroke-dasharray: 1000; }
+  .band, .fila, .nodo { transition: fill var(--dur-rapida) var(--ease),
+                                   stroke var(--dur-rapida) var(--ease); }
+  .capa:not(.off):hover .band, .flujo:not(.off):hover .fila { fill: var(--panel2); }
+  @media (prefers-reduced-motion: reduce) {
+    .servicios, .preview, .flujo.on .paso, .flujo.on .ff { animation: none; }
+    .capa, .flecha, .flujo, .band, .fila, .nodo { transition: none; }
+  }
 
   #tabs { display: flex; align-items: center; gap: 6px; padding: 8px 12px 0; }
   .tab { font: 600 12px/1 inherit; cursor: pointer; padding: 7px 14px; border-radius: 8px;
@@ -475,18 +492,20 @@ def _svg_flujo(modelo: dict) -> tuple:
         alto_pila = {c: n * NODO_H + (n - 1) * 8 for c, n in conteo.items()}
 
         cajas = []
-        for paso, indice in posiciones:
+        for k, (paso, indice) in enumerate(posiciones):
             capa_id = paso["capa"]
             total = conteo[capa_id]
             x = COL_X0 + (capa_id - 1) * COL_W
             y = centro - alto_pila[capa_id] / 2 + indice * (NODO_H + 8)
             servicio = next(s for s in capas[capa_id]["servicios"] if s["id"] == paso["servicio"])
             lineas = _envolver(servicio["nombre"], FUENTE_NODO)[:2]
-            piezas.append(f'      <rect class="nodo" x="{x:g}" y="{y:g}" width="{NODO_W}" height="{NODO_H}" rx="7"/>')
+            piezas.append(f'      <g class="paso" style="--i:{k}">')
+            piezas.append(f'        <rect class="nodo" x="{x:g}" y="{y:g}" width="{NODO_W}" height="{NODO_H}" rx="7"/>')
             base = y + NODO_H / 2 + (0 if len(lineas) == 1 else -4) + 4
             for i, linea in enumerate(lineas):
                 piezas.append(_texto(x + NODO_W / 2, base + 12 * i, "s", _t(linea),
                                      ' text-anchor="middle"'))
+            piezas.append("      </g>")
             cajas.append((x, y, total))
 
         for i in range(len(cajas) - 1):
