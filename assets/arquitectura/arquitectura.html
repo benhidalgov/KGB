@@ -17,7 +17,10 @@
   body { margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column;
          background: var(--bg); color: var(--text);
          font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif; }
-  svg.vista { flex: 1 1 auto; width: 100%; min-height: 0; }
+  svg.vista { flex: 1 1 auto; width: 100%; min-height: 0; cursor: grab; }
+  body.arrastrando svg.vista { cursor: grabbing; }
+  body.arrastrando { user-select: none; }
+  #escena, #escena-flujo { transform-box: view-box; transform-origin: 0 0; }
   svg text { fill: var(--text); }
   svg[hidden] { display: none; }
 
@@ -97,7 +100,7 @@
 <header id="tabs" role="tablist">
   <button class="tab" type="button" role="tab" data-vista="capas" aria-selected="true">Capas</button>
   <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false">Flujo</button>
-  <span id="pista-vista">Clic en una capa o flujo para enfocar · Esc para volver</span>
+  <span id="pista-vista">Clic para enfocar · Rueda para zoom · Arrastrá para mover · Esc para volver</span>
 </header>
 <svg id="vista-capas" class="vista" viewBox="0 0 1240 960" role="img" aria-label="Esquema de arquitectura por capas">
   <defs>
@@ -509,7 +512,79 @@
   var capas = Array.prototype.slice.call(vistaCapas.querySelectorAll('.capa'));
   var flechas = Array.prototype.slice.call(vistaCapas.querySelectorAll('.flecha'));
   var flujos = Array.prototype.slice.call(vistaFlujo.querySelectorAll('.flujo'));
+  var escenas = [document.getElementById('escena'), document.getElementById('escena-flujo')];
   var capaActiva = null, flujoActivo = null;
+  var zoom = { s: 1, x: 0, y: 0 };
+  var arrastre = null, movido = false, suprimir = false;
+
+  function aplicarZoom() {
+    escenas.forEach(function (e) {
+      e.style.transform = zoom.s === 1 ? '' :
+        'translate(' + zoom.x + 'px,' + zoom.y + 'px) scale(' + zoom.s + ')';
+    });
+  }
+
+  function resetZoom() {
+    zoom.s = 1; zoom.x = 0; zoom.y = 0;
+    aplicarZoom();
+  }
+
+  function punto(e, svg) {
+    var vb = svg.viewBox.baseVal, r = svg.getBoundingClientRect();
+    var k = Math.min(r.width / vb.width, r.height / vb.height);
+    var ox = r.left + (r.width - vb.width * k) / 2;
+    var oy = r.top + (r.height - vb.height * k) / 2;
+    return { x: (e.clientX - ox) / k, y: (e.clientY - oy) / k };
+  }
+
+  function escalaDe(svg) {
+    var vb = svg.viewBox.baseVal, r = svg.getBoundingClientRect();
+    return Math.min(r.width / vb.width, r.height / vb.height);
+  }
+
+  function fijar(svg) {
+    var vb = svg.viewBox.baseVal;
+    zoom.x = Math.min(0, Math.max(vb.width * (1 - zoom.s), zoom.x));
+    zoom.y = Math.min(0, Math.max(vb.height * (1 - zoom.s), zoom.y));
+  }
+
+  function alRodar(e, svg) {
+    if (capaActiva) return;
+    e.preventDefault();
+    var p = punto(e, svg);
+    var nuevo = Math.min(3, Math.max(1, zoom.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
+    zoom.x += p.x * (zoom.s - nuevo);
+    zoom.y += p.y * (zoom.s - nuevo);
+    zoom.s = nuevo;
+    fijar(svg);
+    aplicarZoom();
+  }
+
+  function alPresionar(e, svg) {
+    if (capaActiva || e.button !== 0) return;
+    suprimir = false; movido = false;
+    arrastre = { svg: svg, x: e.clientX, y: e.clientY, tx: zoom.x, ty: zoom.y };
+    cuerpo.classList.add('arrastrando');
+  }
+
+  function alMover(e) {
+    if (!arrastre) return;
+    if (zoom.s === 1) return;                         // sin zoom no hay nada que mover
+    if (Math.abs(e.clientX - arrastre.x) + Math.abs(e.clientY - arrastre.y) > 4) movido = true;
+    if (!movido) return;
+    var k = escalaDe(arrastre.svg);
+    zoom.x = arrastre.tx + (e.clientX - arrastre.x) / k;
+    zoom.y = arrastre.ty + (e.clientY - arrastre.y) / k;
+    fijar(arrastre.svg);
+    aplicarZoom();
+  }
+
+  function alSoltar() {
+    if (!arrastre) return;
+    arrastre = null;
+    cuerpo.classList.remove('arrastrando');
+    if (movido) { suprimir = true; setTimeout(function () { suprimir = false; }, 0); }
+  }
 
   function ordenar() {
     var escena = document.getElementById('escena');
@@ -521,6 +596,7 @@
   }
 
   function enfocar(id) {
+    resetZoom();
     capaActiva = id;
     cuerpo.classList.add('foco');
     capas.forEach(function (c) {
@@ -543,6 +619,7 @@
   }
 
   function volver() {
+    resetZoom();
     if (!capaActiva) return;
     capaActiva = null;
     cuerpo.classList.remove('foco');
@@ -573,6 +650,7 @@
   capas.forEach(function (c) {
     var id = c.dataset.capa;
     var accion = function () {
+      if (suprimir) return;
       if (!capaActiva) enfocar(id);
       else if (capaActiva !== id) volver();
     };
@@ -585,6 +663,7 @@
   flujos.forEach(function (f) {
     var id = f.dataset.flujo;
     var accion = function () {
+      if (suprimir) return;
       if (flujoActivo === id) limpiarFlujos();
       else enfocarFlujo(id);
     };
@@ -594,12 +673,24 @@
     });
   });
 
-  document.getElementById('fondo-capas').addEventListener('click', volver);
-  document.getElementById('fondo-flujo').addEventListener('click', limpiarFlujos);
+  document.getElementById('fondo-capas').addEventListener('click', function () {
+    if (!suprimir) volver();
+  });
+  document.getElementById('fondo-flujo').addEventListener('click', function () {
+    if (!suprimir) limpiarFlujos();
+  });
   document.getElementById('volver').addEventListener('click', volver);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { volver(); limpiarFlujos(); }
   });
+
+  [vistaCapas, vistaFlujo].forEach(function (svg) {
+    svg.addEventListener('wheel', function (e) { alRodar(e, svg); }, { passive: false });
+    svg.addEventListener('pointerdown', function (e) { alPresionar(e, svg); });
+  });
+  window.addEventListener('pointermove', alMover);
+  window.addEventListener('pointerup', alSoltar);
+  window.addEventListener('pointercancel', alSoltar);
 
   tabs.forEach(function (t) {
     t.addEventListener('click', function () {

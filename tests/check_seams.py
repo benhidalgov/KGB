@@ -216,6 +216,8 @@ def check_arquitectura_html():
     assert "svg text { fill: var(--text); }" in claro, "el texto SVG debe seguir el tema"
     assert 'class="paso" style="--i:' in claro, "los pasos del flujo deben escalonarse"
     assert "prefers-reduced-motion" in claro, "el movimiento debe respetar la preferencia"
+    assert "addEventListener('wheel'" in claro and "passive: false" in claro, "falta el zoom con rueda"
+    assert "function resetZoom" in claro and "#escena, #escena-flujo" in claro, "falta el paneo"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
     for svg in re.findall(r"<svg .*?</svg>", claro, re.S):
         ET.fromstring(svg)
