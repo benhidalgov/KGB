@@ -32,6 +32,7 @@ from core.ui_consultas import renderizar_modulo_consultas
 from core.ui_mantenimientos import renderizar_modulo_mantenimientos
 from core.ui_documentos import renderizar_pestana_documentacion
 from core.ui_plantillas import renderizar_pestana_plantillas
+from core.ui_arquitectura import renderizar_seccion_arquitectura
 
 
 @st.cache_data(show_spinner=False, ttl=60)
@@ -159,6 +160,9 @@ if "Consultas" in seccion_activa:
 
 elif "Mantenimientos" in seccion_activa or "CMDB" in seccion_activa:
     renderizar_modulo_mantenimientos(df_mantenimientos_cache)
+
+elif "Arquitectura" in seccion_activa:
+    renderizar_seccion_arquitectura()
 
 elif "Documentación" in seccion_activa:
     renderizar_pestana_documentacion(st.session_state.doc_store)

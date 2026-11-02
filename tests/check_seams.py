@@ -196,6 +196,18 @@ def check_diagrama_ingesta_clave_unica():
             aud._obtener_historial_versiones_cached.cache_clear()
 
 
+def check_arquitectura_html():
+    """El HTML de arquitectura versionado carga y el tema se aplica sin residuos."""
+    from core.ui_arquitectura import cargar_html_arquitectura
+
+    claro = cargar_html_arquitectura("Claro")
+    assert "%%TEMA%%" not in claro and 'class="tema-claro"' in claro, "el tema claro debe aplicarse"
+    assert "Arquitectura de plataforma" in claro and "<svg" in claro, "falta el esquema"
+    oscuro = cargar_html_arquitectura("Oscuro")
+    assert 'class="tema-oscuro"' in oscuro and "%%TEMA%%" not in oscuro, "el tema oscuro debe aplicarse"
+    assert oscuro == claro.replace("tema-claro", "tema-oscuro"), "solo debe variar el tema"
+
+
 def _app_test(cuerpo: str) -> AppTest:
     """Construye un AppTest cuyo script corre en este proceso (patches de módulos aplican)."""
     script = f"import sys\nsys.path.insert(0, {ROOT!r})\n{cuerpo}"
@@ -278,6 +290,7 @@ if __name__ == "__main__":
     check_busqueda_multitermino_requiere_ambos()
     check_ruta_original_no_escapa_de_data()
     check_diagrama_ingesta_clave_unica()
+    check_arquitectura_html()
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
     print("[OK] check_seams")

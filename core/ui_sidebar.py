@@ -89,6 +89,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         # resetea la radio a la primera opción, arrastrando al usuario de módulo.
         opciones_nav = [
             "Consultas y Búsqueda",
+            "Arquitectura",
             "Historial de Mantenimientos",
             "Documentación Técnica",
             "Plantillas y Runbooks",

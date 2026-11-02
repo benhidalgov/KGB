@@ -34,6 +34,8 @@ MANIFEST_PATH = os.path.join(DATA_DIR, "ingestion_manifest.json")
 VAULT_FILE_PATH = os.path.join(DATA_DIR, ".vault.enc")
 VAULT_KEY_PATH = os.path.join(DATA_DIR, ".vault.key")
 CATEGORIAS_PATH = os.path.join(DATA_DIR, "categorias.json")
+# Fuera de data/: en Docker ese directorio es un bind mount del host y taparia el artefacto.
+ARQ_HTML_PATH = os.path.join(APP_DIR, "assets", "arquitectura", "arquitectura.html")
 PLANTILLAS_CUSTOM_PATH = os.path.join(DATA_DIR, "plantillas_custom.json")
 USERS_PATH = os.path.join(DATA_DIR, "users.json")
 
