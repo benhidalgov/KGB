@@ -212,6 +212,52 @@ def check_arquitectura_html():
     assert oscuro == claro.replace("tema-claro", "tema-oscuro"), "solo debe variar el tema"
 
 
+def check_arquitectura_modelo():
+    """El modelo generado del Excel es coherente y cubre el inventario completo."""
+    import json
+
+    from core.configuracion import APP_DIR
+
+    ruta = os.path.join(APP_DIR, "assets", "arquitectura", "modelo.json")
+    with open(ruta, encoding="utf-8") as f:
+        modelo = json.load(f)
+
+    capas = {c["id"]: c for c in modelo["capas"]}
+    assert sorted(capas) == list(range(1, 9)), "deben existir las 8 capas"
+    assert all(c["nombre"] for c in capas.values()), "toda capa necesita nombre"
+    total_servicios = sum(len(c["servicios"]) for c in capas.values())
+    assert total_servicios == modelo["meta"]["total_servicios"] == 70, \
+        f"servicios inconsistentes: {total_servicios}"
+    assert len(modelo["hosts"]) == modelo["meta"]["total_servidores"] == 58, "hosts inconsistentes"
+    assert sum(1 for h in modelo["hosts"] if h["critico"]) == modelo["meta"]["total_criticos"] == 43, \
+        "criticos inconsistentes"
+    assert sum(c["servidores"] for c in capas.values()) == 58, "los badges deben sumar el inventario"
+
+    ips = [h["ip"] for h in modelo["hosts"]]
+    assert len(set(ips)) == len(ips), "IP duplicada: dos filas describen el mismo equipo"
+    assert all(ips), "todo servidor necesita IP como identidad"
+    hostnames = [h["hostname"] for h in modelo["hosts"]]
+    if len(set(hostnames)) != len(hostnames):
+        print("  aviso: hostname repetido en el inventario "
+              f"({sorted({h for h in hostnames if hostnames.count(h) > 1})})")
+    ids = [s["id"] for c in capas.values() for s in c["servicios"]]
+    assert len(set(ids)) == len(ids), "id de servicio duplicado"
+    assert all(h["capa"] in capas for h in modelo["hosts"]), "servidor en capa inexistente"
+
+    for rel in modelo["relaciones"]:
+        assert rel["desde"] in capas and rel["hasta"] in capas, f"relacion invalida: {rel}"
+
+    assert len(modelo["flujos"]) == 5, "deben existir los 5 flujos"
+    for flujo in modelo["flujos"]:
+        assert len(flujo["pasos"]) >= 2, f"flujo corto: {flujo['id']}"
+        capas_flujo = [p["capa"] for p in flujo["pasos"]]
+        assert capas_flujo == sorted(capas_flujo), f"flujo no avanza por capas: {flujo['id']}"
+        for paso in flujo["pasos"]:
+            nombres = {s["id"] for s in capas[paso["capa"]]["servicios"]}
+            assert paso["servicio"] in nombres, \
+                f"{flujo['id']}: {paso['servicio']} no pertenece a la capa {paso['capa']}"
+
+
 def _app_test(cuerpo: str) -> AppTest:
     """Construye un AppTest cuyo script corre en este proceso (patches de módulos aplican)."""
     script = f"import sys\nsys.path.insert(0, {ROOT!r})\n{cuerpo}"
@@ -295,6 +341,7 @@ if __name__ == "__main__":
     check_ruta_original_no_escapa_de_data()
     check_diagrama_ingesta_clave_unica()
     check_arquitectura_html()
+    check_arquitectura_modelo()
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
     print("[OK] check_seams")

@@ -1,0 +1,1161 @@
+{
+ "meta": {
+  "fuente": "Inventario_Servidores_SMUCORP.xlsx",
+  "fuente_actualizada": "2026-11-02",
+  "total_servidores": 58,
+  "total_servicios": 70,
+  "total_criticos": 43
+ },
+ "capas": [
+  {
+   "id": 1,
+   "nombre": "Canales de entrada",
+   "plano": "trafico",
+   "servicios": [
+    {
+     "id": "geocom-bbr-sw-de-cajas",
+     "nombre": "Geocom / BBR SW de Cajas",
+     "categoria": "POS / Cajas",
+     "externo": true
+    },
+    {
+     "id": "lector-biometrico-dactilar-sovos",
+     "nombre": "Lector biométrico dactilar (Sovos)",
+     "categoria": "Hardware",
+     "externo": true
+    },
+    {
+     "id": "tablets-de-autoservicio-y-atencion-de-clientes",
+     "nombre": "Tablets de autoservicio y atención de clientes",
+     "categoria": "Hardware",
+     "externo": false
+    },
+    {
+     "id": "portal-web-clientes-unipay",
+     "nombre": "Portal Web Clientes Unipay",
+     "categoria": "Canal digital",
+     "externo": false
+    },
+    {
+     "id": "app-movil-unipay-wallet",
+     "nombre": "App Móvil Unipay (Wallet)",
+     "categoria": "Canal digital",
+     "externo": false
+    },
+    {
+     "id": "chatbot-whatsapp-chattigo",
+     "nombre": "Chatbot WhatsApp (Chattigo)",
+     "categoria": "Canal digital",
+     "externo": true
+    },
+    {
+     "id": "waf-https-tls",
+     "nombre": "WAF (HTTPS / TLS)",
+     "categoria": "Seguridad",
+     "externo": false
+    },
+    {
+     "id": "call-center-ivr-atento-trustcorp",
+     "nombre": "Call Center / IVR (Atento / TrustCorp)",
+     "categoria": "Canal operativo",
+     "externo": true
+    },
+    {
+     "id": "portal-unired-cajas-xcash",
+     "nombre": "Portal Unired / cajas XCash",
+     "categoria": "Recaudación",
+     "externo": true
+    },
+    {
+     "id": "fuerza-de-ventas-smu",
+     "nombre": "Fuerza de ventas SMU",
+     "categoria": "Canal operativo",
+     "externo": false
+    },
+    {
+     "id": "agencias-externas-serbanc-altsolution",
+     "nombre": "Agencias externas Serbanc / AltSolution",
+     "categoria": "Cobranza",
+     "externo": true
+    },
+    {
+     "id": "webservices-rest-y-lotes-sftp-diarios",
+     "nombre": "WebServices REST y lotes SFTP diarios",
+     "categoria": "Integración",
+     "externo": false
+    }
+   ],
+   "servidores": 0,
+   "criticos": 0
+  },
+  {
+   "id": 2,
+   "nombre": "Perímetro de seguridad y red core",
+   "plano": "trafico",
+   "servicios": [
+    {
+     "id": "firewalls-fortigate-100e-ha",
+     "nombre": "Firewalls FortiGate 100E (HA)",
+     "categoria": "Seguridad",
+     "externo": false
+    },
+    {
+     "id": "vpn-ipsec-site-to-site-17-tuneles",
+     "nombre": "VPN IPSec Site-to-Site (17 túneles)",
+     "categoria": "Conectividad",
+     "externo": false
+    },
+    {
+     "id": "haproxy-balanceo-l7",
+     "nombre": "HAProxy (balanceo L7)",
+     "categoria": "Balanceo",
+     "externo": false
+    },
+    {
+     "id": "switches-core-con-hsrp-lidice-y-panamericana",
+     "nombre": "Switches core con HSRP (Lídice y Panamericana)",
+     "categoria": "Red",
+     "externo": false
+    },
+    {
+     "id": "vlans-10-3280-3282-3328-3329",
+     "nombre": "VLANs (10, 3280, 3282, 3328, 3329)",
+     "categoria": "Red",
+     "externo": false
+    },
+    {
+     "id": "enlaces-dedicados-gtd",
+     "nombre": "Enlaces dedicados GTD",
+     "categoria": "Conectividad",
+     "externo": true
+    }
+   ],
+   "servidores": 2,
+   "criticos": 2
+  },
+  {
+   "id": 3,
+   "nombre": "Integración y bus de servicios",
+   "plano": "trafico",
+   "servicios": [
+    {
+     "id": "wso2-api-manager-esb-cluster",
+     "nombre": "WSO2 API Manager & ESB (clúster)",
+     "categoria": "Integración",
+     "externo": false
+    },
+    {
+     "id": "switch-transaccional-unicard-iso-8583",
+     "nombre": "Switch transaccional Unicard (ISO 8583)",
+     "categoria": "Transaccional",
+     "externo": false
+    },
+    {
+     "id": "wso2-identity-server",
+     "nombre": "WSO2 Identity Server",
+     "categoria": "Seguridad / IAM",
+     "externo": false
+    },
+    {
+     "id": "wso2-monitoring-analytics",
+     "nombre": "WSO2 Monitoring & Analytics",
+     "categoria": "Monitoreo",
+     "externo": false
+    },
+    {
+     "id": "active-directory-domain-controllers",
+     "nombre": "Active Directory (Domain Controllers)",
+     "categoria": "Seguridad / IAM",
+     "externo": false
+    },
+    {
+     "id": "servidor-sftp",
+     "nombre": "Servidor SFTP",
+     "categoria": "Transferencia de archivos",
+     "externo": false
+    }
+   ],
+   "servidores": 12,
+   "criticos": 12
+  },
+  {
+   "id": 4,
+   "nombre": "Aplicaciones de negocio y core financiero",
+   "plano": "trafico",
+   "servicios": [
+    {
+     "id": "crm-engage",
+     "nombre": "CRM Engage",
+     "categoria": "Core clientes",
+     "externo": false
+    },
+    {
+     "id": "brider",
+     "nombre": "Brider",
+     "categoria": "Core seguros",
+     "externo": false
+    },
+    {
+     "id": "credit-maker",
+     "nombre": "Credit Maker",
+     "categoria": "Riesgo",
+     "externo": false
+    },
+    {
+     "id": "servidor-de-riesgo",
+     "nombre": "Servidor de Riesgo",
+     "categoria": "Riesgo",
+     "externo": false
+    },
+    {
+     "id": "control-de-gestion",
+     "nombre": "Control de Gestión",
+     "categoria": "Gestión",
+     "externo": false
+    },
+    {
+     "id": "be-clever",
+     "nombre": "Be Clever",
+     "categoria": "Fidelización",
+     "externo": false
+    },
+    {
+     "id": "pasarelas-de-canales",
+     "nombre": "Pasarelas de canales",
+     "categoria": "Integración",
+     "externo": false
+    },
+    {
+     "id": "sap-bo",
+     "nombre": "SAP BO",
+     "categoria": "Reportería",
+     "externo": false
+    },
+    {
+     "id": "app-booking-unicard-transaccional",
+     "nombre": "App Booking Unicard Transaccional",
+     "categoria": "Aplicación",
+     "externo": false
+    },
+    {
+     "id": "asterisk-pbx",
+     "nombre": "Asterisk PBX",
+     "categoria": "Telefonía",
+     "externo": false
+    },
+    {
+     "id": "servidor-documental",
+     "nombre": "Servidor documental",
+     "categoria": "Documental",
+     "externo": false
+    },
+    {
+     "id": "relay-de-correo",
+     "nombre": "Relay de correo",
+     "categoria": "Correo",
+     "externo": false
+    }
+   ],
+   "servidores": 25,
+   "criticos": 15
+  },
+  {
+   "id": 5,
+   "nombre": "Persistencia, BD y batch",
+   "plano": "trafico",
+   "servicios": [
+    {
+     "id": "sql-server-bd-engage",
+     "nombre": "SQL Server – BD Engage",
+     "categoria": "Base de datos",
+     "externo": false
+    },
+    {
+     "id": "sql-server-bd-brider",
+     "nombre": "SQL Server – BD Brider",
+     "categoria": "Base de datos",
+     "externo": false
+    },
+    {
+     "id": "sql-server-bd-canales",
+     "nombre": "SQL Server – BD Canales",
+     "categoria": "Base de datos",
+     "externo": false
+    },
+    {
+     "id": "sql-server-bd-prodapps108",
+     "nombre": "SQL Server – BD Prodapps108",
+     "categoria": "Base de datos",
+     "externo": false
+    },
+    {
+     "id": "mysql-bd-credit-maker",
+     "nombre": "MySQL – BD Credit Maker",
+     "categoria": "Base de datos",
+     "externo": false
+    },
+    {
+     "id": "sap-hana",
+     "nombre": "SAP HANA",
+     "categoria": "Base de datos / ERP",
+     "externo": false
+    },
+    {
+     "id": "datamart-bi",
+     "nombre": "Datamart BI",
+     "categoria": "BI",
+     "externo": false
+    },
+    {
+     "id": "jenkins-malla-batch-nocturna",
+     "nombre": "Jenkins (malla batch nocturna)",
+     "categoria": "Automatización",
+     "externo": false
+    },
+    {
+     "id": "file-server-scl012-y-etls-diarios",
+     "nombre": "File Server SCL012 y ETLs diarios",
+     "categoria": "Archivos",
+     "externo": false
+    }
+   ],
+   "servidores": 11,
+   "criticos": 8
+  },
+  {
+   "id": 6,
+   "nombre": "Ecosistema externo",
+   "plano": "externo",
+   "servicios": [
+    {
+     "id": "minsait-payments-nuek-switch-core",
+     "nombre": "Minsait Payments / NUEK (Switch Core)",
+     "categoria": "Procesador de pagos",
+     "externo": true
+    },
+    {
+     "id": "sovos-autentia",
+     "nombre": "Sovos / Autentia",
+     "categoria": "Identidad y firma",
+     "externo": true
+    },
+    {
+     "id": "transbank",
+     "nombre": "Transbank",
+     "categoria": "Adquirencia",
+     "externo": true
+    },
+    {
+     "id": "banchile",
+     "nombre": "Banchile",
+     "categoria": "Banca y pagos",
+     "externo": true
+    },
+    {
+     "id": "unired",
+     "nombre": "Unired",
+     "categoria": "Banca y pagos",
+     "externo": true
+    },
+    {
+     "id": "nexus",
+     "nombre": "Nexus",
+     "categoria": "Banca y pagos",
+     "externo": true
+    },
+    {
+     "id": "mv-servicio-vpn",
+     "nombre": "MV-Servicio VPN",
+     "categoria": "Conectividad VPN",
+     "externo": true
+    },
+    {
+     "id": "zcc-vpn",
+     "nombre": "ZCC VPN",
+     "categoria": "Conectividad VPN",
+     "externo": true
+    },
+    {
+     "id": "colektia",
+     "nombre": "Colektia",
+     "categoria": "Cobranza",
+     "externo": true
+    },
+    {
+     "id": "aws-unicard-vpn",
+     "nombre": "AWS (Unicard VPN)",
+     "categoria": "Nube",
+     "externo": true
+    },
+    {
+     "id": "previred",
+     "nombre": "Previred",
+     "categoria": "Datos previsionales",
+     "externo": true
+    },
+    {
+     "id": "bci-seguros",
+     "nombre": "Bci Seguros",
+     "categoria": "Seguros",
+     "externo": true
+    },
+    {
+     "id": "american-assist",
+     "nombre": "American Assist",
+     "categoria": "Seguros",
+     "externo": true
+    },
+    {
+     "id": "servicios-mok",
+     "nombre": "Servicios Mok",
+     "categoria": "Seguros",
+     "externo": true
+    },
+    {
+     "id": "equifax-dicom",
+     "nombre": "Equifax (Dicom)",
+     "categoria": "Buró de crédito",
+     "externo": true
+    },
+    {
+     "id": "sinacofi",
+     "nombre": "Sinacofi",
+     "categoria": "Buró de crédito",
+     "externo": true
+    },
+    {
+     "id": "transunion",
+     "nombre": "TransUnion",
+     "categoria": "Buró de crédito",
+     "externo": true
+    },
+    {
+     "id": "cmf-comision-para-el-mercado-financiero",
+     "nombre": "CMF (Comisión para el Mercado Financiero)",
+     "categoria": "Regulador",
+     "externo": true
+    },
+    {
+     "id": "geocom-chile-y-sts-uruguay-conectividad-pos",
+     "nombre": "Geocom Chile y STS Uruguay (conectividad POS)",
+     "categoria": "POS",
+     "externo": true
+    }
+   ],
+   "servidores": 0,
+   "criticos": 0
+  },
+  {
+   "id": 7,
+   "nombre": "Operación y monitoreo",
+   "plano": "gestion",
+   "servicios": [
+    {
+     "id": "nagios-xi",
+     "nombre": "Nagios XI",
+     "categoria": "Monitoreo",
+     "externo": false
+    },
+    {
+     "id": "vzor-suite",
+     "nombre": "Vzor Suite",
+     "categoria": "Monitoreo",
+     "externo": false
+    },
+    {
+     "id": "new-relic",
+     "nombre": "New Relic",
+     "categoria": "APM",
+     "externo": true
+    },
+    {
+     "id": "prtg-network-monitor",
+     "nombre": "PRTG Network Monitor",
+     "categoria": "Monitoreo",
+     "externo": false
+    }
+   ],
+   "servidores": 4,
+   "criticos": 2
+  },
+  {
+   "id": 8,
+   "nombre": "Hosting, entrega y despliegue",
+   "plano": "gestion",
+   "servicios": [
+    {
+     "id": "azure-devops",
+     "nombre": "Azure DevOps",
+     "categoria": "DevOps",
+     "externo": true
+    },
+    {
+     "id": "vcloud-gtd-iaas-2-0-2-1",
+     "nombre": "vCloud GTD (IaaS 2.0 / 2.1)",
+     "categoria": "IaaS",
+     "externo": true
+    }
+   ],
+   "servidores": 4,
+   "criticos": 4
+  }
+ ],
+ "hosts": [
+  {
+   "hostname": "ADM-Intesis-001",
+   "ip": "10.24.0.10",
+   "sistema": "GTD",
+   "nivel": "GTD",
+   "capa": 8,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIAP-BCL01",
+   "ip": "10.24.0.77",
+   "sistema": "BE CLEVER",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "PDWIAP-SOLV",
+   "ip": "10.24.0.78",
+   "sistema": "BE CLEVER",
+   "nivel": "Base de Datos",
+   "capa": 5,
+   "critico": false
+  },
+  {
+   "hostname": "PDWIBD_SOLV",
+   "ip": "10.24.0.75",
+   "sistema": "BE CLEVER",
+   "nivel": "Base de Datos",
+   "capa": 5,
+   "critico": false
+  },
+  {
+   "hostname": "PDWIBD-SOLV",
+   "ip": "10.24.0.6",
+   "sistema": "BE CLEVER",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "CGESTION01",
+   "ip": "10.24.0.43",
+   "sistema": "CONTROL GESTION",
+   "nivel": "Explotacion",
+   "capa": 7,
+   "critico": false
+  },
+  {
+   "hostname": "COLECTOR-UNICARD",
+   "ip": "10.24.0.101",
+   "sistema": "GTD",
+   "nivel": "GTD",
+   "capa": 8,
+   "critico": true
+  },
+  {
+   "hostname": "CORSEG",
+   "ip": "10.24.0.141",
+   "sistema": "BRIDER",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "CORSEG-DB",
+   "ip": "10.24.0.142",
+   "sistema": "BRIDER",
+   "nivel": "Base de Datos",
+   "capa": 5,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIST-ED01",
+   "ip": "10.24.0.44",
+   "sistema": "ENGAGE",
+   "nivel": "Back-end",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "BALANCER001",
+   "ip": "10.24.0.125",
+   "sistema": "BALANCEADOR",
+   "nivel": "Transversal",
+   "capa": 2,
+   "critico": true
+  },
+  {
+   "hostname": "BALANCER002",
+   "ip": "10.24.0.126",
+   "sistema": "BALANCEADOR",
+   "nivel": "Transversal",
+   "capa": 2,
+   "critico": true
+  },
+  {
+   "hostname": "OTRS",
+   "ip": "10.24.0.25",
+   "sistema": "TICKETERA ANTIGUA",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "PDLXAP-SCP01",
+   "ip": "10.24.0.72",
+   "sistema": "IIS Control de Procesos",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "PDLXAP-CMS",
+   "ip": "10.24.0.144",
+   "sistema": "DOCKER(TRUST)",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PDLXAP-CMS",
+   "ip": "10.24.0.143",
+   "sistema": "TOMCAT(Web administradora)",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "PDLXAP-TFE02",
+   "ip": "10.24.0.35",
+   "sistema": "FRONT AUTOAPERTURA",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIAP-MON01",
+   "ip": "10.24.0.192",
+   "sistema": "ADSELFSERVICE - OTROS",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "PDWIAP-WSP01",
+   "ip": "10.24.0.146",
+   "sistema": "ALMACENADOR DE DOCUMENTOS",
+   "nivel": "Back-end",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIBD-SQL03",
+   "ip": "10.24.0.114",
+   "sistema": "CANALES",
+   "nivel": "Base de Datos",
+   "capa": 5,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIBD-SQL04R",
+   "ip": "10.24.0.117",
+   "sistema": "CANALES",
+   "nivel": "(sin dato)",
+   "capa": 5,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIIS-BFF01",
+   "ip": "10.24.0.36",
+   "sistema": "AutoApertura",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIIS-BFF02",
+   "ip": "10.24.0.37",
+   "sistema": "AutoApertura",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIIS-CAN01",
+   "ip": "10.24.0.73",
+   "sistema": "CANALES IIS",
+   "nivel": "Back-end",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIIS-CAN02",
+   "ip": "10.24.0.74",
+   "sistema": "CANALES IIS",
+   "nivel": "Back-end",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PDWIIS-CAN03",
+   "ip": "10.24.0.69",
+   "sistema": "SONAR CUBE, NGINX VARIOS",
+   "nivel": "Back-end",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PROAPPS046",
+   "ip": "10.24.0.50",
+   "sistema": "CREDIT MAKER",
+   "nivel": "Base de Datos",
+   "capa": 5,
+   "critico": true
+  },
+  {
+   "hostname": "PRODAPPS001",
+   "ip": "10.24.0.137",
+   "sistema": "TOMCAT PRINCIPAL & WEB(TC10)",
+   "nivel": "Back-end",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PRODAPPS012",
+   "ip": "10.24.0.17",
+   "sistema": "DOCUMENTAL",
+   "nivel": "Transversal",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "PRODAPPS108",
+   "ip": "10.24.0.21",
+   "sistema": "DATAMART",
+   "nivel": "Explotacion",
+   "capa": 7,
+   "critico": true
+  },
+  {
+   "hostname": "PRODAPPS406",
+   "ip": "10.24.0.12",
+   "sistema": "ENGAGE",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PRODAPPS407",
+   "ip": "10.24.0.19",
+   "sistema": "ENGAGE",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PRODDAPPS00-001-R",
+   "ip": "10.24.0.138",
+   "sistema": "RABBITMQ",
+   "nivel": "Back-end",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "PRODJENK001",
+   "ip": "10.24.0.135",
+   "sistema": "JENKINS",
+   "nivel": "Transversal",
+   "capa": 5,
+   "critico": true
+  },
+  {
+   "hostname": "PRODJENK002",
+   "ip": "10.24.0.136",
+   "sistema": "JENKINS",
+   "nivel": "Transversal",
+   "capa": 5,
+   "critico": true
+  },
+  {
+   "hostname": "PRODRISK01",
+   "ip": "10.24.0.39",
+   "sistema": "RIESGO",
+   "nivel": "Explotacion",
+   "capa": 7,
+   "critico": false
+  },
+  {
+   "hostname": "PRODSFTPS01",
+   "ip": "10.24.0.11",
+   "sistema": "SFTP",
+   "nivel": "Transversal",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "PRODSQL089",
+   "ip": "10.24.0.16",
+   "sistema": "ENGAGE",
+   "nivel": "Base de Datos",
+   "capa": 5,
+   "critico": true
+  },
+  {
+   "hostname": "PRODSQL090",
+   "ip": "10.24.0.20",
+   "sistema": "ENGAGE",
+   "nivel": "Base de Datos",
+   "capa": 5,
+   "critico": false
+  },
+  {
+   "hostname": "Relay-SMUCORP",
+   "ip": "10.24.0.45",
+   "sistema": "CORREO USO VZOR",
+   "nivel": "Transversal",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "PDWIAPAD001",
+   "ip": "10.24.0.22",
+   "sistema": "ACTIVE DIRECTORY",
+   "nivel": "Transversal",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "SMUCORPAD02",
+   "ip": "10.24.0.23",
+   "sistema": "ACTIVE DIRECTORY",
+   "nivel": "Transversal",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "SMUCORPSP02",
+   "ip": "10.24.0.41",
+   "sistema": "SHAREPOINT",
+   "nivel": "Transversal",
+   "capa": 4,
+   "critico": false
+  },
+  {
+   "hostname": "FORTISIEM-COLLECTOR-UNICARD",
+   "ip": "10.24.0.100",
+   "sistema": "GTD",
+   "nivel": "GTD",
+   "capa": 8,
+   "critico": true
+  },
+  {
+   "hostname": "VICIDIALNEW1",
+   "ip": "10.24.0.34",
+   "sistema": "TELEFONIA",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "VICIDIALNEW2",
+   "ip": "10.24.0.32",
+   "sistema": "TELEFONIA",
+   "nivel": "Frontend",
+   "capa": 4,
+   "critico": true
+  },
+  {
+   "hostname": "Vzor01-001",
+   "ip": "10.24.0.145",
+   "sistema": "GTD",
+   "nivel": "GTD",
+   "capa": 8,
+   "critico": true
+  },
+  {
+   "hostname": "PRODMIDWARE002",
+   "ip": "10.24.0.122",
+   "sistema": "WSO2",
+   "nivel": "Middleware",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "PRODMIDWARE005",
+   "ip": "10.24.0.123",
+   "sistema": "WSO2",
+   "nivel": "Middleware",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "PRODMIDWARE006",
+   "ip": "10.24.0.124",
+   "sistema": "WSO2",
+   "nivel": "Middleware",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "PRODMIDWARE003",
+   "ip": "10.24.0.129",
+   "sistema": "WSO2",
+   "nivel": "Middleware",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "PRODMIDWARE004",
+   "ip": "10.24.0.130",
+   "sistema": "WSO2",
+   "nivel": "Middleware",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "PRODMIDWARE001",
+   "ip": "10.24.0.128",
+   "sistema": "WSO2",
+   "nivel": "Middleware",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "PDXP-VCAS01",
+   "ip": "10.24.0.60",
+   "sistema": "DOCKER TRUST",
+   "nivel": "Middleware",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "VZOR",
+   "ip": "10.24.0.110",
+   "sistema": "VZOR",
+   "nivel": "MONITOREO",
+   "capa": 7,
+   "critico": true
+  },
+  {
+   "hostname": "SMUCORPAD01",
+   "ip": "10.24.0.8",
+   "sistema": "ACTIVE DIRECTORY",
+   "nivel": "Transversal",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "WSO2-TRUST",
+   "ip": "10.24.0.250",
+   "sistema": "WSO2 Trust",
+   "nivel": "Transversal",
+   "capa": 3,
+   "critico": true
+  },
+  {
+   "hostname": "PROAPPS046_2",
+   "ip": "10.24.0.49",
+   "sistema": "CREDIT MAKER",
+   "nivel": "Base de Datos",
+   "capa": 5,
+   "critico": true
+  }
+ ],
+ "relaciones": [
+  {
+   "desde": 1,
+   "hasta": 2,
+   "etiqueta": "HTTPS",
+   "tipo": "flujo"
+  },
+  {
+   "desde": 2,
+   "hasta": 3,
+   "etiqueta": "IPSec",
+   "tipo": "flujo"
+  },
+  {
+   "desde": 3,
+   "hasta": 4,
+   "etiqueta": "ISO 8583",
+   "tipo": "flujo"
+  },
+  {
+   "desde": 4,
+   "hasta": 5,
+   "etiqueta": "JDBC",
+   "tipo": "flujo"
+  },
+  {
+   "desde": 1,
+   "hasta": 6,
+   "etiqueta": "REST",
+   "tipo": "flujo"
+  },
+  {
+   "desde": 3,
+   "hasta": 6,
+   "etiqueta": "ISO 8583",
+   "tipo": "flujo"
+  },
+  {
+   "desde": 4,
+   "hasta": 6,
+   "etiqueta": "JDBC",
+   "tipo": "flujo"
+  },
+  {
+   "desde": 7,
+   "hasta": 5,
+   "etiqueta": "monitorea",
+   "tipo": "gestion"
+  },
+  {
+   "desde": 7,
+   "hasta": 4,
+   "etiqueta": "monitorea",
+   "tipo": "gestion"
+  }
+ ],
+ "flujos": [
+  {
+   "id": "compra-pos",
+   "nombre": "Compra en POS",
+   "pasos": [
+    {
+     "capa": 1,
+     "servicio": "geocom-bbr-sw-de-cajas"
+    },
+    {
+     "capa": 2,
+     "servicio": "firewalls-fortigate-100e-ha"
+    },
+    {
+     "capa": 3,
+     "servicio": "switch-transaccional-unicard-iso-8583"
+    },
+    {
+     "capa": 4,
+     "servicio": "app-booking-unicard-transaccional"
+    },
+    {
+     "capa": 5,
+     "servicio": "sql-server-bd-canales"
+    },
+    {
+     "capa": 6,
+     "servicio": "minsait-payments-nuek-switch-core"
+    }
+   ]
+  },
+  {
+   "id": "compra-wallet",
+   "nombre": "Compra desde wallet Unipay",
+   "pasos": [
+    {
+     "capa": 1,
+     "servicio": "app-movil-unipay-wallet"
+    },
+    {
+     "capa": 2,
+     "servicio": "firewalls-fortigate-100e-ha"
+    },
+    {
+     "capa": 3,
+     "servicio": "wso2-api-manager-esb-cluster"
+    },
+    {
+     "capa": 4,
+     "servicio": "pasarelas-de-canales"
+    },
+    {
+     "capa": 5,
+     "servicio": "sql-server-bd-canales"
+    },
+    {
+     "capa": 6,
+     "servicio": "minsait-payments-nuek-switch-core"
+    }
+   ]
+  },
+  {
+   "id": "portal-unipay",
+   "nombre": "Autogestión en portal web",
+   "pasos": [
+    {
+     "capa": 1,
+     "servicio": "portal-web-clientes-unipay"
+    },
+    {
+     "capa": 2,
+     "servicio": "firewalls-fortigate-100e-ha"
+    },
+    {
+     "capa": 3,
+     "servicio": "wso2-api-manager-esb-cluster"
+    },
+    {
+     "capa": 4,
+     "servicio": "crm-engage"
+    },
+    {
+     "capa": 5,
+     "servicio": "sql-server-bd-engage"
+    }
+   ]
+  },
+  {
+   "id": "recaudacion",
+   "nombre": "Recaudación externa",
+   "pasos": [
+    {
+     "capa": 1,
+     "servicio": "portal-unired-cajas-xcash"
+    },
+    {
+     "capa": 3,
+     "servicio": "wso2-api-manager-esb-cluster"
+    },
+    {
+     "capa": 4,
+     "servicio": "pasarelas-de-canales"
+    },
+    {
+     "capa": 5,
+     "servicio": "sql-server-bd-canales"
+    },
+    {
+     "capa": 6,
+     "servicio": "unired"
+    }
+   ]
+  },
+  {
+   "id": "conciliacion-batch",
+   "nombre": "Conciliación batch nocturna",
+   "pasos": [
+    {
+     "capa": 1,
+     "servicio": "webservices-rest-y-lotes-sftp-diarios"
+    },
+    {
+     "capa": 3,
+     "servicio": "servidor-sftp"
+    },
+    {
+     "capa": 5,
+     "servicio": "jenkins-malla-batch-nocturna"
+    },
+    {
+     "capa": 5,
+     "servicio": "datamart-bi"
+    }
+   ]
+  }
+ ]
+}
