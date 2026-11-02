@@ -258,6 +258,28 @@ def check_arquitectura_modelo():
                 f"{flujo['id']}: {paso['servicio']} no pertenece a la capa {paso['capa']}"
 
 
+def check_arquitectura_render():
+    """El HTML versionado es exactamente lo que produce el render del modelo."""
+    import html as _html
+    import re
+
+    from core.arq_render import cargar_modelo, render_html
+    from core.configuracion import ARQ_HTML_PATH, ARQ_MODELO_PATH
+
+    modelo = cargar_modelo(ARQ_MODELO_PATH)
+    generado = render_html(modelo)
+    with open(ARQ_HTML_PATH, encoding="utf-8") as f:
+        versionado = f.read().replace("\r\n", "\n")
+    assert generado == versionado, "arquitectura.html desincronizado: correr tools/gen_arq.py"
+    assert "%%TEMA%%" in generado, "el loader necesita el marcador de tema"
+    assert ">None<" not in generado, "el render filtro un None"
+    texto = " ".join(_html.unescape(re.sub(r"<[^>]+>", " ", generado)).split())
+    for capa in modelo["capas"]:
+        for servicio in capa["servicios"]:
+            assert " ".join(servicio["nombre"].split()) in texto, \
+                f"servicio ausente en el render: {servicio['nombre']}"
+
+
 def _app_test(cuerpo: str) -> AppTest:
     """Construye un AppTest cuyo script corre en este proceso (patches de módulos aplican)."""
     script = f"import sys\nsys.path.insert(0, {ROOT!r})\n{cuerpo}"
@@ -342,6 +364,7 @@ if __name__ == "__main__":
     check_diagrama_ingesta_clave_unica()
     check_arquitectura_html()
     check_arquitectura_modelo()
+    check_arquitectura_render()
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
     print("[OK] check_seams")

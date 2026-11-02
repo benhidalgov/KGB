@@ -14,12 +14,16 @@ import datetime
 import json
 import os
 import re
+import sys
 import unicodedata
 
 import pandas as pd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SALIDA = os.path.join(ROOT, "assets", "arquitectura", "modelo.json")
+
+sys.path.insert(0, ROOT)
+from core.arq_render import generar as generar_html          # noqa: E402
 
 # La capa 8 no existe en el Excel: el plano de gestion se separo en operacion
 # (7) y hosting/entrega (8). Estos dos servicios salen de la hoja "Servicios".
@@ -172,6 +176,7 @@ def main():
     with open(args.salida, "w", encoding="utf-8", newline="\n") as f:
         json.dump(modelo, f, ensure_ascii=False, indent=1)
         f.write("\n")
+    ruta_html = generar_html(args.salida)
 
     for capa in modelo["capas"]:
         print(f"  capa {capa['id']} · {capa['nombre']}: {len(capa['servicios'])} servicios, "
@@ -180,6 +185,7 @@ def main():
     print(f"[OK] {args.salida}: {m['total_servicios']} servicios, "
           f"{m['total_servidores']} servidores, {m['total_criticos']} criticos, "
           f"{len(modelo['flujos'])} flujos")
+    print(f"[OK] {ruta_html}")
 
 
 if __name__ == "__main__":
