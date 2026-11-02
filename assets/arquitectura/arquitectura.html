@@ -13,9 +13,9 @@
     --bg: #131313; --panel: #1d1d20; --text: #e9e9e7; --muted: #9a9a98;
     --line: #34343a; --accent: #5b93ff; --crit: #fb923c; --int: #2dd4bf; --ext: #a78bfa;
   }
-  body { margin: 0; background: var(--bg); color: var(--text);
+  body { margin: 0; height: 100vh; overflow: hidden;
+         background: var(--bg); color: var(--text);
          font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif; }
-  svg { width: 100%; height: auto; display: block; }
   .band { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
   .ext { stroke-dasharray: 6 4; }
   .ops { fill: none; stroke-dasharray: 4 4; }
@@ -37,6 +37,8 @@
   .flecha { transition: opacity .3s ease; }
   .flecha.off { opacity: .15; }
   .servicios { display: none; }
+  .capa.on .servicios { display: inline; }
+  svg { width: 100%; height: 100%; }
 
   #volver { position: fixed; top: 10px; right: 14px; display: none; z-index: 5;
             font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer;
@@ -235,8 +237,7 @@
     <text class="m" x="208" y="797">Interno</text>
     <circle class="extc" cx="280" cy="793" r="5"/>
     <text class="m" x="292" y="797">Externo (borde punteado)</text>
-    <text class="m" x="470" y="797">Mapeo de servidores: Nivel infraestructura + Sistema (los 12 "Transversal" y 1 sin dato, repartidos por Sistema) · total 58</text>
-    <text class="m" x="1210" y="797" text-anchor="end">Clic en una capa para ver sus servicios</text>
+    <text class="m" x="470" y="797">Mapeo de servidores por Nivel infraestructura + Sistema (los 12 "Transversal" y 1 sin dato, repartidos por Sistema) · total 58</text>
   </g>
 </svg>
 
@@ -263,7 +264,6 @@
       c.classList.toggle('on', on);
       c.classList.toggle('off', !on);
       c.querySelector('rect').setAttribute('height', on ? c.dataset.h1 : c.dataset.h0);
-      c.querySelector('.servicios').style.display = on ? '' : 'none';
       if (!on) c.style.transform = '';
     });
     flechas.forEach(function (f) {
@@ -286,7 +286,6 @@
       c.classList.remove('on', 'off');
       c.style.transform = '';
       c.querySelector('rect').setAttribute('height', c.dataset.h0);
-      c.querySelector('.servicios').style.display = 'none';
     });
     flechas.forEach(function (f) { f.classList.remove('off'); });
     ordenar();
