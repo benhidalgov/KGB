@@ -213,6 +213,7 @@ def check_arquitectura_html():
     assert "data-desde=" in claro and "data-hasta=" in claro, "faltan flechas trazables"
     assert "data-h0=" in claro and "data-h1=" in claro, "faltan alturas de foco"
     assert 'class="preview"' in claro and ".capa.on .preview" in claro, "falta la vista previa"
+    assert "svg text { fill: var(--text); }" in claro, "el texto SVG debe seguir el tema"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
     for svg in re.findall(r"<svg .*?</svg>", claro, re.S):
         ET.fromstring(svg)
