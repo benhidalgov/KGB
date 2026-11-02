@@ -38,6 +38,8 @@
   .flecha.off { opacity: .15; }
   .servicios { display: none; }
   .capa.on .servicios { display: inline; }
+  .preview { display: inline; }
+  .capa.on .preview { display: none; }
   svg { width: 100%; height: 100%; }
 
   #volver { position: fixed; top: 10px; right: 14px; display: none; z-index: 5;
@@ -102,6 +104,9 @@
       <rect class="band" x="30" y="55" width="730" height="96" rx="10"/>
       <text class="h" x="52" y="85">1 · Canales de entrada</text>
       <text class="b" x="738" y="85" text-anchor="end">12 servicios · 6 externos · sin servidores propios</text>
+      <g class="preview">
+      <text class="m" x="52" y="117">Geocom / BBR SW de Cajas · Lector biométrico dactilar (Sovos) · Tablets de autoservicio y atención de clientes …</text>
+      </g>
       <g class="servicios">
       <text class="s" x="130" y="117">•  Geocom / BBR SW de Cajas</text>
       <text class="s" x="430" y="117">•  Lector biométrico dactilar (Sovos)</text>
@@ -110,16 +115,20 @@
       <text class="s" x="130" y="151">•  App Móvil Unipay (Wallet)</text>
       <text class="s" x="430" y="151">•  Chatbot WhatsApp (Chattigo)</text>
       <text class="s" x="130" y="168">•  WAF (HTTPS / TLS)</text>
-      <text class="s" x="430" y="168">•  Call Center / IVR (Atento / TrustCorp) <tspan class="m">(+4)</tspan></text>
-      <text class="m" x="52" y="185">+4 más: Portal Unired / cajas XCash · Fuerza de ventas SMU ·</text>
-      <text class="m" x="52" y="202">Agencias externas Serbanc / AltSolution · WebServices REST y lotes</text>
-      <text class="m" x="52" y="219">SFTP diarios</text>
+      <text class="s" x="430" y="168">•  Call Center / IVR (Atento / TrustCorp)</text>
+      <text class="s" x="130" y="185">•  Portal Unired / cajas XCash</text>
+      <text class="s" x="430" y="185">•  Fuerza de ventas SMU <tspan class="m">(+2)</tspan></text>
+      <text class="m" x="52" y="202">+2 más: Agencias externas Serbanc / AltSolution · WebServices REST</text>
+      <text class="m" x="52" y="219">y lotes SFTP diarios</text>
       </g>
     </g>
     <g class="capa" data-capa="2" data-h0="96" data-h1="123" tabindex="0" role="button" aria-label="Perímetro de seguridad y red core, 6 servicios">
       <rect class="band" x="30" y="171" width="730" height="96" rx="10"/>
       <text class="h" x="52" y="201">2 · Perímetro de seguridad y red core</text>
       <text class="b" x="738" y="201" text-anchor="end">6 servicios · 1 externo · 2 servidores · 2 críticos</text>
+      <g class="preview">
+      <text class="m" x="52" y="233">Firewalls FortiGate 100E (HA) · VPN IPSec Site-to-Site (17 túneles) · HAProxy (balanceo L7) · Switches core con HSRP …</text>
+      </g>
       <g class="servicios">
       <text class="s" x="130" y="233">•  Firewalls FortiGate 100E (HA)</text>
       <text class="s" x="430" y="233">•  VPN IPSec Site-to-Site (17 túneles)</text>
@@ -133,6 +142,9 @@
       <rect class="band" x="30" y="287" width="730" height="96" rx="10"/>
       <text class="h" x="52" y="317">3 · Integración y bus de servicios</text>
       <text class="b" x="738" y="317" text-anchor="end">6 servicios · 12 servidores · 12 críticos</text>
+      <g class="preview">
+      <text class="m" x="52" y="349">WSO2 API Manager &amp; ESB (clúster) · Switch transaccional Unicard (ISO 8583) · WSO2 Identity Server · WSO2 Monitoring &amp; …</text>
+      </g>
       <g class="servicios">
       <text class="s" x="130" y="349">•  WSO2 API Manager &amp; ESB (clúster)</text>
       <text class="s" x="430" y="349">•  Switch transaccional Unicard (ISO 8583)</text>
@@ -146,6 +158,9 @@
       <rect class="band" x="30" y="403" width="730" height="96" rx="10"/>
       <text class="h" x="52" y="433">4 · Aplicaciones de negocio y core financiero</text>
       <text class="b" x="738" y="433" text-anchor="end">12 servicios · 25 servidores · 15 críticos</text>
+      <g class="preview">
+      <text class="m" x="52" y="465">CRM Engage · Brider · Credit Maker · Servidor de Riesgo · Control de Gestión · Be Clever · Pasarelas de canales · SAP …</text>
+      </g>
       <g class="servicios">
       <text class="s" x="130" y="465">•  CRM Engage</text>
       <text class="s" x="430" y="465">•  Brider</text>
@@ -154,15 +169,19 @@
       <text class="s" x="130" y="499">•  Control de Gestión</text>
       <text class="s" x="430" y="499">•  Be Clever</text>
       <text class="s" x="130" y="516">•  Pasarelas de canales</text>
-      <text class="s" x="430" y="516">•  SAP BO <tspan class="m">(+4)</tspan></text>
-      <text class="m" x="52" y="533">+4 más: App Booking Unicard Transaccional · Asterisk PBX ·</text>
-      <text class="m" x="52" y="550">Servidor documental · Relay de correo</text>
+      <text class="s" x="430" y="516">•  SAP BO</text>
+      <text class="s" x="130" y="533">•  App Booking Unicard Transaccional</text>
+      <text class="s" x="430" y="533">•  Asterisk PBX <tspan class="m">(+2)</tspan></text>
+      <text class="m" x="52" y="550">+2 más: Servidor documental · Relay de correo</text>
       </g>
     </g>
     <g class="capa" data-capa="5" data-h0="96" data-h1="157" tabindex="0" role="button" aria-label="Persistencia, BD y batch, 9 servicios">
       <rect class="band" x="30" y="519" width="730" height="96" rx="10"/>
       <text class="h" x="52" y="549">5 · Persistencia, BD y batch</text>
       <text class="b" x="738" y="549" text-anchor="end">9 servicios · 11 servidores · 8 críticos</text>
+      <g class="preview">
+      <text class="m" x="52" y="581">SQL Server – BD Engage · SQL Server – BD Brider · SQL Server – BD Canales · SQL Server – BD Prodapps108 · MySQL – BD …</text>
+      </g>
       <g class="servicios">
       <text class="s" x="130" y="581">•  SQL Server – BD Engage</text>
       <text class="s" x="430" y="581">•  SQL Server – BD Brider</text>
@@ -179,6 +198,14 @@
       <rect class="band ext" x="820" y="55" width="390" height="560" rx="10"/>
       <text class="h" x="842" y="85">6 · Ecosistema externo</text>
       <text class="b" x="1188" y="85" text-anchor="end">19 servicios · 19 externos</text>
+      <g class="preview">
+      <text class="m" x="842" y="117">Minsait Payments / NUEK (Switch Core) · Sovos / Autentia ·</text>
+      <text class="m" x="842" y="135">Transbank · Banchile · Unired · Nexus · MV-Servicio VPN ·</text>
+      <text class="m" x="842" y="153">ZCC VPN · Colektia · AWS (Unicard VPN) · Previred · Bci</text>
+      <text class="m" x="842" y="171">Seguros · American Assist · Servicios Mok · Equifax (Dicom)</text>
+      <text class="m" x="842" y="189">Sinacofi · TransUnion · CMF (Comisión para el Mercado</text>
+      <text class="m" x="842" y="207">Financiero) · Geocom Chile y STS Uruguay (conectividad POS)</text>
+      </g>
       <g class="servicios">
       <text class="s" x="842" y="117">•  Minsait Payments / NUEK (Switch Core)</text>
       <text class="s" x="842" y="135">•  Sovos / Autentia</text>
@@ -188,17 +215,27 @@
       <text class="s" x="842" y="207">•  Nexus</text>
       <text class="s" x="842" y="225">•  MV-Servicio VPN</text>
       <text class="s" x="842" y="243">•  ZCC VPN</text>
-      <text class="m" x="842" y="261">+11 adicionales: Colektia · AWS (Unicard VPN) · Previred · Bci</text>
-      <text class="m" x="842" y="279">Seguros · American Assist · Servicios Mok · Equifax (Dicom) ·</text>
-      <text class="m" x="842" y="297">Sinacofi · TransUnion · CMF (Comisión para el Mercado</text>
-      <text class="m" x="842" y="315">Financiero) · Geocom Chile y STS Uruguay (conectividad POS)</text>
-      <text class="m pista" x="842" y="343">Clic para ver los 19 servicios</text>
+      <text class="s" x="842" y="261">•  Colektia</text>
+      <text class="s" x="842" y="279">•  AWS (Unicard VPN)</text>
+      <text class="s" x="842" y="297">•  Previred</text>
+      <text class="s" x="842" y="315">•  Bci Seguros</text>
+      <text class="s" x="842" y="333">•  American Assist</text>
+      <text class="s" x="842" y="351">•  Servicios Mok</text>
+      <text class="s" x="842" y="369">•  Equifax (Dicom)</text>
+      <text class="s" x="842" y="387">•  Sinacofi</text>
+      <text class="s" x="842" y="405">•  TransUnion</text>
+      <text class="s" x="842" y="423">•  CMF (Comisión para el Mercado Financiero)</text>
+      <text class="s" x="842" y="441">•  Geocom Chile y STS Uruguay (conectividad POS)</text>
+      <text class="m pista" x="842" y="469">Clic para ampliar</text>
       </g>
     </g>
     <g class="capa" data-capa="7" data-h0="96" data-h1="106" tabindex="0" role="button" aria-label="Operación y monitoreo, 4 servicios">
       <rect class="band ops" x="30" y="651" width="1180" height="96" rx="10"/>
       <text class="h" x="52" y="681">7 · Operación y monitoreo</text>
       <text class="b" x="1188" y="681" text-anchor="end">4 servicios · 1 externo · 4 servidores · 2 críticos</text>
+      <g class="preview">
+      <text class="m" x="52" y="713">Nagios XI · Vzor Suite · New Relic · PRTG Network Monitor</text>
+      </g>
       <g class="servicios">
       <text class="s" x="130" y="713">•  Nagios XI</text>
       <text class="s" x="430" y="713">•  Vzor Suite</text>
@@ -211,6 +248,9 @@
       <rect class="band ops" x="30" y="771" width="1180" height="80" rx="10"/>
       <text class="h" x="52" y="801">8 · Hosting, entrega y despliegue</text>
       <text class="b" x="1188" y="801" text-anchor="end">2 servicios · 2 externos · 4 servidores · 4 críticos</text>
+      <g class="preview">
+      <text class="m" x="52" y="833">Azure DevOps · vCloud GTD (IaaS 2.0 / 2.1)</text>
+      </g>
       <g class="servicios">
       <text class="s" x="130" y="833">•  Azure DevOps</text>
       <text class="s" x="430" y="833">•  vCloud GTD (IaaS 2.0 / 2.1)</text>

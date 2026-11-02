@@ -55,6 +55,8 @@ CSS = """
   .flecha.off { opacity: .15; }
   .servicios { display: none; }
   .capa.on .servicios { display: inline; }
+  .preview { display: inline; }
+  .capa.on .preview { display: none; }
   svg { width: 100%; height: 100%; }
 
   #volver { position: fixed; top: 10px; right: 14px; display: none; z-index: 5;
@@ -156,7 +158,7 @@ def _envolver(texto: str, limite: int) -> list:
             actual = f"{actual} {palabra}".strip()
     if actual:
         lineas.append(actual)
-    return lineas
+    return [linea[2:] if linea.startswith("· ") else linea for linea in lineas]
 
 
 def _badge(capa: dict) -> str:
@@ -172,10 +174,11 @@ def _badge(capa: dict) -> str:
     return " · ".join(partes)
 
 
-def _filas_servicios(capa: dict, dos_columnas: bool) -> tuple:
+def _filas_servicios(capa: dict, dos_columnas: bool, maximo: int = None) -> tuple:
     """Filas de servicio en orden de lectura; el resto se resume aparte."""
     servicios = capa["servicios"]
-    mostrados = servicios if len(servicios) <= 10 else servicios[:MAX_SERVICIOS]
+    tope = maximo if maximo is not None else (10 if dos_columnas else 8)
+    mostrados = servicios if len(servicios) <= tope else servicios[:tope]
     resto = servicios[len(mostrados):]
     filas = []
     if dos_columnas:
@@ -195,6 +198,17 @@ def _lineas_resto(resto: list, dos_columnas: bool, limite: int) -> list:
     resumen = " · ".join(_t(s["nombre"]) for s in resto)
     prefijo = f"+{len(resto)} más: " if dos_columnas else f"+{len(resto)} adicionales: "
     return _envolver(prefijo + resumen, limite)
+
+
+def _vista_previa(capa: dict, ancho: float, alto: float, espacio: int) -> list:
+    """Nombres de servicio en una linea (o varias) que se ve sin enfocar."""
+    limite = max(20, int((ancho - 44) / 5.8))
+    lineas = _envolver(" · ".join(s["nombre"] for s in capa["servicios"]), limite)
+    maximo = max(1, int((alto - 62 - 4) // espacio))
+    if len(lineas) > maximo:
+        lineas = lineas[:maximo]
+        lineas[-1] = lineas[-1].rstrip(" ·,") + " …"
+    return lineas
 
 
 def _texto(x: float, y: float, clase: str, contenido: str, extra: str = "") -> str:
@@ -286,7 +300,7 @@ def render_html(modelo: dict) -> str:
         x, y0, ancho, alto = geometria[cid]
         dos_columnas = cid != 6
         espacio = FILA if dos_columnas else 18
-        filas, resto = _filas_servicios(capa, dos_columnas)
+        filas, resto = _filas_servicios(capa, dos_columnas, None if dos_columnas else len(capa["servicios"]))
         lineas_resto = _lineas_resto(resto, dos_columnas, FUENTE_NOTA if dos_columnas else FUENTE_DER)
         hosts = [h["hostname"] for h in hosts_por_capa.get(cid, [])] if capa["plano"] == "gestion" else []
         lineas_hosts = _envolver("Hosts: " + " · ".join(hosts), FUENTE_NOTA) if hosts else []
@@ -301,6 +315,15 @@ def render_html(modelo: dict) -> str:
         piezas.append(f'      <rect class="{clases}" x="{x:g}" y="{y0:g}" width="{ancho:g}" height="{alto:g}" rx="10"/>')
         piezas.append(_texto(x + 22, y0 + 30, "h", f'{cid} · {_t(capa["nombre"])}'))
         piezas.append(_texto(x + ancho - 22, y0 + 30, "b", _badge(capa), ' text-anchor="end"'))
+
+        lineas_preview = _vista_previa(capa, ancho, alto, espacio)
+        if lineas_preview:
+            piezas.append('      <g class="preview">')
+            pyy = y0 + 62
+            for linea in lineas_preview:
+                piezas.append(_texto(x + 22, pyy, "m", _t(linea)))
+                pyy += espacio
+            piezas.append("      </g>")
 
         piezas.append('      <g class="servicios">')
         yy = y0 + 62
@@ -317,8 +340,7 @@ def render_html(modelo: dict) -> str:
                 piezas.append(_texto(x + 760 if dos_columnas else x + 22, yy_hosts, "m", linea))
                 yy_hosts += espacio
         if cid == 6:
-            piezas.append(_texto(x + 22, max(y0 + alto / 2 - 5, yy + 10), "m pista",
-                                 f"Clic para ver los {_n(len(capa['servicios']), 'servicio', 'servicios')}"))
+            piezas.append(_texto(x + 22, max(y0 + alto / 2 - 5, yy + 10), "m pista", "Clic para ampliar"))
         piezas.append("      </g>")
         piezas.append("    </g>")
 

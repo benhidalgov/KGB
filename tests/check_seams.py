@@ -206,6 +206,7 @@ def check_arquitectura_html():
     assert claro.count('data-capa="') == 8, "faltan capas interactivas"
     assert "data-desde=" in claro and "data-hasta=" in claro, "faltan flechas trazables"
     assert "data-h0=" in claro and "data-h1=" in claro, "faltan alturas de foco"
+    assert 'class="preview"' in claro and ".capa.on .preview" in claro, "falta la vista previa"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
     oscuro = cargar_html_arquitectura("Oscuro")
     assert 'class="tema-oscuro"' in oscuro and "%%TEMA%%" not in oscuro, "el tema oscuro debe aplicarse"
