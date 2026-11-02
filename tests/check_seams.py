@@ -197,17 +197,25 @@ def check_diagrama_ingesta_clave_unica():
 
 
 def check_arquitectura_html():
-    """El HTML de arquitectura versionado carga y el tema se aplica sin residuos."""
+    """El HTML de arquitectura trae las dos vistas, el tema se aplica y los SVG son validos."""
+    import re
+    import xml.etree.ElementTree as ET
+
     from core.ui_arquitectura import cargar_html_arquitectura
 
     claro = cargar_html_arquitectura("Claro")
     assert "%%TEMA%%" not in claro and 'class="tema-claro"' in claro, "el tema claro debe aplicarse"
-    assert "Arquitectura de plataforma" in claro and "<svg" in claro, "falta el esquema"
+    assert "Arquitectura de plataforma" in claro, "falta el esquema"
+    assert 'id="vista-capas"' in claro and 'id="vista-flujo"' in claro, "faltan las dos vistas"
+    assert claro.count('class="tab"') == 2, "faltan las pestañas"
     assert claro.count('data-capa="') == 8, "faltan capas interactivas"
+    assert claro.count('data-flujo="') == 5, "faltan los flujos"
     assert "data-desde=" in claro and "data-hasta=" in claro, "faltan flechas trazables"
     assert "data-h0=" in claro and "data-h1=" in claro, "faltan alturas de foco"
     assert 'class="preview"' in claro and ".capa.on .preview" in claro, "falta la vista previa"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
+    for svg in re.findall(r"<svg .*?</svg>", claro, re.S):
+        ET.fromstring(svg)
     oscuro = cargar_html_arquitectura("Oscuro")
     assert 'class="tema-oscuro"' in oscuro and "%%TEMA%%" not in oscuro, "el tema oscuro debe aplicarse"
     assert oscuro == claro.replace("tema-claro", "tema-oscuro"), "solo debe variar el tema"
