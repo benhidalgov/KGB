@@ -332,172 +332,192 @@
       <text class="t" x="30" y="30">Arquitectura de plataforma SMUCORP</text>
       <text class="m stamp" x="1210" y="28" text-anchor="end">Vista por flujo · Actualizado: 2026-11-02 · Fuente: Inventario_Servidores_SMUCORP.xlsx (58 servidores · 70 servicios)</text>
       <text class="b" x="40" y="66">Canales de entrada</text>
-      <text class="b" x="236" y="66">Perímetro de seguridad y red</text>
-      <text class="b" x="236" y="80">core</text>
-      <text class="b" x="432" y="66">Integración y bus de servicios</text>
-      <text class="b" x="628" y="66">Aplicaciones de negocio y core</text>
-      <text class="b" x="628" y="80">financiero</text>
-      <text class="b" x="824" y="66">Persistencia, BD y batch</text>
-      <text class="b" x="1020" y="66">Ecosistema externo</text>
+      <text class="b" x="240" y="66">Perímetro de seguridad y red</text>
+      <text class="b" x="240" y="80">core</text>
+      <text class="b" x="440" y="66">Integración y bus de servicios</text>
+      <text class="b" x="640" y="66">Aplicaciones de negocio y core</text>
+      <text class="b" x="640" y="80">financiero</text>
+      <text class="b" x="840" y="66">Persistencia, BD y batch</text>
+      <text class="b" x="1040" y="66">Ecosistema externo</text>
     <g class="flujo" data-flujo="compra-pos" tabindex="0" role="button" aria-label="Flujo Compra en POS">
       <rect class="fila" x="20" y="96" width="1200" height="94" rx="10"/>
       <text class="f" x="36" y="116">Compra en POS</text>
       <g class="paso" style="--i:0">
-        <rect class="nodo" x="40" y="134" width="150" height="42" rx="7"/>
-      <text class="s" x="115" y="159" text-anchor="middle">Geocom / BBR SW de Cajas</text>
+        <rect class="nodo" x="40" y="134" width="140" height="42" rx="7"/>
+      <text class="s" x="110" y="155" text-anchor="middle">Geocom / BBR SW de</text>
+      <text class="s" x="110" y="167" text-anchor="middle">Cajas</text>
       </g>
       <g class="paso" style="--i:1">
-        <rect class="nodo" x="236" y="134" width="150" height="42" rx="7"/>
-      <text class="s" x="311" y="155" text-anchor="middle">Firewalls FortiGate 100E</text>
-      <text class="s" x="311" y="167" text-anchor="middle">(HA)</text>
+        <rect class="nodo" x="240" y="134" width="140" height="42" rx="7"/>
+      <text class="s" x="310" y="155" text-anchor="middle">Firewalls FortiGate</text>
+      <text class="s" x="310" y="167" text-anchor="middle">100E (HA)</text>
       </g>
       <g class="paso" style="--i:2">
-        <rect class="nodo" x="432" y="134" width="150" height="42" rx="7"/>
-      <text class="s" x="507" y="155" text-anchor="middle">Switch transaccional</text>
-      <text class="s" x="507" y="167" text-anchor="middle">Unicard (ISO 8583)</text>
+        <rect class="nodo" x="440" y="134" width="140" height="42" rx="7"/>
+      <text class="s" x="510" y="155" text-anchor="middle">Switch transaccional</text>
+      <text class="s" x="510" y="167" text-anchor="middle">Unicard (ISO 8583)</text>
       </g>
       <g class="paso" style="--i:3">
-        <rect class="nodo" x="628" y="134" width="150" height="42" rx="7"/>
-      <text class="s" x="703" y="155" text-anchor="middle">App Booking Unicard</text>
-      <text class="s" x="703" y="167" text-anchor="middle">Transaccional</text>
+        <rect class="nodo" x="640" y="134" width="140" height="42" rx="7"/>
+      <text class="s" x="710" y="155" text-anchor="middle">App Booking Unicard</text>
+      <text class="s" x="710" y="167" text-anchor="middle">Transaccional</text>
       </g>
       <g class="paso" style="--i:4">
-        <rect class="nodo" x="824" y="134" width="150" height="42" rx="7"/>
-      <text class="s" x="899" y="159" text-anchor="middle">SQL Server – BD Canales</text>
+        <rect class="nodo" x="840" y="134" width="140" height="42" rx="7"/>
+      <text class="s" x="910" y="155" text-anchor="middle">SQL Server – BD</text>
+      <text class="s" x="910" y="167" text-anchor="middle">Canales</text>
       </g>
       <g class="paso" style="--i:5">
-        <rect class="nodo" x="1020" y="134" width="150" height="42" rx="7"/>
-      <text class="s" x="1095" y="155" text-anchor="middle">Minsait Payments / NUEK</text>
-      <text class="s" x="1095" y="167" text-anchor="middle">(Switch Core)</text>
+        <rect class="nodo" x="1040" y="134" width="140" height="42" rx="7"/>
+      <text class="s" x="1110" y="155" text-anchor="middle">Minsait Payments /</text>
+      <text class="s" x="1110" y="167" text-anchor="middle">NUEK (Switch Core)</text>
       </g>
-      <path class="ff" d="M 190 155 H 234"/>
-      <path class="ff" d="M 386 155 H 430"/>
-      <path class="ff" d="M 582 155 H 626"/>
-      <path class="ff" d="M 778 155 H 822"/>
-      <path class="ff" d="M 974 155 H 1018"/>
+      <path class="ff" d="M 180 155 H 238"/>
+      <text class="m" x="210" y="149" text-anchor="middle">HTTPS</text>
+      <path class="ff" d="M 380 155 H 438"/>
+      <text class="m" x="410" y="149" text-anchor="middle">IPSec</text>
+      <path class="ff" d="M 580 155 H 638"/>
+      <text class="m" x="610" y="149" text-anchor="middle">ISO 8583</text>
+      <path class="ff" d="M 780 155 H 838"/>
+      <text class="m" x="810" y="149" text-anchor="middle">JDBC</text>
+      <path class="ff" d="M 980 155 H 1038"/>
     </g>
     <g class="flujo" data-flujo="compra-wallet" tabindex="0" role="button" aria-label="Flujo Compra desde wallet Unipay">
       <rect class="fila" x="20" y="208" width="1200" height="94" rx="10"/>
       <text class="f" x="36" y="228">Compra desde wallet Unipay</text>
       <g class="paso" style="--i:0">
-        <rect class="nodo" x="40" y="246" width="150" height="42" rx="7"/>
-      <text class="s" x="115" y="267" text-anchor="middle">App Móvil Unipay</text>
-      <text class="s" x="115" y="279" text-anchor="middle">(Wallet)</text>
+        <rect class="nodo" x="40" y="246" width="140" height="42" rx="7"/>
+      <text class="s" x="110" y="267" text-anchor="middle">App Móvil Unipay</text>
+      <text class="s" x="110" y="279" text-anchor="middle">(Wallet)</text>
       </g>
       <g class="paso" style="--i:1">
-        <rect class="nodo" x="236" y="246" width="150" height="42" rx="7"/>
-      <text class="s" x="311" y="267" text-anchor="middle">Firewalls FortiGate 100E</text>
-      <text class="s" x="311" y="279" text-anchor="middle">(HA)</text>
+        <rect class="nodo" x="240" y="246" width="140" height="42" rx="7"/>
+      <text class="s" x="310" y="267" text-anchor="middle">Firewalls FortiGate</text>
+      <text class="s" x="310" y="279" text-anchor="middle">100E (HA)</text>
       </g>
       <g class="paso" style="--i:2">
-        <rect class="nodo" x="432" y="246" width="150" height="42" rx="7"/>
-      <text class="s" x="507" y="267" text-anchor="middle">WSO2 API Manager &amp; ESB</text>
-      <text class="s" x="507" y="279" text-anchor="middle">(clúster)</text>
+        <rect class="nodo" x="440" y="246" width="140" height="42" rx="7"/>
+      <text class="s" x="510" y="267" text-anchor="middle">WSO2 API Manager &amp; ESB</text>
+      <text class="s" x="510" y="279" text-anchor="middle">(clúster)</text>
       </g>
       <g class="paso" style="--i:3">
-        <rect class="nodo" x="628" y="246" width="150" height="42" rx="7"/>
-      <text class="s" x="703" y="271" text-anchor="middle">Pasarelas de canales</text>
+        <rect class="nodo" x="640" y="246" width="140" height="42" rx="7"/>
+      <text class="s" x="710" y="271" text-anchor="middle">Pasarelas de canales</text>
       </g>
       <g class="paso" style="--i:4">
-        <rect class="nodo" x="824" y="246" width="150" height="42" rx="7"/>
-      <text class="s" x="899" y="271" text-anchor="middle">SQL Server – BD Canales</text>
+        <rect class="nodo" x="840" y="246" width="140" height="42" rx="7"/>
+      <text class="s" x="910" y="267" text-anchor="middle">SQL Server – BD</text>
+      <text class="s" x="910" y="279" text-anchor="middle">Canales</text>
       </g>
       <g class="paso" style="--i:5">
-        <rect class="nodo" x="1020" y="246" width="150" height="42" rx="7"/>
-      <text class="s" x="1095" y="267" text-anchor="middle">Minsait Payments / NUEK</text>
-      <text class="s" x="1095" y="279" text-anchor="middle">(Switch Core)</text>
+        <rect class="nodo" x="1040" y="246" width="140" height="42" rx="7"/>
+      <text class="s" x="1110" y="267" text-anchor="middle">Minsait Payments /</text>
+      <text class="s" x="1110" y="279" text-anchor="middle">NUEK (Switch Core)</text>
       </g>
-      <path class="ff" d="M 190 267 H 234"/>
-      <path class="ff" d="M 386 267 H 430"/>
-      <path class="ff" d="M 582 267 H 626"/>
-      <path class="ff" d="M 778 267 H 822"/>
-      <path class="ff" d="M 974 267 H 1018"/>
+      <path class="ff" d="M 180 267 H 238"/>
+      <text class="m" x="210" y="261" text-anchor="middle">HTTPS</text>
+      <path class="ff" d="M 380 267 H 438"/>
+      <text class="m" x="410" y="261" text-anchor="middle">IPSec</text>
+      <path class="ff" d="M 580 267 H 638"/>
+      <text class="m" x="610" y="261" text-anchor="middle">REST</text>
+      <path class="ff" d="M 780 267 H 838"/>
+      <text class="m" x="810" y="261" text-anchor="middle">JDBC</text>
+      <path class="ff" d="M 980 267 H 1038"/>
     </g>
     <g class="flujo" data-flujo="portal-unipay" tabindex="0" role="button" aria-label="Flujo Autogestión en portal web">
       <rect class="fila" x="20" y="320" width="1200" height="94" rx="10"/>
       <text class="f" x="36" y="340">Autogestión en portal web</text>
       <g class="paso" style="--i:0">
-        <rect class="nodo" x="40" y="358" width="150" height="42" rx="7"/>
-      <text class="s" x="115" y="379" text-anchor="middle">Portal Web Clientes</text>
-      <text class="s" x="115" y="391" text-anchor="middle">Unipay</text>
+        <rect class="nodo" x="40" y="358" width="140" height="42" rx="7"/>
+      <text class="s" x="110" y="379" text-anchor="middle">Portal Web Clientes</text>
+      <text class="s" x="110" y="391" text-anchor="middle">Unipay</text>
       </g>
       <g class="paso" style="--i:1">
-        <rect class="nodo" x="236" y="358" width="150" height="42" rx="7"/>
-      <text class="s" x="311" y="379" text-anchor="middle">Firewalls FortiGate 100E</text>
-      <text class="s" x="311" y="391" text-anchor="middle">(HA)</text>
+        <rect class="nodo" x="240" y="358" width="140" height="42" rx="7"/>
+      <text class="s" x="310" y="379" text-anchor="middle">Firewalls FortiGate</text>
+      <text class="s" x="310" y="391" text-anchor="middle">100E (HA)</text>
       </g>
       <g class="paso" style="--i:2">
-        <rect class="nodo" x="432" y="358" width="150" height="42" rx="7"/>
-      <text class="s" x="507" y="379" text-anchor="middle">WSO2 API Manager &amp; ESB</text>
-      <text class="s" x="507" y="391" text-anchor="middle">(clúster)</text>
+        <rect class="nodo" x="440" y="358" width="140" height="42" rx="7"/>
+      <text class="s" x="510" y="379" text-anchor="middle">WSO2 API Manager &amp; ESB</text>
+      <text class="s" x="510" y="391" text-anchor="middle">(clúster)</text>
       </g>
       <g class="paso" style="--i:3">
-        <rect class="nodo" x="628" y="358" width="150" height="42" rx="7"/>
-      <text class="s" x="703" y="383" text-anchor="middle">CRM Engage</text>
+        <rect class="nodo" x="640" y="358" width="140" height="42" rx="7"/>
+      <text class="s" x="710" y="383" text-anchor="middle">CRM Engage</text>
       </g>
       <g class="paso" style="--i:4">
-        <rect class="nodo" x="824" y="358" width="150" height="42" rx="7"/>
-      <text class="s" x="899" y="383" text-anchor="middle">SQL Server – BD Engage</text>
+        <rect class="nodo" x="840" y="358" width="140" height="42" rx="7"/>
+      <text class="s" x="910" y="383" text-anchor="middle">SQL Server – BD Engage</text>
       </g>
-      <path class="ff" d="M 190 379 H 234"/>
-      <path class="ff" d="M 386 379 H 430"/>
-      <path class="ff" d="M 582 379 H 626"/>
-      <path class="ff" d="M 778 379 H 822"/>
+      <path class="ff" d="M 180 379 H 238"/>
+      <text class="m" x="210" y="373" text-anchor="middle">HTTPS</text>
+      <path class="ff" d="M 380 379 H 438"/>
+      <text class="m" x="410" y="373" text-anchor="middle">IPSec</text>
+      <path class="ff" d="M 580 379 H 638"/>
+      <text class="m" x="610" y="373" text-anchor="middle">REST</text>
+      <path class="ff" d="M 780 379 H 838"/>
+      <text class="m" x="810" y="373" text-anchor="middle">JDBC</text>
     </g>
     <g class="flujo" data-flujo="recaudacion" tabindex="0" role="button" aria-label="Flujo Recaudación externa">
       <rect class="fila" x="20" y="432" width="1200" height="94" rx="10"/>
       <text class="f" x="36" y="452">Recaudación externa</text>
       <g class="paso" style="--i:0">
-        <rect class="nodo" x="40" y="470" width="150" height="42" rx="7"/>
-      <text class="s" x="115" y="491" text-anchor="middle">Portal Unired / cajas</text>
-      <text class="s" x="115" y="503" text-anchor="middle">XCash</text>
+        <rect class="nodo" x="40" y="470" width="140" height="42" rx="7"/>
+      <text class="s" x="110" y="491" text-anchor="middle">Portal Unired / cajas</text>
+      <text class="s" x="110" y="503" text-anchor="middle">XCash</text>
       </g>
       <g class="paso" style="--i:1">
-        <rect class="nodo" x="432" y="470" width="150" height="42" rx="7"/>
-      <text class="s" x="507" y="491" text-anchor="middle">WSO2 API Manager &amp; ESB</text>
-      <text class="s" x="507" y="503" text-anchor="middle">(clúster)</text>
+        <rect class="nodo" x="440" y="470" width="140" height="42" rx="7"/>
+      <text class="s" x="510" y="491" text-anchor="middle">WSO2 API Manager &amp; ESB</text>
+      <text class="s" x="510" y="503" text-anchor="middle">(clúster)</text>
       </g>
       <g class="paso" style="--i:2">
-        <rect class="nodo" x="628" y="470" width="150" height="42" rx="7"/>
-      <text class="s" x="703" y="495" text-anchor="middle">Pasarelas de canales</text>
+        <rect class="nodo" x="640" y="470" width="140" height="42" rx="7"/>
+      <text class="s" x="710" y="495" text-anchor="middle">Pasarelas de canales</text>
       </g>
       <g class="paso" style="--i:3">
-        <rect class="nodo" x="824" y="470" width="150" height="42" rx="7"/>
-      <text class="s" x="899" y="495" text-anchor="middle">SQL Server – BD Canales</text>
+        <rect class="nodo" x="840" y="470" width="140" height="42" rx="7"/>
+      <text class="s" x="910" y="491" text-anchor="middle">SQL Server – BD</text>
+      <text class="s" x="910" y="503" text-anchor="middle">Canales</text>
       </g>
       <g class="paso" style="--i:4">
-        <rect class="nodo" x="1020" y="470" width="150" height="42" rx="7"/>
-      <text class="s" x="1095" y="495" text-anchor="middle">Unired</text>
+        <rect class="nodo" x="1040" y="470" width="140" height="42" rx="7"/>
+      <text class="s" x="1110" y="495" text-anchor="middle">Unired</text>
       </g>
-      <path class="ff" d="M 190 491 H 430"/>
-      <path class="ff" d="M 582 491 H 626"/>
-      <path class="ff" d="M 778 491 H 822"/>
-      <path class="ff" d="M 974 491 H 1018"/>
+      <path class="ff" d="M 180 491 H 438"/>
+      <text class="m" x="310" y="485" text-anchor="middle">HTTPS</text>
+      <path class="ff" d="M 580 491 H 638"/>
+      <text class="m" x="610" y="485" text-anchor="middle">REST</text>
+      <path class="ff" d="M 780 491 H 838"/>
+      <text class="m" x="810" y="485" text-anchor="middle">JDBC</text>
+      <path class="ff" d="M 980 491 H 1038"/>
     </g>
     <g class="flujo" data-flujo="conciliacion-batch" tabindex="0" role="button" aria-label="Flujo Conciliación batch nocturna">
       <rect class="fila" x="20" y="544" width="1200" height="94" rx="10"/>
       <text class="f" x="36" y="564">Conciliación batch nocturna</text>
       <g class="paso" style="--i:0">
-        <rect class="nodo" x="40" y="582" width="150" height="42" rx="7"/>
-      <text class="s" x="115" y="603" text-anchor="middle">WebServices REST y lotes</text>
-      <text class="s" x="115" y="615" text-anchor="middle">SFTP diarios</text>
+        <rect class="nodo" x="40" y="582" width="140" height="42" rx="7"/>
+      <text class="s" x="110" y="603" text-anchor="middle">WebServices REST y</text>
+      <text class="s" x="110" y="615" text-anchor="middle">lotes SFTP diarios</text>
       </g>
       <g class="paso" style="--i:1">
-        <rect class="nodo" x="432" y="582" width="150" height="42" rx="7"/>
-      <text class="s" x="507" y="607" text-anchor="middle">Servidor SFTP</text>
+        <rect class="nodo" x="440" y="582" width="140" height="42" rx="7"/>
+      <text class="s" x="510" y="607" text-anchor="middle">Servidor SFTP</text>
       </g>
       <g class="paso" style="--i:2">
-        <rect class="nodo" x="824" y="557" width="150" height="42" rx="7"/>
-      <text class="s" x="899" y="578" text-anchor="middle">Jenkins (malla batch</text>
-      <text class="s" x="899" y="590" text-anchor="middle">nocturna)</text>
+        <rect class="nodo" x="840" y="557" width="140" height="42" rx="7"/>
+      <text class="s" x="910" y="578" text-anchor="middle">Jenkins (malla batch</text>
+      <text class="s" x="910" y="590" text-anchor="middle">nocturna)</text>
       </g>
       <g class="paso" style="--i:3">
-        <rect class="nodo" x="824" y="607" width="150" height="42" rx="7"/>
-      <text class="s" x="899" y="632" text-anchor="middle">Datamart BI</text>
+        <rect class="nodo" x="840" y="607" width="140" height="42" rx="7"/>
+      <text class="s" x="910" y="632" text-anchor="middle">Datamart BI</text>
       </g>
-      <path class="ff" d="M 190 603 H 430"/>
-      <path class="ff" d="M 582 603 H 702 V 578 H 822"/>
-      <path class="ff" d="M 899 599 V 607"/>
+      <path class="ff" d="M 180 603 H 438"/>
+      <text class="m" x="310" y="597" text-anchor="middle">SFTP</text>
+      <path class="ff" d="M 580 603 H 709 V 578 H 838"/>
+      <path class="ff" d="M 910 599 V 607"/>
     </g>
       <text class="m" x="36" y="678">Clic en un flujo para aislarlo · Esc para volver</text>
   </g>

@@ -44,25 +44,35 @@ RELACIONES = [
     {"desde": 7, "hasta": 4, "etiqueta": "monitorea", "tipo": "gestion"},
 ]
 
+# Cada paso es (capa, servicio, via): `via` etiqueta el tramo que llega al paso,
+# tomada de RELACIONES cuando existe; vacia cuando el dato no esta confirmado.
 FLUJOS = [
     {"id": "compra-pos", "nombre": "Compra en POS", "pasos": [
-        (1, "Geocom / BBR SW de Cajas"), (2, "Firewalls FortiGate 100E (HA)"),
-        (3, "Switch transaccional Unicard (ISO 8583)"), (4, "App Booking Unicard Transaccional"),
-        (5, "SQL Server – BD Canales"), (6, "Minsait Payments / NUEK (Switch Core)")]},
+        (1, "Geocom / BBR SW de Cajas", ""), (2, "Firewalls FortiGate 100E (HA)", "HTTPS"),
+        (3, "Switch transaccional Unicard (ISO 8583)", "IPSec"),
+        (4, "App Booking Unicard Transaccional", "ISO 8583"),
+        (5, "SQL Server – BD Canales", "JDBC"),
+        (6, "Minsait Payments / NUEK (Switch Core)", "")]},
     {"id": "compra-wallet", "nombre": "Compra desde wallet Unipay", "pasos": [
-        (1, "App Móvil Unipay (Wallet)"), (2, "Firewalls FortiGate 100E (HA)"),
-        (3, "WSO2 API Manager & ESB (clúster)"), (4, "Pasarelas de canales"),
-        (5, "SQL Server – BD Canales"), (6, "Minsait Payments / NUEK (Switch Core)")]},
+        (1, "App Móvil Unipay (Wallet)", ""), (2, "Firewalls FortiGate 100E (HA)", "HTTPS"),
+        (3, "WSO2 API Manager & ESB (clúster)", "IPSec"),
+        (4, "Pasarelas de canales", "REST"),
+        (5, "SQL Server – BD Canales", "JDBC"),
+        (6, "Minsait Payments / NUEK (Switch Core)", "")]},
     {"id": "portal-unipay", "nombre": "Autogestión en portal web", "pasos": [
-        (1, "Portal Web Clientes Unipay"), (2, "Firewalls FortiGate 100E (HA)"),
-        (3, "WSO2 API Manager & ESB (clúster)"), (4, "CRM Engage"),
-        (5, "SQL Server – BD Engage")]},
+        (1, "Portal Web Clientes Unipay", ""), (2, "Firewalls FortiGate 100E (HA)", "HTTPS"),
+        (3, "WSO2 API Manager & ESB (clúster)", "IPSec"),
+        (4, "CRM Engage", "REST"),
+        (5, "SQL Server – BD Engage", "JDBC")]},
     {"id": "recaudacion", "nombre": "Recaudación externa", "pasos": [
-        (1, "Portal Unired / cajas XCash"), (3, "WSO2 API Manager & ESB (clúster)"),
-        (4, "Pasarelas de canales"), (5, "SQL Server – BD Canales"), (6, "Unired")]},
+        (1, "Portal Unired / cajas XCash", ""),
+        (3, "WSO2 API Manager & ESB (clúster)", "HTTPS"),
+        (4, "Pasarelas de canales", "REST"),
+        (5, "SQL Server – BD Canales", "JDBC"), (6, "Unired", "")]},
     {"id": "conciliacion-batch", "nombre": "Conciliación batch nocturna", "pasos": [
-        (1, "WebServices REST y lotes SFTP diarios"), (3, "Servidor SFTP"),
-        (5, "Jenkins (malla batch nocturna)"), (5, "Datamart BI")]},
+        (1, "WebServices REST y lotes SFTP diarios", ""),
+        (3, "Servidor SFTP", "SFTP"),
+        (5, "Jenkins (malla batch nocturna)", ""), (5, "Datamart BI", "")]},
 ]
 
 
@@ -142,11 +152,11 @@ def construir(xlsx: str) -> dict:
     flujos = []
     for flujo in FLUJOS:
         pasos = []
-        for capa, nombre in flujo["pasos"]:
+        for capa, nombre, via in flujo["pasos"]:
             sid = _id(nombre)
             if sid not in ids:
                 raise SystemExit(f"flujo {flujo['id']}: servicio desconocido {nombre!r}")
-            pasos.append({"capa": capa, "servicio": sid})
+            pasos.append({"capa": capa, "servicio": sid, "via": via})
         flujos.append({"id": flujo["id"], "nombre": flujo["nombre"], "pasos": pasos})
 
     mtime = datetime.date.fromtimestamp(os.path.getmtime(xlsx)).isoformat()

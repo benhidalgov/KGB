@@ -27,11 +27,11 @@ FUENTE_DER = 62            # caracteres por linea en la columna externa
 FUENTE_NOTA = 66
 
 # Vista de flujo
-COL_X0, COL_W = 40, 196     # columna de cada capa (1..6)
-NODO_W, NODO_H = 150, 42
+COL_X0, COL_W = 40, 200     # columna de cada capa (1..6)
+NODO_W, NODO_H = 140, 42
 FILA_FLUJO = 112
 TOP_FLUJO = 96
-FUENTE_NODO = 24
+FUENTE_NODO = 22
 
 CSS = """
   :root {
@@ -597,16 +597,20 @@ def _svg_flujo(modelo: dict) -> tuple:
                 piezas.append(_texto(x + NODO_W / 2, base + 12 * i, "s", _t(linea),
                                      ' text-anchor="middle"'))
             piezas.append("      </g>")
-            cajas.append((x, y, total))
+            cajas.append((x, y, total, paso))
 
         for i in range(len(cajas) - 1):
-            x1, y1, _ = cajas[i]
-            x2, y2, _ = cajas[i + 1]
+            x1, y1, _, _ = cajas[i]
+            x2, y2, _, siguiente = cajas[i + 1]
             if abs(x1 - x2) < 0.5:                        # misma capa: bajan en vertical
                 d = _ruta(x1 + NODO_W / 2, y1 + NODO_H, x2 + NODO_W / 2, y2)
             else:
                 d = _ruta(x1 + NODO_W, y1 + NODO_H / 2, x2 - 2, y2 + NODO_H / 2)
             piezas.append(f'      <path class="ff" d="{d}"/>')
+            via = siguiente.get("via")
+            if via and abs(y1 - y2) < 0.5 and abs(x1 - x2) > 0.5:
+                piezas.append(_texto((x1 + NODO_W + x2) / 2, y1 + NODO_H / 2 - 6, "m", _t(via),
+                                     ' text-anchor="middle"'))
         piezas.append("    </g>")
 
     piezas.append(_texto(36, alto_svg - 12, "m", "Clic en un flujo para aislarlo · Esc para volver"))

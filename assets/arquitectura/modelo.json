@@ -1029,27 +1029,33 @@
    "pasos": [
     {
      "capa": 1,
-     "servicio": "geocom-bbr-sw-de-cajas"
+     "servicio": "geocom-bbr-sw-de-cajas",
+     "via": ""
     },
     {
      "capa": 2,
-     "servicio": "firewalls-fortigate-100e-ha"
+     "servicio": "firewalls-fortigate-100e-ha",
+     "via": "HTTPS"
     },
     {
      "capa": 3,
-     "servicio": "switch-transaccional-unicard-iso-8583"
+     "servicio": "switch-transaccional-unicard-iso-8583",
+     "via": "IPSec"
     },
     {
      "capa": 4,
-     "servicio": "app-booking-unicard-transaccional"
+     "servicio": "app-booking-unicard-transaccional",
+     "via": "ISO 8583"
     },
     {
      "capa": 5,
-     "servicio": "sql-server-bd-canales"
+     "servicio": "sql-server-bd-canales",
+     "via": "JDBC"
     },
     {
      "capa": 6,
-     "servicio": "minsait-payments-nuek-switch-core"
+     "servicio": "minsait-payments-nuek-switch-core",
+     "via": ""
     }
    ]
   },
@@ -1059,27 +1065,33 @@
    "pasos": [
     {
      "capa": 1,
-     "servicio": "app-movil-unipay-wallet"
+     "servicio": "app-movil-unipay-wallet",
+     "via": ""
     },
     {
      "capa": 2,
-     "servicio": "firewalls-fortigate-100e-ha"
+     "servicio": "firewalls-fortigate-100e-ha",
+     "via": "HTTPS"
     },
     {
      "capa": 3,
-     "servicio": "wso2-api-manager-esb-cluster"
+     "servicio": "wso2-api-manager-esb-cluster",
+     "via": "IPSec"
     },
     {
      "capa": 4,
-     "servicio": "pasarelas-de-canales"
+     "servicio": "pasarelas-de-canales",
+     "via": "REST"
     },
     {
      "capa": 5,
-     "servicio": "sql-server-bd-canales"
+     "servicio": "sql-server-bd-canales",
+     "via": "JDBC"
     },
     {
      "capa": 6,
-     "servicio": "minsait-payments-nuek-switch-core"
+     "servicio": "minsait-payments-nuek-switch-core",
+     "via": ""
     }
    ]
   },
@@ -1089,23 +1101,28 @@
    "pasos": [
     {
      "capa": 1,
-     "servicio": "portal-web-clientes-unipay"
+     "servicio": "portal-web-clientes-unipay",
+     "via": ""
     },
     {
      "capa": 2,
-     "servicio": "firewalls-fortigate-100e-ha"
+     "servicio": "firewalls-fortigate-100e-ha",
+     "via": "HTTPS"
     },
     {
      "capa": 3,
-     "servicio": "wso2-api-manager-esb-cluster"
+     "servicio": "wso2-api-manager-esb-cluster",
+     "via": "IPSec"
     },
     {
      "capa": 4,
-     "servicio": "crm-engage"
+     "servicio": "crm-engage",
+     "via": "REST"
     },
     {
      "capa": 5,
-     "servicio": "sql-server-bd-engage"
+     "servicio": "sql-server-bd-engage",
+     "via": "JDBC"
     }
    ]
   },
@@ -1115,23 +1132,28 @@
    "pasos": [
     {
      "capa": 1,
-     "servicio": "portal-unired-cajas-xcash"
+     "servicio": "portal-unired-cajas-xcash",
+     "via": ""
     },
     {
      "capa": 3,
-     "servicio": "wso2-api-manager-esb-cluster"
+     "servicio": "wso2-api-manager-esb-cluster",
+     "via": "HTTPS"
     },
     {
      "capa": 4,
-     "servicio": "pasarelas-de-canales"
+     "servicio": "pasarelas-de-canales",
+     "via": "REST"
     },
     {
      "capa": 5,
-     "servicio": "sql-server-bd-canales"
+     "servicio": "sql-server-bd-canales",
+     "via": "JDBC"
     },
     {
      "capa": 6,
-     "servicio": "unired"
+     "servicio": "unired",
+     "via": ""
     }
    ]
   },
@@ -1141,19 +1163,23 @@
    "pasos": [
     {
      "capa": 1,
-     "servicio": "webservices-rest-y-lotes-sftp-diarios"
+     "servicio": "webservices-rest-y-lotes-sftp-diarios",
+     "via": ""
     },
     {
      "capa": 3,
-     "servicio": "servidor-sftp"
+     "servicio": "servidor-sftp",
+     "via": "SFTP"
     },
     {
      "capa": 5,
-     "servicio": "jenkins-malla-batch-nocturna"
+     "servicio": "jenkins-malla-batch-nocturna",
+     "via": ""
     },
     {
      "capa": 5,
-     "servicio": "datamart-bi"
+     "servicio": "datamart-bi",
+     "via": ""
     }
    ]
   }

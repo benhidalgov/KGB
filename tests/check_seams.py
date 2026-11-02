@@ -221,6 +221,9 @@ def check_arquitectura_html():
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
     for svg in re.findall(r"<svg .*?</svg>", claro, re.S):
         ET.fromstring(svg)
+    flujo_svg = re.search(r'<svg id="vista-flujo".*?</svg>', claro, re.S).group(0)
+    assert ">ISO 8583</text>" in flujo_svg and ">JDBC</text>" in flujo_svg, \
+        "faltan las etiquetas de enlace en los flujos"
     oscuro = cargar_html_arquitectura("Oscuro")
     assert 'class="tema-oscuro"' in oscuro and "%%TEMA%%" not in oscuro, "el tema oscuro debe aplicarse"
     assert oscuro == claro.replace("tema-claro", "tema-oscuro"), "solo debe variar el tema"
@@ -270,6 +273,9 @@ def check_arquitectura_modelo():
             nombres = {s["id"] for s in capas[paso["capa"]]["servicios"]}
             assert paso["servicio"] in nombres, \
                 f"{flujo['id']}: {paso['servicio']} no pertenece a la capa {paso['capa']}"
+            assert "via" in paso, f"{flujo['id']}: falta la etiqueta del enlace"
+    assert sum(1 for f in modelo["flujos"] for p in f["pasos"] if p["via"]) == 16, \
+        "cada enlace confirmado necesita su protocolo"
 
 
 def check_arquitectura_render():
