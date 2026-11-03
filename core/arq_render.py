@@ -632,14 +632,30 @@ def _svg_capas(modelo: dict) -> tuple:
         piezas.append(f'      <line class="regla" x1="{x + 16:g}" y1="{y0 + 44:g}" '
                       f'x2="{x + ancho - 16:g}" y2="{y0 + 44:g}"/>')
 
-        lineas_preview = _vista_previa(capa, ancho, alto, espacio)
-        if lineas_preview:
+        if cid == 6:
+            # La columna externa es alta: un parrafo de nombres deja media caja
+            # vacia. Un servicio por fila con su categoria la llena y se escanea.
             piezas.append('      <g class="preview">')
+            paso_previa = min(21, max(16, (alto - 74) / max(1, len(capa["servicios"]))))
             pyy = y0 + 62
-            for linea in lineas_preview:
-                piezas.append(_texto(x + 22, pyy, "m", _t(linea)))
-                pyy += espacio
+            for servicio in capa["servicios"]:
+                if pyy > y0 + alto - 12:
+                    break
+                cat = servicio["categoria"]
+                limite = max(20, int((ancho - 66 - len(cat) * 4.8) / 5.7))
+                piezas.append(_texto(x + 22, pyy, "s", "•  " + _t(_recortar(servicio["nombre"], limite))))
+                piezas.append(_texto(x + ancho - 22, pyy, "m", _t(cat), ' text-anchor="end"'))
+                pyy += paso_previa
             piezas.append("      </g>")
+        else:
+            lineas_preview = _vista_previa(capa, ancho, alto, espacio)
+            if lineas_preview:
+                piezas.append('      <g class="preview">')
+                pyy = y0 + 62
+                for linea in lineas_preview:
+                    piezas.append(_texto(x + 22, pyy, "m", _t(linea)))
+                    pyy += espacio
+                piezas.append("      </g>")
 
         piezas.append('      <g class="servicios">')
         yy = y0 + 62
