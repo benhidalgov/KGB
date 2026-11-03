@@ -16,6 +16,8 @@ steps:
   displayName: 'Instalar dependencias'
 
 - script: |
+    python tests/check_seams.py
+    python tests/check_bugfixes.py
     python tests/check_security_high.py
     python tests/check_nivel1.py
     python tests/check_auditoria_log.py

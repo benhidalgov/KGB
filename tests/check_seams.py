@@ -392,7 +392,46 @@ def check_ui_filtro_categoria_sin_reset():
             "cambiar el recuento no debe resetear el filtro a la primera opción"
 
 
+def check_preflight_produccion():
+    """En produccion el arranque exige claves maestras, boveda y PostgreSQL."""
+    from core.preflight import VARIABLES_OBLIGATORIAS, problemas_de_entorno
+
+    class _Conexion:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def exec_driver_sql(self, sql):
+            return None
+
+    class _Motor:
+        def connect(self):
+            return _Conexion()
+
+    assert problemas_de_entorno(es_produccion=False) == [], "en desarrollo no debe validar"
+
+    with mock.patch.dict(os.environ, {v: "" for v in VARIABLES_OBLIGATORIAS}), \
+         mock.patch("core.db.obtener_engine", return_value=None):
+        faltan = problemas_de_entorno(es_produccion=True)
+    assert len(faltan) == len(VARIABLES_OBLIGATORIAS) + 1, faltan
+    assert any("PostgreSQL" in motivo for motivo in faltan), "debe detectar la base"
+
+    with mock.patch.dict(os.environ, {v: "x" for v in VARIABLES_OBLIGATORIAS}):
+        assert problemas_de_entorno(es_produccion=True, engine=_Motor()) == [], \
+            "con todo configurado no debe haber problemas"
+
+        class _MotorCaido:
+            def connect(self):
+                raise OSError("sin red")
+
+        faltan = problemas_de_entorno(es_produccion=True, engine=_MotorCaido())
+        assert any("no responde" in motivo for motivo in faltan), faltan
+
+
 if __name__ == "__main__":
+    check_preflight_produccion()
     check_auth_desactivado_no_entra()
     check_auth_fallback_local()
     check_vault_ciclo_vida_listar_eliminar()

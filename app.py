@@ -15,6 +15,7 @@ logger = logging.getLogger("infra_copilot.app")
 
 from core.estilos import cargar_estilos_css
 from core.configuracion import CSV_PATH
+from core.preflight import problemas_de_entorno
 from core.auth import (
     es_usuario_autenticado,
     obtener_usuario_actual,
@@ -90,10 +91,28 @@ def _aplicar_migraciones_una_vez() -> list:
     return _aplicar_migraciones_core()
 
 
+def _verificar_entorno() -> None:
+    """En produccion corta el arranque si falta configuracion o PostgreSQL.
+
+    Sin este corte la consola muestra el login y falla recien al autenticar
+    (auditoria) o al abrir la boveda, sin decir que el despliegue esta incompleto.
+    """
+    if "entorno_faltan" not in st.session_state:
+        st.session_state.entorno_faltan = problemas_de_entorno()
+    faltan = st.session_state.entorno_faltan
+    if not faltan:
+        return
+    st.error("La consola no inicia: la configuración de producción está incompleta.")
+    st.markdown("\n".join(f"- {motivo}" for motivo in faltan))
+    st.caption("Revise .env.example y los logs del contenedor.")
+    st.stop()
+
+
 st.set_page_config(page_title="Consola de Infraestructura y Operaciones", layout="wide", initial_sidebar_state="expanded")
 tema_actual_app = st.session_state.get("tema_visual", "Claro")
 st.markdown(cargar_estilos_css(tema_actual_app), unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
+_verificar_entorno()
 _aplicar_migraciones_una_vez()
 
 # 1.1 Vista Directa del Manual en Nueva Pestaña del Navegador (?view=manual)
