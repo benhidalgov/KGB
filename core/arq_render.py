@@ -35,14 +35,16 @@ FUENTE_NODO = 20
 
 CSS = """
   :root {
-    --bg: #f5f6f8; --panel: #ffffff; --panel2: #eef0f4; --text: #14161a; --muted: #666d78;
+    --bg: #f0f3f7; --panel: #ffffff; --panel2: #eef0f4; --text: #14161a; --muted: #666d78;
     --line: #dce0e6; --accent: #2563eb; --crit: #b45309; --int: #0f766e; --ext: #6d28d9;
+    --band: #e7ecf3; --band-ops: #dce3eb;
     --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
     --dur-rapida: .16s; --dur-media: .28s; --ease: cubic-bezier(.2, .6, .2, 1);
   }
   html.tema-oscuro {
-    --bg: #101215; --panel: #181b1f; --panel2: #21252b; --text: #e8eaed; --muted: #8d949e;
+    --bg: #0c0e11; --panel: #181b1f; --panel2: #21252b; --text: #e8eaed; --muted: #8d949e;
     --line: #2c3138; --accent: #6ea0ff; --crit: #fb923c; --int: #2dd4bf; --ext: #a78bfa;
+    --band: #20242a; --band-ops: #262b32;
   }
   body { margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column;
          background: var(--bg); color: var(--text);
@@ -77,6 +79,12 @@ CSS = """
   .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 
   .band { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+  .banda { fill: var(--band); }
+  .banda-ops { fill: var(--band-ops); }
+  html.tema-claro .band, html.tema-claro .fila {
+    filter: drop-shadow(0 1px 2px rgba(16, 24, 40, .07))
+            drop-shadow(0 10px 22px rgba(16, 24, 40, .045));
+  }
   .ext { stroke-dasharray: 6 4; }
   .ops { fill: var(--panel2); stroke-dasharray: 6 4; }
   .regla { stroke: var(--line); stroke-width: 1; }
@@ -453,6 +461,16 @@ def _texto(x: float, y: float, clase: str, contenido: str, extra: str = "") -> s
     return f'      <text class="{clase}" x="{x:g}" y="{y:g}"{extra}>{contenido}</text>'
 
 
+def _banda(x: float, y: float, ancho: float, alto: float, ops: bool = False) -> str:
+    """Franja de encabezado del panel, con las esquinas superiores redondeadas."""
+    r = 8
+    d = (f"M {x:g} {y + alto:g} L {x:g} {y + r:g} Q {x:g} {y:g} {x + r:g} {y:g} "
+         f"L {x + ancho - r:g} {y:g} Q {x + ancho:g} {y:g} {x + ancho:g} {y + r:g} "
+         f"L {x + ancho:g} {y + alto:g} Z")
+    clase = "banda banda-ops" if ops else "banda"
+    return f'      <path class="{clase}" d="{d}"/>'
+
+
 def _badge(capa: dict) -> str:
     externos = sum(1 for s in capa["servicios"] if s["externo"])
     partes = [_n(len(capa["servicios"]), "servicio", "servicios")]
@@ -606,6 +624,7 @@ def _svg_capas(modelo: dict) -> tuple:
                       f'tabindex="0" role="button" aria-label="{_t(capa["nombre"])}, '
                       f'{_n(len(capa["servicios"]), "servicio", "servicios")}">')
         piezas.append(f'      <rect class="{clases}" x="{x:g}" y="{y0:g}" width="{ancho:g}" height="{alto:g}" rx="8"/>')
+        piezas.append(_banda(x + 1, y0 + 1, ancho - 2, 44, capa["plano"] == "gestion"))
         piezas.append(_texto(x + 22, y0 + 30, "h",
                              f'<tspan class="idx">{cid:02d}</tspan>   {_t(capa["nombre"])}'))
         piezas.append(_texto(x + ancho - 22, y0 + 30, "b", _badge(capa), ' text-anchor="end"'))
@@ -690,7 +709,9 @@ def _svg_flujo(modelo: dict) -> tuple:
         piezas.append(f'    <g class="flujo" data-flujo="{flujo["id"]}" tabindex="0" role="button" '
                       f'aria-label="Flujo {_t(flujo["nombre"])}">')
         piezas.append(f'      <rect class="fila" x="20" y="{y0:g}" width="1200" height="{FILA_FLUJO - 18}" rx="8"/>')
-        piezas.append(_texto(36, y0 + 20, "f", _t(flujo["nombre"])))
+        piezas.append(_banda(21, y0 + 1, 1198, 28))
+        piezas.append(f'      <line class="regla" x1="21" y1="{y0 + 29:g}" x2="1219" y2="{y0 + 29:g}"/>')
+        piezas.append(_texto(36, y0 + 19, "f", _t(flujo["nombre"])))
 
         conteo, posiciones = {}, []
         for paso in flujo["pasos"]:

@@ -219,6 +219,7 @@ def check_arquitectura_html():
     assert "addEventListener('wheel'" in claro and "passive: false" in claro, "falta el zoom con rueda"
     assert "function resetZoom" in claro and "#escena, #escena-flujo" in claro, "falta el paneo"
     assert 'class="idx"' in claro and 'class="regla"' in claro, "falta la numeracion de capa"
+    assert 'class="banda"' in claro, "falta la franja de encabezado"
     assert 'class="d"' in claro, "falta la descripcion de servicio en el foco"
     assert 'preserveAspectRatio="xMidYMin meet"' in claro, "la vista debe anclarse arriba"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
@@ -236,7 +237,8 @@ def check_arquitectura_html():
     assert flujo_svg.count('data-servicio=') == 26, "los nodos del flujo deben abrir ficha"
     oscuro = cargar_html_arquitectura("Oscuro")
     assert 'class="tema-oscuro"' in oscuro and "%%TEMA%%" not in oscuro, "el tema oscuro debe aplicarse"
-    assert oscuro == claro.replace("tema-claro", "tema-oscuro"), "solo debe variar el tema"
+    assert oscuro == claro.replace('<html class="tema-claro"', '<html class="tema-oscuro"'), \
+        "solo debe variar el tema"
 
 
 def check_arquitectura_modelo():

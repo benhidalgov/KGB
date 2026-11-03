@@ -6,14 +6,16 @@
 <title>Arquitectura de plataforma SMUCORP</title>
 <style>
   :root {
-    --bg: #f5f6f8; --panel: #ffffff; --panel2: #eef0f4; --text: #14161a; --muted: #666d78;
+    --bg: #f0f3f7; --panel: #ffffff; --panel2: #eef0f4; --text: #14161a; --muted: #666d78;
     --line: #dce0e6; --accent: #2563eb; --crit: #b45309; --int: #0f766e; --ext: #6d28d9;
+    --band: #e7ecf3; --band-ops: #dce3eb;
     --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
     --dur-rapida: .16s; --dur-media: .28s; --ease: cubic-bezier(.2, .6, .2, 1);
   }
   html.tema-oscuro {
-    --bg: #101215; --panel: #181b1f; --panel2: #21252b; --text: #e8eaed; --muted: #8d949e;
+    --bg: #0c0e11; --panel: #181b1f; --panel2: #21252b; --text: #e8eaed; --muted: #8d949e;
     --line: #2c3138; --accent: #6ea0ff; --crit: #fb923c; --int: #2dd4bf; --ext: #a78bfa;
+    --band: #20242a; --band-ops: #262b32;
   }
   body { margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column;
          background: var(--bg); color: var(--text);
@@ -48,6 +50,12 @@
   .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 
   .band { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+  .banda { fill: var(--band); }
+  .banda-ops { fill: var(--band-ops); }
+  html.tema-claro .band, html.tema-claro .fila {
+    filter: drop-shadow(0 1px 2px rgba(16, 24, 40, .07))
+            drop-shadow(0 10px 22px rgba(16, 24, 40, .045));
+  }
   .ext { stroke-dasharray: 6 4; }
   .ops { fill: var(--panel2); stroke-dasharray: 6 4; }
   .regla { stroke: var(--line); stroke-width: 1; }
@@ -182,6 +190,7 @@
     </g>
     <g class="capa" data-capa="1" data-h0="96" data-h1="261" tabindex="0" role="button" aria-label="Canales de entrada, 12 servicios">
       <rect class="band" x="30" y="55" width="730" height="96" rx="8"/>
+      <path class="banda" d="M 31 100 L 31 64 Q 31 56 39 56 L 751 56 Q 759 56 759 64 L 759 100 Z"/>
       <text class="h" x="52" y="85"><tspan class="idx">01</tspan>   Canales de entrada</text>
       <text class="b" x="738" y="85" text-anchor="end">12 servicios · 6 externos · sin servidores propios</text>
       <line class="regla" x1="46" y1="99" x2="744" y2="99"/>
@@ -235,6 +244,7 @@
     </g>
     <g class="capa" data-capa="2" data-h0="96" data-h1="165" tabindex="0" role="button" aria-label="Perímetro de seguridad y red core, 6 servicios">
       <rect class="band" x="30" y="171" width="730" height="96" rx="8"/>
+      <path class="banda" d="M 31 216 L 31 180 Q 31 172 39 172 L 751 172 Q 759 172 759 180 L 759 216 Z"/>
       <text class="h" x="52" y="201"><tspan class="idx">02</tspan>   Perímetro de seguridad y red core</text>
       <text class="b" x="738" y="201" text-anchor="end">6 servicios · 1 externo · 2 servidores · 2 críticos</text>
       <line class="regla" x1="46" y1="215" x2="744" y2="215"/>
@@ -270,6 +280,7 @@
     </g>
     <g class="capa" data-capa="3" data-h0="96" data-h1="165" tabindex="0" role="button" aria-label="Integración y bus de servicios, 6 servicios">
       <rect class="band" x="30" y="287" width="730" height="96" rx="8"/>
+      <path class="banda" d="M 31 332 L 31 296 Q 31 288 39 288 L 751 288 Q 759 288 759 296 L 759 332 Z"/>
       <text class="h" x="52" y="317"><tspan class="idx">03</tspan>   Integración y bus de servicios</text>
       <text class="b" x="738" y="317" text-anchor="end">6 servicios · 12 servidores · 12 críticos</text>
       <line class="regla" x1="46" y1="331" x2="744" y2="331"/>
@@ -305,6 +316,7 @@
     </g>
     <g class="capa" data-capa="4" data-h0="96" data-h1="244" tabindex="0" role="button" aria-label="Aplicaciones de negocio y core financiero, 12 servicios">
       <rect class="band" x="30" y="403" width="730" height="96" rx="8"/>
+      <path class="banda" d="M 31 448 L 31 412 Q 31 404 39 404 L 751 404 Q 759 404 759 412 L 759 448 Z"/>
       <text class="h" x="52" y="433"><tspan class="idx">04</tspan>   Aplicaciones de negocio y core financiero</text>
       <text class="b" x="738" y="433" text-anchor="end">12 servicios · 25 servidores · 15 críticos</text>
       <line class="regla" x1="46" y1="447" x2="744" y2="447"/>
@@ -357,6 +369,7 @@
     </g>
     <g class="capa" data-capa="5" data-h0="96" data-h1="227" tabindex="0" role="button" aria-label="Persistencia, BD y batch, 9 servicios">
       <rect class="band" x="30" y="519" width="730" height="96" rx="8"/>
+      <path class="banda" d="M 31 564 L 31 528 Q 31 520 39 520 L 751 520 Q 759 520 759 528 L 759 564 Z"/>
       <text class="h" x="52" y="549"><tspan class="idx">05</tspan>   Persistencia, BD y batch</text>
       <text class="b" x="738" y="549" text-anchor="end">9 servicios · 11 servidores · 8 críticos</text>
       <line class="regla" x1="46" y1="563" x2="744" y2="563"/>
@@ -404,6 +417,7 @@
     </g>
     <g class="capa" data-capa="6" data-h0="468" data-h1="680" tabindex="0" role="button" aria-label="Ecosistema externo, 19 servicios">
       <rect class="band ext" x="820" y="55" width="390" height="468" rx="8"/>
+      <path class="banda" d="M 821 100 L 821 64 Q 821 56 829 56 L 1201 56 Q 1209 56 1209 64 L 1209 100 Z"/>
       <text class="h" x="842" y="85"><tspan class="idx">06</tspan>   Ecosistema externo</text>
       <text class="b" x="1188" y="85" text-anchor="end">19 servicios · 19 externos</text>
       <line class="regla" x1="836" y1="99" x2="1194" y2="99"/>
@@ -497,6 +511,7 @@
     </g>
     <g class="capa" data-capa="7" data-h0="96" data-h1="134" tabindex="0" role="button" aria-label="Operación y monitoreo, 4 servicios">
       <rect class="band ops" x="30" y="651" width="1180" height="96" rx="8"/>
+      <path class="banda banda-ops" d="M 31 696 L 31 660 Q 31 652 39 652 L 1201 652 Q 1209 652 1209 660 L 1209 696 Z"/>
       <text class="h" x="52" y="681"><tspan class="idx">07</tspan>   Operación y monitoreo</text>
       <text class="b" x="1188" y="681" text-anchor="end">4 servicios · 1 externo · 4 servidores · 2 críticos</text>
       <line class="regla" x1="46" y1="695" x2="1194" y2="695"/>
@@ -525,6 +540,7 @@
     </g>
     <g class="capa" data-capa="8" data-h0="80" data-h1="106" tabindex="0" role="button" aria-label="Hosting, entrega y despliegue, 2 servicios">
       <rect class="band ops" x="30" y="771" width="1180" height="80" rx="8"/>
+      <path class="banda banda-ops" d="M 31 816 L 31 780 Q 31 772 39 772 L 1201 772 Q 1209 772 1209 780 L 1209 816 Z"/>
       <text class="h" x="52" y="801"><tspan class="idx">08</tspan>   Hosting, entrega y despliegue</text>
       <text class="b" x="1188" y="801" text-anchor="end">2 servicios · 2 externos · 4 servidores · 4 críticos</text>
       <line class="regla" x1="46" y1="815" x2="1194" y2="815"/>
@@ -585,7 +601,9 @@
       <text class="b" x="1040" y="66"><tspan class="idx">06</tspan>  Ecosistema externo</text>
     <g class="flujo" data-flujo="compra-pos" tabindex="0" role="button" aria-label="Flujo Compra en POS">
       <rect class="fila" x="20" y="96" width="1200" height="94" rx="8"/>
-      <text class="f" x="36" y="116">Compra en POS</text>
+      <path class="banda" d="M 21 125 L 21 105 Q 21 97 29 97 L 1211 97 Q 1219 97 1219 105 L 1219 125 Z"/>
+      <line class="regla" x1="21" y1="125" x2="1219" y2="125"/>
+      <text class="f" x="36" y="115">Compra en POS</text>
       <g class="paso" style="--i:0" data-servicio="geocom-bbr-sw-de-cajas" tabindex="0" role="button" aria-label="Ficha de Geocom / BBR SW de Cajas">
         <rect class="nodo" x="40" y="134" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="155" text-anchor="middle">Geocom / BBR SW de</text>
@@ -628,7 +646,9 @@
     </g>
     <g class="flujo" data-flujo="compra-wallet" tabindex="0" role="button" aria-label="Flujo Compra desde wallet Unipay">
       <rect class="fila" x="20" y="208" width="1200" height="94" rx="8"/>
-      <text class="f" x="36" y="228">Compra desde wallet Unipay</text>
+      <path class="banda" d="M 21 237 L 21 217 Q 21 209 29 209 L 1211 209 Q 1219 209 1219 217 L 1219 237 Z"/>
+      <line class="regla" x1="21" y1="237" x2="1219" y2="237"/>
+      <text class="f" x="36" y="227">Compra desde wallet Unipay</text>
       <g class="paso" style="--i:0" data-servicio="app-movil-unipay-wallet" tabindex="0" role="button" aria-label="Ficha de App Móvil Unipay (Wallet)">
         <rect class="nodo" x="40" y="246" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="267" text-anchor="middle">App Móvil Unipay</text>
@@ -670,7 +690,9 @@
     </g>
     <g class="flujo" data-flujo="portal-unipay" tabindex="0" role="button" aria-label="Flujo Autogestión en portal web">
       <rect class="fila" x="20" y="320" width="1200" height="94" rx="8"/>
-      <text class="f" x="36" y="340">Autogestión en portal web</text>
+      <path class="banda" d="M 21 349 L 21 329 Q 21 321 29 321 L 1211 321 Q 1219 321 1219 329 L 1219 349 Z"/>
+      <line class="regla" x1="21" y1="349" x2="1219" y2="349"/>
+      <text class="f" x="36" y="339">Autogestión en portal web</text>
       <g class="paso" style="--i:0" data-servicio="portal-web-clientes-unipay" tabindex="0" role="button" aria-label="Ficha de Portal Web Clientes Unipay">
         <rect class="nodo" x="40" y="358" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="379" text-anchor="middle">Portal Web Clientes</text>
@@ -706,7 +728,9 @@
     </g>
     <g class="flujo" data-flujo="recaudacion" tabindex="0" role="button" aria-label="Flujo Recaudación externa">
       <rect class="fila" x="20" y="432" width="1200" height="94" rx="8"/>
-      <text class="f" x="36" y="452">Recaudación externa</text>
+      <path class="banda" d="M 21 461 L 21 441 Q 21 433 29 433 L 1211 433 Q 1219 433 1219 441 L 1219 461 Z"/>
+      <line class="regla" x1="21" y1="461" x2="1219" y2="461"/>
+      <text class="f" x="36" y="451">Recaudación externa</text>
       <g class="paso" style="--i:0" data-servicio="portal-unired-cajas-xcash" tabindex="0" role="button" aria-label="Ficha de Portal Unired / cajas XCash">
         <rect class="nodo" x="40" y="470" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="491" text-anchor="middle">Portal Unired /</text>
@@ -740,7 +764,9 @@
     </g>
     <g class="flujo" data-flujo="conciliacion-batch" tabindex="0" role="button" aria-label="Flujo Conciliación batch nocturna">
       <rect class="fila" x="20" y="544" width="1200" height="94" rx="8"/>
-      <text class="f" x="36" y="564">Conciliación batch nocturna</text>
+      <path class="banda" d="M 21 573 L 21 553 Q 21 545 29 545 L 1211 545 Q 1219 545 1219 553 L 1219 573 Z"/>
+      <line class="regla" x1="21" y1="573" x2="1219" y2="573"/>
+      <text class="f" x="36" y="563">Conciliación batch nocturna</text>
       <g class="paso" style="--i:0" data-servicio="webservices-rest-y-lotes-sftp-diarios" tabindex="0" role="button" aria-label="Ficha de WebServices REST y lotes SFTP diarios">
         <rect class="nodo" x="40" y="582" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="603" text-anchor="middle">WebServices REST y</text>
