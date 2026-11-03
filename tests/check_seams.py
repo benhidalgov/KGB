@@ -218,6 +218,8 @@ def check_arquitectura_html():
     assert "prefers-reduced-motion" in claro, "el movimiento debe respetar la preferencia"
     assert "addEventListener('wheel'" in claro and "passive: false" in claro, "falta el zoom con rueda"
     assert "function resetZoom" in claro and "#escena, #escena-flujo" in claro, "falta el paneo"
+    assert 'class="idx"' in claro and 'class="regla"' in claro, "falta la numeracion de capa"
+    assert 'preserveAspectRatio="xMidYMin meet"' in claro, "la vista debe anclarse arriba"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
     for svg in re.findall(r"<svg .*?</svg>", claro, re.S):
         ET.fromstring(svg)

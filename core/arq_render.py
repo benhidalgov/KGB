@@ -31,17 +31,18 @@ COL_X0, COL_W = 40, 200     # columna de cada capa (1..6)
 NODO_W, NODO_H = 140, 42
 FILA_FLUJO = 112
 TOP_FLUJO = 96
-FUENTE_NODO = 22
+FUENTE_NODO = 20
 
 CSS = """
   :root {
-    --bg: #f7f7f5; --panel: #ffffff; --panel2: #efefea; --text: #1a1a1a; --muted: #6b6b6b;
-    --line: #d8d8d4; --accent: #2f6feb; --crit: #c2410c; --int: #0f766e; --ext: #7c3aed;
+    --bg: #f5f6f8; --panel: #ffffff; --panel2: #eef0f4; --text: #14161a; --muted: #666d78;
+    --line: #dce0e6; --accent: #2563eb; --crit: #b45309; --int: #0f766e; --ext: #6d28d9;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
     --dur-rapida: .16s; --dur-media: .28s; --ease: cubic-bezier(.2, .6, .2, 1);
   }
   html.tema-oscuro {
-    --bg: #131313; --panel: #1d1d20; --panel2: #232327; --text: #e9e9e7; --muted: #9a9a98;
-    --line: #34343a; --accent: #5b93ff; --crit: #fb923c; --int: #2dd4bf; --ext: #a78bfa;
+    --bg: #101215; --panel: #181b1f; --panel2: #21252b; --text: #e8eaed; --muted: #8d949e;
+    --line: #2c3138; --accent: #6ea0ff; --crit: #fb923c; --int: #2dd4bf; --ext: #a78bfa;
   }
   body { margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column;
          background: var(--bg); color: var(--text);
@@ -69,26 +70,28 @@ CSS = """
     .capa, .flecha, .flujo, .band, .fila, .nodo { transition: none; }
   }
 
-  #tabs { display: flex; align-items: center; gap: 6px; padding: 8px 12px 0; }
-  .tab { font: 600 12px/1 inherit; cursor: pointer; padding: 7px 14px; border-radius: 8px;
-         border: 1px solid var(--line); background: var(--panel); color: var(--muted); }
-  .tab[aria-selected="true"] { color: var(--text); border-color: var(--accent);
-         box-shadow: inset 0 -2px 0 var(--accent); }
-  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  #pista-vista { margin-left: auto; font-size: 10.5px; color: var(--muted); }
+  #tabs { display: flex; align-items: center; gap: 22px; padding: 14px 0 0 30px; }
+  .tab { font: 500 13px/1 inherit; cursor: pointer; padding: 0 0 7px; border: 0;
+         background: none; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 
   .band { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
   .ext { stroke-dasharray: 6 4; }
   .ops { fill: var(--panel2); stroke-dasharray: 6 4; }
-  .t { font-size: 19px; font-weight: 700; }
-  .h { font-size: 17px; font-weight: 700; }
-  .f { font-size: 12.5px; font-weight: 700; }
+  .regla { stroke: var(--line); stroke-width: 1; }
+  .t { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+  .h { font-size: 16px; font-weight: 600; }
+  .f { font-size: 13px; font-weight: 600; }
   .s { font-size: 11.5px; }
-  .b { font-size: 11.5px; fill: var(--muted); }
+  .b { font-size: 11px; fill: var(--muted); }
   .m { font-size: 10.5px; fill: var(--muted); }
-  .fl { stroke: var(--accent); stroke-width: 2; fill: none; marker-end: url(#flecha-c); }
-  .fld { stroke: var(--muted); stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; marker-end: url(#flecha-cm); }
-  .ff { stroke: var(--accent); stroke-width: 1.6; fill: none; marker-end: url(#flecha-f); }
+  .idx { font-family: var(--mono); font-size: 11px; font-weight: 500; fill: var(--muted); }
+  .stamp { font-family: var(--mono); font-size: 10px; }
+  .capa.on .idx { fill: var(--accent); }
+  .fl { stroke: var(--accent); stroke-width: 1.8; fill: none; marker-end: url(#flecha-c); }
+  .fld { stroke: var(--muted); stroke-width: 1.3; fill: none; stroke-dasharray: 5 4; marker-end: url(#flecha-cm); }
+  .ff { stroke: var(--accent); stroke-width: 1.5; fill: none; marker-end: url(#flecha-f); }
   .crit { fill: var(--crit); } .int { fill: var(--int); } .extc { fill: var(--ext); }
 
   /* Foco por capa */
@@ -207,6 +210,17 @@ JS = """
     if (movido) { suprimir = true; setTimeout(function () { suprimir = false; }, 0); }
   }
 
+  // Alinea las pestanas con el borde del contenido: el SVG se centra con
+  // letterboxing, asi que su caja no coincide con el viewBox.
+  function alinear() {
+    var svg = cuerpo.dataset.vista === 'flujo' ? vistaFlujo : vistaCapas;
+    var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    if (!r.width || !r.height) return;
+    var k = Math.min(r.width / vb.width, r.height / vb.height);
+    var izq = r.left + (r.width - vb.width * k) / 2;
+    document.getElementById('tabs').style.paddingLeft = Math.max(8, izq + 30 * k) + 'px';
+  }
+
   function ordenar() {
     var escena = document.getElementById('escena');
     capas.forEach(function (c) { escena.appendChild(c); });
@@ -322,8 +336,11 @@ JS = """
       vistaFlujo.toggleAttribute('hidden', vista !== 'flujo');
       volver();
       limpiarFlujos();
+      alinear();
     });
   });
+  window.addEventListener('resize', alinear);
+  alinear();
 })();
 """
 
@@ -414,12 +431,12 @@ def _vista_previa(capa: dict, ancho: float, alto: float, espacio: int) -> list:
     return lineas
 
 
-def _titulo(modelo: dict, subtitulo: str) -> list:
+def _titulo(modelo: dict) -> list:
     meta = modelo["meta"]
     return [
         _texto(X0, 30, "t", "Arquitectura de plataforma SMUCORP"),
         _texto(ANCHO - 30, 28, "m stamp",
-               f"{subtitulo} · Actualizado: {_t(meta['fuente_actualizada'])} · "
+               f"Actualizado: {_t(meta['fuente_actualizada'])} · "
                f"Fuente: {_t(meta['fuente'])} ({meta['total_servidores']} servidores · "
                f"{meta['total_servicios']} servicios)", ' text-anchor="end"'),
     ]
@@ -440,7 +457,10 @@ def _svg_capas(modelo: dict) -> tuple:
         geometria[capa["id"]] = (X0, y, ANCHO_IZQ, ALTO_COLAPSADO)
         y += ALTO_COLAPSADO + SEPARACION
     fondo_izq = y - SEPARACION
-    geometria[6] = (X_DER, TOP, ANCHO_DER, fondo_izq - TOP)
+    # La columna externa solo baja hasta la ultima capa que la llama: estirarla
+    # hasta el batch deja media caja vacia.
+    fin_ext = geometria[4][1] + geometria[4][3] + 24
+    geometria[6] = (X_DER, TOP, ANCHO_DER, fin_ext - TOP)
     y = fondo_izq + 36
     for capa in gestion:
         alto = 96 if capa["id"] == 7 else 80
@@ -452,7 +472,7 @@ def _svg_capas(modelo: dict) -> tuple:
 
     piezas = ['  <g id="escena">',
               f'    <rect id="fondo-capas" x="0" y="0" width="{ANCHO}" height="{alto_svg}" fill="transparent"/>']
-    piezas.extend(_titulo(modelo, "Vista por capas"))
+    piezas.extend(_titulo(modelo))
 
     # Las relaciones de gestion se dibujan como una sola flecha hacia la capa
     # mas baja que monitorean: una por capa destino cruzaria las cajas del medio.
@@ -502,15 +522,18 @@ def _svg_capas(modelo: dict) -> tuple:
         hosts = [h["hostname"] for h in hosts_por_capa.get(cid, [])] if capa["plano"] == "gestion" else []
         lineas_hosts = _envolver("Hosts: " + " · ".join(hosts), FUENTE_NOTA) if hosts else []
         filas_totales = max(len(filas) + len(lineas_resto), len(lineas_hosts) if dos_columnas else 0)
-        alto1 = max(alto, 62 + espacio * filas_totales + 10)
+        alto1 = max(ALTO_COLAPSADO, 62 + espacio * filas_totales + 10)
 
         clases = "band ops" if capa["plano"] == "gestion" else ("band ext" if cid == 6 else "band")
         piezas.append(f'    <g class="capa" data-capa="{cid}" data-h0="{alto}" data-h1="{alto1}" '
                       f'tabindex="0" role="button" aria-label="{_t(capa["nombre"])}, '
                       f'{_n(len(capa["servicios"]), "servicio", "servicios")}">')
-        piezas.append(f'      <rect class="{clases}" x="{x:g}" y="{y0:g}" width="{ancho:g}" height="{alto:g}" rx="10"/>')
-        piezas.append(_texto(x + 22, y0 + 30, "h", f'{cid} · {_t(capa["nombre"])}'))
+        piezas.append(f'      <rect class="{clases}" x="{x:g}" y="{y0:g}" width="{ancho:g}" height="{alto:g}" rx="8"/>')
+        piezas.append(_texto(x + 22, y0 + 30, "h",
+                             f'<tspan class="idx">{cid:02d}</tspan>   {_t(capa["nombre"])}'))
         piezas.append(_texto(x + ancho - 22, y0 + 30, "b", _badge(capa), ' text-anchor="end"'))
+        piezas.append(f'      <line class="regla" x1="{x + 16:g}" y1="{y0 + 44:g}" '
+                      f'x2="{x + ancho - 16:g}" y2="{y0 + 44:g}"/>')
 
         lineas_preview = _vista_previa(capa, ancho, alto, espacio)
         if lineas_preview:
@@ -550,6 +573,9 @@ def _svg_capas(modelo: dict) -> tuple:
     piezas.append(_texto(X0 + 440, leyenda_y + 4, "m",
                          f"Mapeo de servidores por Nivel infraestructura + Sistema "
                          f"· total {meta['total_servidores']}"))
+    piezas.append(_texto(ANCHO - 30, leyenda_y + 4, "m",
+                         "Clic para enfocar · Rueda: zoom · Arrastrá: mover · Esc: volver",
+                         ' text-anchor="end"'))
     piezas.append("  </g>")
     return piezas, alto_svg
 
@@ -561,19 +587,20 @@ def _svg_flujo(modelo: dict) -> tuple:
 
     piezas = ['  <g id="escena-flujo">',
               f'    <rect id="fondo-flujo" x="0" y="0" width="{ANCHO}" height="{alto_svg}" fill="transparent"/>']
-    piezas.extend(_titulo(modelo, "Vista por flujo"))
+    piezas.extend(_titulo(modelo))
 
     for capa_id in columnas:
         x = COL_X0 + (capa_id - 1) * COL_W
         for i, linea in enumerate(_envolver(capas[capa_id]["nombre"], 30)[:2]):
-            piezas.append(_texto(x, 66 + 14 * i, "b", _t(linea).replace("·", "")))
+            indice = f'<tspan class="idx">{capa_id:02d}</tspan>  ' if i == 0 else ""
+            piezas.append(_texto(x, 66 + 14 * i, "b", indice + _t(linea).replace("·", "")))
 
     for k, flujo in enumerate(modelo["flujos"]):
         y0 = TOP_FLUJO + k * FILA_FLUJO
         centro = y0 + (FILA_FLUJO - 18) / 2 + 12
         piezas.append(f'    <g class="flujo" data-flujo="{flujo["id"]}" tabindex="0" role="button" '
                       f'aria-label="Flujo {_t(flujo["nombre"])}">')
-        piezas.append(f'      <rect class="fila" x="20" y="{y0:g}" width="1200" height="{FILA_FLUJO - 18}" rx="10"/>')
+        piezas.append(f'      <rect class="fila" x="20" y="{y0:g}" width="1200" height="{FILA_FLUJO - 18}" rx="8"/>')
         piezas.append(_texto(36, y0 + 20, "f", _t(flujo["nombre"])))
 
         conteo, posiciones = {}, []
@@ -591,7 +618,7 @@ def _svg_flujo(modelo: dict) -> tuple:
             servicio = next(s for s in capas[capa_id]["servicios"] if s["id"] == paso["servicio"])
             lineas = _envolver(servicio["nombre"], FUENTE_NODO)[:2]
             piezas.append(f'      <g class="paso" style="--i:{k}">')
-            piezas.append(f'        <rect class="nodo" x="{x:g}" y="{y:g}" width="{NODO_W}" height="{NODO_H}" rx="7"/>')
+            piezas.append(f'        <rect class="nodo" x="{x:g}" y="{y:g}" width="{NODO_W}" height="{NODO_H}" rx="6"/>')
             base = y + NODO_H / 2 + (0 if len(lineas) == 1 else -4) + 4
             for i, linea in enumerate(lineas):
                 piezas.append(_texto(x + NODO_W / 2, base + 12 * i, "s", _t(linea),
@@ -609,24 +636,29 @@ def _svg_flujo(modelo: dict) -> tuple:
             piezas.append(f'      <path class="ff" d="{d}"/>')
             via = siguiente.get("via")
             if via and abs(y1 - y2) < 0.5 and abs(x1 - x2) > 0.5:
-                piezas.append(_texto((x1 + NODO_W + x2) / 2, y1 + NODO_H / 2 - 6, "m", _t(via),
+                piezas.append(_texto((x1 + NODO_W + x2) / 2, y1 + NODO_H / 2 - 8, "m", _t(via),
                                      ' text-anchor="middle"'))
         piezas.append("    </g>")
 
-    piezas.append(_texto(36, alto_svg - 12, "m", "Clic en un flujo para aislarlo · Esc para volver"))
+    piezas.append(_texto(ANCHO - 30, alto_svg - 12, "m",
+                         "Clic para aislar · Rueda: zoom · Arrastrá: mover · Esc: volver",
+                         ' text-anchor="end"'))
     piezas.append("  </g>")
     return piezas, alto_svg
 
 
 DEFS = """
-    <marker id="{flecha}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
-            markerHeight="7" orient="auto-start-reverse">
+    <marker id="{flecha}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
+            markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
     </marker>
-    <marker id="{flecha_m}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
-            markerHeight="7" orient="auto-start-reverse">
+    <marker id="{flecha_m}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
+            markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"/>
-    </marker>"""
+    </marker>
+    <pattern id="rejilla-{flecha}" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="var(--muted)" opacity=".16"/>
+    </pattern>"""
 
 
 def render_html(modelo: dict) -> str:
@@ -635,10 +667,14 @@ def render_html(modelo: dict) -> str:
 
     def envolver_svg(svg_id, piezas, alto, prefijo, etiqueta, oculto=False):
         return (f'<svg id="{svg_id}" class="vista" viewBox="0 0 {ANCHO} {alto:g}" '
+                f'preserveAspectRatio="xMidYMin meet" '
                 f'role="img" aria-label="{etiqueta}"'
                 f'{" hidden=\"hidden\"" if oculto else ""}>\n  <defs>'
                 + DEFS.format(flecha=f"flecha-{prefijo}", flecha_m=f"flecha-{prefijo}m")
-                + "\n  </defs>\n" + "\n".join(piezas) + "\n</svg>")
+                + "\n  </defs>\n"
+                + f'<rect x="0" y="0" width="{ANCHO}" height="{alto:g}" '
+                  f'fill="url(#rejilla-flecha-{prefijo})"/>\n'
+                + "\n".join(piezas) + "\n</svg>")
 
     return (
         '<!DOCTYPE html>\n<html class="%%TEMA%%" lang="es">\n<head>\n'
@@ -650,7 +686,6 @@ def render_html(modelo: dict) -> str:
         '<header id="tabs" role="tablist">\n'
         '  <button class="tab" type="button" role="tab" data-vista="capas" aria-selected="true">Capas</button>\n'
         '  <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false">Flujo</button>\n'
-        '  <span id="pista-vista">Clic para enfocar · Rueda para zoom · Arrastrá para mover · Esc para volver</span>\n'
         "</header>\n"
         + envolver_svg("vista-capas", piezas_capas, alto_capas, "c",
                        "Esquema de arquitectura por capas")
