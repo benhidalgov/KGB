@@ -73,11 +73,17 @@ CSS = """
     .capa, .flecha, .flujo, .band, .fila, .nodo { transition: none; }
   }
 
-  #tabs { display: flex; align-items: center; gap: 22px; padding: 14px 0 0 30px; }
+  #tabs { display: flex; align-items: center; padding: 14px 0 0 30px; }
+  #tabs-lista { display: flex; align-items: center; gap: 22px; }
   .tab { font: 500 13px/1 inherit; cursor: pointer; padding: 0 0 7px; border: 0;
          background: none; color: var(--muted); border-bottom: 2px solid transparent; }
   .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
   .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  #zoom { margin-left: auto; background: none; border: 0; cursor: pointer; padding: 4px 0;
+          font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--muted); }
+  #zoom:hover { color: var(--text); }
+  #zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  #zoom[hidden] { display: none; }
 
   .band { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
   .banda { fill: var(--band); }
@@ -97,7 +103,7 @@ CSS = """
   .m { font-size: 10.5px; fill: var(--muted); }
   .d { font-size: 10px; fill: var(--muted); }
   .idx { font-family: var(--mono); font-size: 11px; font-weight: 500; fill: var(--muted); }
-  .stamp { font-family: var(--mono); font-size: 10px; }
+  .stamp { font-family: var(--mono); font-size: 11px; }
   .capa.on .idx { fill: var(--accent); }
   .fl { stroke: var(--accent); stroke-width: 1.8; fill: none; marker-end: url(#flecha-c); }
   .fld { stroke: var(--muted); stroke-width: 1.3; fill: none; stroke-dasharray: 5 4; marker-end: url(#flecha-cm); }
@@ -174,6 +180,7 @@ JS = """
   var capaActiva = null, flujoActivo = null;
   var datos = JSON.parse(document.getElementById('datos').textContent);
   var dialogo = document.getElementById('detalle');
+  var botonZoom = document.getElementById('zoom');
   var zoom = { s: 1, x: 0, y: 0 };
   var arrastre = null, movido = false, suprimir = false;
 
@@ -182,6 +189,8 @@ JS = """
       e.style.transform = zoom.s === 1 ? '' :
         'translate(' + zoom.x + 'px,' + zoom.y + 'px) scale(' + zoom.s + ')';
     });
+    botonZoom.hidden = zoom.s === 1;
+    botonZoom.textContent = Math.round(zoom.s * 100) + ' % · Restablecer';
   }
 
   function resetZoom() {
@@ -254,7 +263,9 @@ JS = """
     if (!r.width || !r.height) return;
     var k = Math.min(r.width / vb.width, r.height / vb.height);
     var izq = r.left + (r.width - vb.width * k) / 2;
-    document.getElementById('tabs').style.paddingLeft = Math.max(8, izq + 30 * k) + 'px';
+    var tabs = document.getElementById('tabs');
+    tabs.style.paddingLeft = Math.max(8, izq + 30 * k) + 'px';
+    tabs.style.paddingRight = Math.max(8, r.left + r.width - (izq + (vb.width - 30) * k)) + 'px';
   }
 
   function ordenar() {
@@ -356,6 +367,7 @@ JS = """
     if (!suprimir) limpiarFlujos();
   });
   document.getElementById('volver').addEventListener('click', volver);
+  botonZoom.addEventListener('click', resetZoom);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !dialogo.open) { volver(); limpiarFlujos(); }
   });
@@ -531,8 +543,8 @@ def _titulo(modelo: dict) -> list:
         _texto(X0, 30, "t", "Arquitectura de plataforma SMUCORP"),
         _texto(ANCHO - 30, 28, "m stamp",
                f"Actualizado: {_t(meta['fuente_actualizada'])} · "
-               f"Fuente: {_t(meta['fuente'])} ({meta['total_servidores']} servidores · "
-               f"{meta['total_servicios']} servicios)", ' text-anchor="end"'),
+               f"{meta['total_servidores']} servidores · {meta['total_servicios']} servicios",
+               ' text-anchor="end"'),
     ]
 
 
@@ -688,15 +700,9 @@ def _svg_capas(modelo: dict) -> tuple:
 
     meta = modelo["meta"]
     piezas.append('    <g class="leyenda">')
-    piezas.append(f'    <circle class="crit" cx="{X0 + 6:g}" cy="{leyenda_y:g}" r="5"/>')
-    piezas.append(_texto(X0 + 18, leyenda_y + 4, "m", f"Servidor crítico ({meta['total_criticos']})"))
-    piezas.append(f'    <circle class="int" cx="{X0 + 166:g}" cy="{leyenda_y:g}" r="5"/>')
-    piezas.append(_texto(X0 + 178, leyenda_y + 4, "m", "Interno"))
-    piezas.append(f'    <circle class="extc" cx="{X0 + 250:g}" cy="{leyenda_y:g}" r="5"/>')
-    piezas.append(_texto(X0 + 262, leyenda_y + 4, "m", "Externo (borde punteado)"))
-    piezas.append(_texto(X0 + 440, leyenda_y + 4, "m",
-                         f"Mapeo de servidores por Nivel infraestructura + Sistema "
-                         f"· total {meta['total_servidores']}"))
+    piezas.append(_texto(X0, leyenda_y + 4, "m",
+                         f"Borde punteado: ecosistema externo · "
+                         f"{meta['total_criticos']} servidores críticos"))
     piezas.append(_texto(ANCHO - 30, leyenda_y + 4, "m",
                          "Clic para enfocar · clic en un servicio para su ficha · Esc: volver",
                          ' text-anchor="end"'))
@@ -826,9 +832,12 @@ def render_html(modelo: dict) -> str:
         "<title>Arquitectura de plataforma SMUCORP</title>\n<style>"
         f"{CSS}</style>\n</head>\n<body data-vista=\"capas\">\n"
         '<button id="volver" type="button" aria-label="Volver al esquema">← Volver</button>\n'
-        '<header id="tabs" role="tablist">\n'
-        '  <button class="tab" type="button" role="tab" data-vista="capas" aria-selected="true">Capas</button>\n'
-        '  <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false">Flujo</button>\n'
+        '<header id="tabs">\n'
+        '  <div id="tabs-lista" role="tablist">\n'
+        '    <button class="tab" type="button" role="tab" data-vista="capas" aria-selected="true">Capas</button>\n'
+        '    <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false">Flujo</button>\n'
+        "  </div>\n"
+        '  <button id="zoom" type="button" hidden aria-label="Restablecer el zoom"></button>\n'
         "</header>\n"
         + envolver_svg("vista-capas", piezas_capas, alto_capas, "c",
                        "Esquema de arquitectura por capas")

@@ -220,6 +220,8 @@ def check_arquitectura_html():
     assert "function resetZoom" in claro and "#escena, #escena-flujo" in claro, "falta el paneo"
     assert 'class="idx"' in claro and 'class="regla"' in claro, "falta la numeracion de capa"
     assert 'class="banda"' in claro, "falta la franja de encabezado"
+    assert 'id="zoom"' in claro and "Borde punteado: ecosistema externo" in claro, \
+        "faltan el reset de zoom y la leyenda util"
     assert 'class="d"' in claro, "falta la descripcion de servicio en el foco"
     assert 'preserveAspectRatio="xMidYMin meet"' in claro, "la vista debe anclarse arriba"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
