@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -430,10 +431,104 @@ def check_preflight_produccion():
         assert any("no responde" in motivo for motivo in faltan), faltan
 
 
+def check_auth_sesion_expira_y_revalida():
+    """La sesión revalida rol/estado cada minuto y se corta por inactividad."""
+    estado = {
+        "auth_activa": True,
+        "usuario_actual": {"username": "op", "nombre": "Op", "rol": "Operador"},
+        "auth_ultima_actividad": time.time(),
+        "auth_chequeo": 0.0,
+    }
+    with mock.patch.object(auth.st, "session_state", estado), \
+         mock.patch.object(auth, "es_postgres_disponible", lambda: True), \
+         mock.patch.object(auth, "obtener_usuarios_pg",
+                           lambda: {"op": {"nombre": "Op", "rol": "Auditor", "activo": True}}):
+        assert auth.es_usuario_autenticado() is True
+        assert estado["usuario_actual"]["rol"] == "Auditor", "debe tomar el rol vigente"
+
+    estado = {
+        "auth_activa": True,
+        "usuario_actual": {"username": "op", "nombre": "Op", "rol": "Operador"},
+        "auth_ultima_actividad": time.time(),
+        "auth_chequeo": 0.0,
+    }
+    with mock.patch.object(auth.st, "session_state", estado), \
+         mock.patch.object(auth, "es_postgres_disponible", lambda: True), \
+         mock.patch.object(auth, "obtener_usuarios_pg",
+                           lambda: {"op": {"nombre": "Op", "rol": "Operador", "activo": False}}):
+        assert auth.es_usuario_autenticado() is False, "un usuario desactivado no sigue"
+        assert estado["auth_activa"] is False
+
+    estado = {
+        "auth_activa": True,
+        "usuario_actual": {"username": "op", "rol": "Operador"},
+        "auth_ultima_actividad": time.time() - auth._MAX_INACTIVIDAD_SEG - 1,
+        "auth_chequeo": time.time(),
+    }
+    with mock.patch.object(auth.st, "session_state", estado), \
+         mock.patch.object(auth, "es_postgres_disponible", lambda: True):
+        assert auth.es_usuario_autenticado() is False, "la inactividad debe cerrar la sesión"
+        assert estado["auth_activa"] is False
+
+
+def check_auth_bloqueo_por_origen():
+    """El bloqueo es por usuario+IP y el ruido no borra una cuenta bloqueada."""
+    with tempfile.TemporaryDirectory() as td:
+        ruta = os.path.join(td, "users.json")
+        password = "clave_valida_3"
+        with open(ruta, "w", encoding="utf-8") as f:
+            json.dump({"op": {"nombre": "Op", "rol": "Operador",
+                              "hash": auth.generar_hash_password(password, salt="sal_unica_c3"),
+                              "activo": True}}, f)
+        auth._INTENTOS_FALLIDOS.clear()
+        with mock.patch.object(auth, "AUTH_USERS_PATH", ruta), \
+             mock.patch.object(auth, "ES_PRODUCCION", False), \
+             mock.patch.object(auth, "es_postgres_disponible", lambda: False):
+            for _ in range(auth._MAX_INTENTOS):
+                assert auth.verificar_credenciales("op", "mala", origen="1.1.1.1") is None
+            assert auth.verificar_credenciales("op", password, origen="1.1.1.1") is None, \
+                "el origen bloqueado no debe entrar"
+            assert auth.verificar_credenciales("op", password, origen="2.2.2.2") is not None, \
+                "otro origen no debe heredar el bloqueo"
+
+        auth._INTENTOS_FALLIDOS.clear()
+        for _ in range(auth._MAX_INTENTOS):
+            auth._registrar_fallo("op|1.1.1.1")
+        for i in range(auth._MAX_CLAVES_INTENTOS + 100):
+            auth._registrar_fallo(f"ruido{i}|9.9.9.9")
+        assert auth._esta_bloqueado("op|1.1.1.1"), "el ruido no debe borrar el bloqueo"
+    auth._INTENTOS_FALLIDOS.clear()
+
+
+def check_auth_tiempo_constante():
+    """Un usuario inexistente paga el mismo PBKDF2 que uno real."""
+    auth._INTENTOS_FALLIDOS.clear()
+    with mock.patch.object(auth, "es_postgres_disponible", lambda: False), \
+         mock.patch.object(auth, "inicializar_almacen_usuarios", lambda: {}), \
+         mock.patch.object(auth, "_verificar_hash", wraps=auth._verificar_hash) as verif:
+        assert auth.verificar_credenciales("noexiste", "x", origen="9.9.9.9") is None
+        assert verif.call_count == 1, "debe verificar contra el hash dummy"
+    auth._INTENTOS_FALLIDOS.clear()
+
+
+def check_auth_maestra_sin_pg_falla_cerrado():
+    """En producción sin PostgreSQL la clave maestra no autentica."""
+    auth._INTENTOS_FALLIDOS.clear()
+    with mock.patch.object(auth, "ES_PRODUCCION", True), \
+         mock.patch.object(auth, "es_postgres_disponible", lambda: False), \
+         mock.patch.object(auth, "_obtener_password_maestra", lambda usuario: "clave_maestra_1"):
+        assert auth.verificar_credenciales("admin", "clave_maestra_1", origen="9.9.9.9") is None
+    auth._INTENTOS_FALLIDOS.clear()
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
     check_auth_fallback_local()
+    check_auth_sesion_expira_y_revalida()
+    check_auth_bloqueo_por_origen()
+    check_auth_tiempo_constante()
+    check_auth_maestra_sin_pg_falla_cerrado()
     check_vault_ciclo_vida_listar_eliminar()
     check_busqueda_multitermino_requiere_ambos()
     check_ruta_original_no_escapa_de_data()

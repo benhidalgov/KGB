@@ -18,39 +18,51 @@ _PBKDF2_ITERATIONS = 100_000
 _ROLES_MAESTROS = {"admin": "Administrador", "operador": "Operador", "auditor": "Auditor"}
 _NOMBRES_MAESTROS = {"admin": "Administrador Principal", "operador": "Operador de Infraestructura", "auditor": "Auditor de Seguridad"}
 
-# Limite de intentos fallidos por usuario (mitigacion en proceso).
+# Limite de intentos fallidos por (usuario, origen) (mitigacion en proceso).
 # ponytail: estado local del proceso; para bloqueo real entre varias instancias,
 # usar el proxy inverso o un almacen compartido. Se reinicia al reiniciar el contenedor.
 _INTENTOS_FALLIDOS: Dict[str, list] = {}
 _MAX_INTENTOS = 5
 _VENTANA_BLOQUEO_S = 60.0
+_MAX_CLAVES_INTENTOS = 4096
+_REVALIDAR_SEG = 60.0
+try:
+    _MAX_INACTIVIDAD_SEG = float(os.environ.get("SESSION_TIMEOUT_MIN", "30")) * 60
+except ValueError:
+    _MAX_INACTIVIDAD_SEG = 30 * 60
 
 
-def _esta_bloqueado(usuario: str) -> bool:
+def _esta_bloqueado(clave: str) -> bool:
     ahora = time.time()
-    vigentes = [t for t in _INTENTOS_FALLIDOS.get(usuario, []) if ahora - t < _VENTANA_BLOQUEO_S]
-    _INTENTOS_FALLIDOS[usuario] = vigentes
+    vigentes = [t for t in _INTENTOS_FALLIDOS.get(clave, []) if ahora - t < _VENTANA_BLOQUEO_S]
+    _INTENTOS_FALLIDOS[clave] = vigentes
     return len(vigentes) >= _MAX_INTENTOS
 
 
-def _registrar_fallo(usuario: str):
+def _registrar_fallo(clave: str):
     global _INTENTOS_FALLIDOS
-    if len(_INTENTOS_FALLIDOS) >= 1024:
-        # Un atacante que envía usuarios aleatorios nunca vuelve a consultar
-        # usuario alguno, así que el podado en _esta_bloqueado no lo alcanza.
-        ahora = time.time()
-        _INTENTOS_FALLIDOS = {
-            k: [t for t in v if ahora - t < _VENTANA_BLOQUEO_S]
-            for k, v in _INTENTOS_FALLIDOS.items()
-            if any(ahora - t < _VENTANA_BLOQUEO_S for t in v)
-        }
-        if len(_INTENTOS_FALLIDOS) >= 1024:
-            _INTENTOS_FALLIDOS = {}
-    _INTENTOS_FALLIDOS.setdefault(usuario, []).append(time.time())
+    _INTENTOS_FALLIDOS.setdefault(clave, []).append(time.time())
+    if len(_INTENTOS_FALLIDOS) < _MAX_CLAVES_INTENTOS:
+        return
+    # Un atacante que envia usuarios aleatorios nunca vuelve a consultar la
+    # clave objetivo, asi que el podado de _esta_bloqueado no lo alcanza.
+    ahora = time.time()
+    vigentes = {
+        k: [t for t in v if ahora - t < _VENTANA_BLOQUEO_S]
+        for k, v in _INTENTOS_FALLIDOS.items()
+    }
+    vigentes = {k: v for k, v in vigentes.items() if v}
+    if len(vigentes) >= _MAX_CLAVES_INTENTOS:
+        # Descartar primero las claves con menos fallos: una cuenta bloqueada
+        # (5 intentos) no debe caer antes que el ruido de un solo intento.
+        orden = sorted(vigentes, key=lambda k: (len(vigentes[k]), min(vigentes[k])))
+        for k in orden[:len(vigentes) - _MAX_CLAVES_INTENTOS + 1]:
+            vigentes.pop(k, None)
+    _INTENTOS_FALLIDOS = vigentes
 
 
-def _limpiar_fallos(usuario: str):
-    _INTENTOS_FALLIDOS.pop(usuario, None)
+def _limpiar_fallos(clave: str):
+    _INTENTOS_FALLIDOS.pop(clave, None)
 
 
 def _obtener_password_maestra(usuario: str) -> str:
@@ -97,6 +109,11 @@ def generar_hash_password(password_plana: str, salt: Optional[str] = None) -> st
         _PBKDF2_ITERATIONS,
     )
     return f"pbkdf2_sha256${_PBKDF2_ITERATIONS}${salt}${dk.hex()}"
+
+
+# Hash de descarte: un usuario inexistente paga el mismo PBKDF2 que uno real,
+# para que el tiempo de respuesta no delate que cuentas existen.
+_HASH_DUMMY = generar_hash_password(secrets.token_hex(16))
 
 
 def inicializar_almacen_usuarios() -> Dict[str, Any]:
@@ -162,37 +179,63 @@ def _verificar_hash(password_plana: str, hash_esperado: Optional[str]) -> bool:
     return hmac.compare_digest(legacy, valor)
 
 
-def verificar_credenciales(username_input: str, password_input: str) -> Optional[Dict[str, Any]]:
-    """Valida el usuario y contraseña contra PostgreSQL, almacén local o secrets."""
+def _origen_actual() -> str:
+    """IP del cliente para separar los bloqueos por origen (vacia si no hay)."""
+    try:
+        return str(getattr(st.context, "ip_address", "") or "")
+    except Exception:
+        return ""
+
+
+def verificar_credenciales(username_input: str, password_input: str, origen: str = "") -> Optional[Dict[str, Any]]:
+    """Valida el usuario y contraseña contra PostgreSQL, almacén local o secrets.
+
+    El bloqueo se cuenta por usuario+origen: un atacante desde una IP no deja
+    fuera al usuario legitimo que entra desde otra.
+    """
     u, p = username_input.strip().lower(), password_input.strip()
-    if not u or not p or _esta_bloqueado(u):
+    clave = f"{u}|{origen}"
+    if not u or not p or _esta_bloqueado(clave):
         return None
+
+    encontrado = False
 
     # 0. Contraseñas maestras inyectadas por entorno (Docker / Streamlit Cloud)
     master = _obtener_password_maestra(u)
     if master and hmac.compare_digest(p.encode("utf-8"), master.encode("utf-8")):
+        # En produccion, sin PostgreSQL no se puede confirmar que la cuenta siga
+        # activa: se falla cerrado en vez de dejar pasar la clave maestra.
+        if ES_PRODUCCION and not es_postgres_disponible():
+            _registrar_fallo(clave)
+            return None
         # La clave maestra no debe bypasear la desactivación del usuario en PG.
         if es_postgres_disponible():
             try:
                 usuarios_pg = obtener_usuarios_pg()
                 if u in usuarios_pg and not usuarios_pg[u].get("activo", True):
-                    _registrar_fallo(u)
+                    _verificar_hash(p, _HASH_DUMMY)
+                    _registrar_fallo(clave)
                     return None
             except Exception:
-                pass
-        _limpiar_fallos(u)
+                # Sin poder leer el catálogo no se puede confirmar la cuenta.
+                if ES_PRODUCCION:
+                    _registrar_fallo(clave)
+                    return None
+        _limpiar_fallos(clave)
         return {"username": u, "nombre": _NOMBRES_MAESTROS.get(u, u.capitalize()), "rol": _ROLES_MAESTROS.get(u, "Operador"), "activo": True}
 
     # 1. Verificación primaria contra PostgreSQL si está disponible
-    desactivado_en_pg = False
     if es_postgres_disponible():
         try:
             usuarios_pg = obtener_usuarios_pg()
             if u in usuarios_pg:
+                encontrado = True
                 if not usuarios_pg[u].get("activo", True):
-                    desactivado_en_pg = True
-                elif _verificar_hash(p, usuarios_pg[u].get("hash")):
-                    _limpiar_fallos(u)
+                    _verificar_hash(p, _HASH_DUMMY)
+                    _registrar_fallo(clave)
+                    return None
+                if _verificar_hash(p, usuarios_pg[u].get("hash")):
+                    _limpiar_fallos(clave)
                     actualizar_ultimo_login_pg(u)
                     return {
                         "username": u,
@@ -204,20 +247,91 @@ def verificar_credenciales(username_input: str, password_input: str) -> Optional
             pass
 
     # 2. Fallback automático a archivo local users.json (deshabilitado en producción).
-    # Un usuario desactivado en PG no debe revivir vía el users.json local.
-    if not ES_PRODUCCION and not desactivado_en_pg:
-        usuarios = inicializar_almacen_usuarios()
-        if u in usuarios and usuarios[u].get("activo", True):
-            if _verificar_hash(p, usuarios[u].get("hash")):
-                _limpiar_fallos(u)
+    # Un usuario desactivado en PG no revive vía el users.json local.
+    if not ES_PRODUCCION:
+        try:
+            usuarios = inicializar_almacen_usuarios()
+        except Exception:
+            usuarios = {}
+        if u in usuarios:
+            encontrado = True
+            if not usuarios[u].get("activo", True):
+                _verificar_hash(p, _HASH_DUMMY)
+            elif _verificar_hash(p, usuarios[u].get("hash")):
+                _limpiar_fallos(clave)
                 return {"username": u, "nombre": usuarios[u].get("nombre", u), "rol": usuarios[u].get("rol", "Operador"), "activo": True}
 
-    _registrar_fallo(u)
+    if not encontrado:
+        # Mismo costo que un usuario real: no se puede enumerar por tiempo.
+        _verificar_hash(p, _HASH_DUMMY)
+    _registrar_fallo(clave)
     return None
 
 
+def _limpiar_estado_sesion():
+    """Cierra la sesión y borra lo que no debe heredar el próximo usuario."""
+    st.session_state["auth_activa"] = False
+    st.session_state["usuario_actual"] = None
+    for clave in ("login_password_val", "login_username_val", "historial_busquedas",
+                  "messages", "nav_seccion_activa", "tab4_doc_selector",
+                  "auth_chequeo", "auth_ultima_actividad"):
+        st.session_state.pop(clave, None)
+
+
+def _leer_registro(usuario: str):
+    """Registro vigente del usuario; None si no existe, "error" si no se pudo leer."""
+    if es_postgres_disponible():
+        try:
+            return obtener_usuarios_pg().get(usuario)
+        except Exception:
+            return "error"
+    if not ES_PRODUCCION:
+        try:
+            return inicializar_almacen_usuarios().get(usuario)
+        except Exception:
+            return "error"
+    return "error"
+
+
+def _sesion_vigente() -> bool:
+    """Cierra la sesión por inactividad o si el usuario cambió en el origen."""
+    if not st.session_state.get("auth_activa") or not st.session_state.get("usuario_actual"):
+        return False
+
+    ahora = time.time()
+    ultima = st.session_state.get("auth_ultima_actividad")
+    if ultima and ahora - ultima > _MAX_INACTIVIDAD_SEG:
+        _limpiar_estado_sesion()
+        return False
+    st.session_state["auth_ultima_actividad"] = ahora
+
+    if ahora - (st.session_state.get("auth_chequeo") or 0) < _REVALIDAR_SEG:
+        return True
+
+    usuario = st.session_state.get("usuario_actual") or {}
+    nombre_usuario = usuario.get("username", "")
+    registro = _leer_registro(nombre_usuario)
+    if registro is None and nombre_usuario in _ROLES_MAESTROS and _obtener_password_maestra(nombre_usuario):
+        # Las cuentas maestras existen por entorno aunque no estén en PG.
+        registro = {"rol": _ROLES_MAESTROS[nombre_usuario],
+                    "nombre": _NOMBRES_MAESTROS[nombre_usuario], "activo": True}
+
+    if not registro or registro == "error" or not registro.get("activo", True):
+        _limpiar_estado_sesion()
+        return False
+
+    st.session_state["usuario_actual"] = {
+        **usuario,
+        "rol": registro.get("rol", usuario.get("rol")),
+        "nombre": registro.get("nombre", usuario.get("nombre")),
+        "activo": True,
+    }
+    st.session_state["auth_chequeo"] = ahora
+    return True
+
+
 def es_usuario_autenticado() -> bool:
-    return bool(st.session_state.get("auth_activa") and st.session_state.get("usuario_actual"))
+    return _sesion_vigente()
 
 
 def obtener_usuario_actual() -> Dict[str, Any]:
@@ -238,13 +352,7 @@ def cerrar_sesion():
     user = obtener_usuario_actual().get("username", "desconocido")
     # Limpiar el estado ANTES de auditar: registrar_evento_auditoria lanza en
     # producción si PG falla, y el logout no debe dejar la sesión abierta.
-    st.session_state["auth_activa"] = False
-    st.session_state["usuario_actual"] = None
-    # Estación compartida: no heredar la contraseña del formulario ni el
-    # historial de consultas/respuestas del usuario anterior.
-    for k in ("login_password_val", "login_username_val", "historial_busquedas",
-              "messages", "nav_seccion_activa", "tab4_doc_selector"):
-        st.session_state.pop(k, None)
+    _limpiar_estado_sesion()
     try:
         registrar_evento_auditoria(doc_name="autenticacion", accion="LOGOUT", version_ant=1, version_nueva=1, autor=user, motivo="Cierre voluntario de sesión en consola web.")
     except Exception:
@@ -351,13 +459,15 @@ def renderizar_pantalla_login():
                 btn_login = st.form_submit_button("Iniciar Sesión", type="primary", width="stretch")
 
             if btn_login:
-                user_info = verificar_credenciales(username_in, password_in)
+                user_info = verificar_credenciales(username_in, password_in, origen=_origen_actual())
                 if user_info:
                     # Auditar ANTES de autenticar: si la bitácora falla en
                     # producción, no debe quedar una sesión activa sin evento.
                     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_EXITOSO", version_ant=1, version_nueva=1, autor=user_info["username"], motivo=f"Inicio exitoso [{user_info['rol']}].")
                     st.session_state["auth_activa"] = True
                     st.session_state["usuario_actual"] = user_info
+                    st.session_state["auth_ultima_actividad"] = time.time()
+                    st.session_state["auth_chequeo"] = time.time()
                     st.toast(f"Bienvenido, {user_info['nombre']}.")
                     st.rerun()
                 else:
