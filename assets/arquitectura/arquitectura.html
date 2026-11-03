@@ -6,16 +6,17 @@
 <title>Arquitectura de plataforma SMUCORP</title>
 <style>
   :root {
-    --bg: #f0f3f7; --panel: #ffffff; --panel2: #eef0f4; --text: #14161a; --muted: #666d78;
-    --line: #dce0e6; --accent: #2563eb; --crit: #b45309; --int: #0f766e; --ext: #6d28d9;
-    --band: #e7ecf3; --band-ops: #dce3eb;
+    --bg: #FAF9F6; --panel: #FFFFFF; --panel2: #F4F3EE; --text: #18181B; --muted: #71717A;
+    --line: #E8E8E3; --accent: #1D5CA8; --crit: #9C2A2A; --int: #276738; --ext: #6366F1;
+    --band: #F4F3EE; --band-ops: #ECEAE4;
     --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
     --dur-rapida: .16s; --dur-media: .28s; --ease: cubic-bezier(.2, .6, .2, 1);
   }
   html.tema-oscuro {
-    --bg: #0c0e11; --panel: #181b1f; --panel2: #21252b; --text: #e8eaed; --muted: #8d949e;
-    --line: #2c3138; --accent: #6ea0ff; --crit: #fb923c; --int: #2dd4bf; --ext: #a78bfa;
-    --band: #20242a; --band-ops: #262b32;
+    --bg: #121315; --panel: #1E2024; --panel2: #26292F; --text: #F0EFEA; --muted: #ABA9A0;
+    --line: rgba(255, 255, 255, .14); --accent: #93C5FD; --crit: #FCA5A5;
+    --int: #6EE7B7; --ext: #A5B4FC;
+    --band: #26292F; --band-ops: #2F333B;
   }
   body { margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column;
          background: var(--bg); color: var(--text);
@@ -53,8 +54,8 @@
   .banda { fill: var(--band); }
   .banda-ops { fill: var(--band-ops); }
   html.tema-claro .band, html.tema-claro .fila {
-    filter: drop-shadow(0 1px 2px rgba(16, 24, 40, .07))
-            drop-shadow(0 10px 22px rgba(16, 24, 40, .045));
+    filter: drop-shadow(0 1px 2px rgba(24, 24, 27, .06))
+            drop-shadow(0 10px 22px rgba(24, 24, 27, .04));
   }
   .ext { stroke-dasharray: 6 4; }
   .ops { fill: var(--panel2); stroke-dasharray: 6 4; }
