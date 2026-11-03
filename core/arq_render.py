@@ -107,6 +107,28 @@ CSS = """
   .capa.on .servicios { display: inline; }
   .preview { display: inline; }
   .capa.on .preview { display: none; }
+  .srv { cursor: pointer; outline: none; }
+  .srv:hover .s, .srv:focus-visible .s,
+  .srv:hover .d, .srv:focus-visible .d { fill: var(--accent); }
+  .paso { cursor: pointer; outline: none; }
+  .paso:hover .s, .paso:focus-visible .s { fill: var(--accent); }
+
+  /* Ficha del servicio */
+  #detalle { border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+             color: var(--text); width: calc(100% - 48px); max-width: 520px;
+             padding: 22px 24px 20px; }
+  #detalle::backdrop { background: rgba(12, 15, 19, .4); }
+  #d-cerrar { float: right; background: none; border: 0; color: var(--muted);
+              font: 500 12px/1 inherit; cursor: pointer; padding: 4px; }
+  #d-cerrar:hover { color: var(--text); }
+  #d-cerrar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px;
+                            border-radius: 4px; }
+  #d-nombre { margin: 0 0 6px; padding-right: 72px; font-size: 18px; font-weight: 600; }
+  #d-meta { margin: 0 0 16px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  #d-desc { margin: 0 0 18px; font-size: 13px; line-height: 1.55; }
+  #d-flujos p { margin: 0 0 3px; font-size: 12.5px; }
+  #d-flujos p:first-child { margin-bottom: 6px; font-size: 10.5px;
+                            font-family: var(--mono); color: var(--muted); }
 
   /* Foco por flujo */
   .flujo { cursor: pointer; transition: opacity .3s ease; outline: none; }
@@ -141,6 +163,8 @@ JS = """
   var flujos = Array.prototype.slice.call(vistaFlujo.querySelectorAll('.flujo'));
   var escenas = [document.getElementById('escena'), document.getElementById('escena-flujo')];
   var capaActiva = null, flujoActivo = null;
+  var datos = JSON.parse(document.getElementById('datos').textContent);
+  var dialogo = document.getElementById('detalle');
   var zoom = { s: 1, x: 0, y: 0 };
   var arrastre = null, movido = false, suprimir = false;
 
@@ -262,6 +286,7 @@ JS = """
 
   function volver() {
     resetZoom();
+    if (dialogo.open) dialogo.close();
     if (!capaActiva) return;
     capaActiva = null;
     cuerpo.classList.remove('foco');
@@ -323,7 +348,47 @@ JS = """
   });
   document.getElementById('volver').addEventListener('click', volver);
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { volver(); limpiarFlujos(); }
+    if (e.key === 'Escape' && !dialogo.open) { volver(); limpiarFlujos(); }
+  });
+
+  function abrirDetalle(id) {
+    var d = datos[id];
+    if (!d) return;
+    document.getElementById('d-nombre').textContent = d.n;
+    document.getElementById('d-meta').textContent =
+      'Capa ' + String(d.capa).padStart(2, '0') + ' · ' + d.cf + ' · ' + d.c +
+      ' · ' + (d.e ? 'Externo' : 'Interno');
+    document.getElementById('d-desc').textContent = d.d || 'Sin descripción en el inventario.';
+    var caja = document.getElementById('d-flujos');
+    caja.textContent = '';
+    var rotulo = document.createElement('p');
+    rotulo.textContent = d.f.length ? 'Aparece en' : 'No aparece en los flujos modelados';
+    caja.appendChild(rotulo);
+    d.f.forEach(function (n) {
+      var p = document.createElement('p');
+      p.textContent = n;
+      caja.appendChild(p);
+    });
+    if (!dialogo.open) dialogo.showModal();
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll('[data-servicio]')).forEach(function (s) {
+    var abrir = function (e) {
+      e.stopPropagation();
+      abrirDetalle(s.dataset.servicio);
+    };
+    s.addEventListener('click', abrir);
+    s.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(e); }
+    });
+  });
+
+  document.getElementById('d-cerrar').addEventListener('click', function () { dialogo.close(); });
+  dialogo.addEventListener('click', function (e) {
+    var r = dialogo.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+      dialogo.close();
+    }
   });
 
   [vistaCapas, vistaFlujo].forEach(function (svg) {
@@ -564,10 +629,13 @@ def _svg_capas(modelo: dict) -> tuple:
                 marca = ""
                 if resto and fi == len(filas) - 1 and j == len(fila) - 1:
                     marca = f' <tspan class="m">(+{len(resto)})</tspan>'
+                piezas.append(f'      <g class="srv" data-servicio="{servicio["id"]}" tabindex="0" '
+                              f'role="button" aria-label="Ficha de {_t(servicio["nombre"])}">')
                 piezas.append(_texto(cx, yy, "s", f"•  {_t(servicio['nombre'])}{marca}"))
                 if servicio.get("descripcion"):
                     piezas.append(_texto(cx + 18, yy + 13, "d",
                                          _t(_recortar(servicio["descripcion"], 54 if dos_columnas else 64))))
+                piezas.append("      </g>")
             yy += paso
         for linea in lineas_resto:
             piezas.append(_texto(x + 22, yy, "m", linea))
@@ -594,7 +662,7 @@ def _svg_capas(modelo: dict) -> tuple:
                          f"Mapeo de servidores por Nivel infraestructura + Sistema "
                          f"· total {meta['total_servidores']}"))
     piezas.append(_texto(ANCHO - 30, leyenda_y + 4, "m",
-                         "Clic para enfocar · Rueda: zoom · Arrastrá: mover · Esc: volver",
+                         "Clic para enfocar · clic en un servicio para su ficha · Esc: volver",
                          ' text-anchor="end"'))
     piezas.append("    </g>")
     piezas.append("  </g>")
@@ -638,7 +706,8 @@ def _svg_flujo(modelo: dict) -> tuple:
             y = centro - alto_pila[capa_id] / 2 + indice * (NODO_H + 8)
             servicio = next(s for s in capas[capa_id]["servicios"] if s["id"] == paso["servicio"])
             lineas = _envolver(servicio["nombre"], FUENTE_NODO)[:2]
-            piezas.append(f'      <g class="paso" style="--i:{k}">')
+            piezas.append(f'      <g class="paso" style="--i:{k}" data-servicio="{paso["servicio"]}" '
+                          f'tabindex="0" role="button" aria-label="Ficha de {_t(servicio["nombre"])}">')
             piezas.append(f'        <rect class="nodo" x="{x:g}" y="{y:g}" width="{NODO_W}" height="{NODO_H}" rx="6"/>')
             base = y + NODO_H / 2 + (0 if len(lineas) == 1 else -4) + 4
             for i, linea in enumerate(lineas):
@@ -662,7 +731,7 @@ def _svg_flujo(modelo: dict) -> tuple:
         piezas.append("    </g>")
 
     piezas.append(_texto(ANCHO - 30, alto_svg - 12, "m",
-                         "Clic para aislar · Rueda: zoom · Arrastrá: mover · Esc: volver",
+                         "Clic en la fila para aislar · en un nodo para su ficha · Esc: volver",
                          ' text-anchor="end"'))
     piezas.append("  </g>")
     return piezas, alto_svg
@@ -682,9 +751,24 @@ DEFS = """
     </pattern>"""
 
 
+def _datos_servicios(modelo: dict) -> dict:
+    """Ficha por servicio: lo que el inventario sabe y los flujos que lo usan."""
+    usos = {}
+    for flujo in modelo["flujos"]:
+        for paso in flujo["pasos"]:
+            usos.setdefault(paso["servicio"], []).append(flujo["nombre"])
+    return {
+        s["id"]: {"n": s["nombre"], "c": s["categoria"], "d": s["descripcion"],
+                  "e": s["externo"], "capa": c["id"], "cf": c["nombre"],
+                  "f": usos.get(s["id"], [])}
+        for c in modelo["capas"] for s in c["servicios"]
+    }
+
+
 def render_html(modelo: dict) -> str:
     piezas_capas, alto_capas = _svg_capas(modelo)
     piezas_flujo, alto_flujo = _svg_flujo(modelo)
+    datos = json.dumps(_datos_servicios(modelo), ensure_ascii=False).replace("<", "\\u003c")
 
     def envolver_svg(svg_id, piezas, alto, prefijo, etiqueta, oculto=False):
         return (f'<svg id="{svg_id}" class="vista" viewBox="0 0 {ANCHO} {alto:g}" '
@@ -713,7 +797,16 @@ def render_html(modelo: dict) -> str:
         + "\n"
         + envolver_svg("vista-flujo", piezas_flujo, alto_flujo, "f",
                        "Flujos transaccionales por capas", oculto=True)
-        + "\n\n<script>" + JS + "</script>\n</body>\n</html>\n"
+        + "\n"
+        + f'<script type="application/json" id="datos">{datos}</script>\n'
+        + '<dialog id="detalle" aria-labelledby="d-nombre">\n'
+        '  <button id="d-cerrar" type="button" aria-label="Cerrar ficha">Cerrar</button>\n'
+        '  <h2 id="d-nombre"></h2>\n'
+        '  <p id="d-meta"></p>\n'
+        '  <p id="d-desc"></p>\n'
+        '  <div id="d-flujos"></div>\n'
+        "</dialog>\n"
+        + "\n<script>" + JS + "</script>\n</body>\n</html>\n"
     )
 
 

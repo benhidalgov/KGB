@@ -227,6 +227,13 @@ def check_arquitectura_html():
     flujo_svg = re.search(r'<svg id="vista-flujo".*?</svg>', claro, re.S).group(0)
     assert ">ISO 8583</text>" in flujo_svg and ">JDBC</text>" in flujo_svg, \
         "faltan las etiquetas de enlace en los flujos"
+    import json
+    fichas = json.loads(re.search(r'<script type="application/json" id="datos">(.*?)</script>',
+                                  claro, re.S).group(1))
+    assert len(fichas) == 70 and all(f["n"] and f["d"] for f in fichas.values()), \
+        "faltan fichas de servicio"
+    assert 'class="srv"' in claro and 'id="detalle"' in claro, "falta la ficha por servicio"
+    assert flujo_svg.count('data-servicio=') == 26, "los nodos del flujo deben abrir ficha"
     oscuro = cargar_html_arquitectura("Oscuro")
     assert 'class="tema-oscuro"' in oscuro and "%%TEMA%%" not in oscuro, "el tema oscuro debe aplicarse"
     assert oscuro == claro.replace("tema-claro", "tema-oscuro"), "solo debe variar el tema"

@@ -78,6 +78,28 @@
   .capa.on .servicios { display: inline; }
   .preview { display: inline; }
   .capa.on .preview { display: none; }
+  .srv { cursor: pointer; outline: none; }
+  .srv:hover .s, .srv:focus-visible .s,
+  .srv:hover .d, .srv:focus-visible .d { fill: var(--accent); }
+  .paso { cursor: pointer; outline: none; }
+  .paso:hover .s, .paso:focus-visible .s { fill: var(--accent); }
+
+  /* Ficha del servicio */
+  #detalle { border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+             color: var(--text); width: calc(100% - 48px); max-width: 520px;
+             padding: 22px 24px 20px; }
+  #detalle::backdrop { background: rgba(12, 15, 19, .4); }
+  #d-cerrar { float: right; background: none; border: 0; color: var(--muted);
+              font: 500 12px/1 inherit; cursor: pointer; padding: 4px; }
+  #d-cerrar:hover { color: var(--text); }
+  #d-cerrar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px;
+                            border-radius: 4px; }
+  #d-nombre { margin: 0 0 6px; padding-right: 72px; font-size: 18px; font-weight: 600; }
+  #d-meta { margin: 0 0 16px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  #d-desc { margin: 0 0 18px; font-size: 13px; line-height: 1.55; }
+  #d-flujos p { margin: 0 0 3px; font-size: 12.5px; }
+  #d-flujos p:first-child { margin-bottom: 6px; font-size: 10.5px;
+                            font-family: var(--mono); color: var(--muted); }
 
   /* Foco por flujo */
   .flujo { cursor: pointer; transition: opacity .3s ease; outline: none; }
@@ -167,26 +189,46 @@
       <text class="m" x="52" y="117">Geocom / BBR SW de Cajas · Lector biométrico dactilar (Sovos) · Tablets de autoservicio y atención de clientes …</text>
       </g>
       <g class="servicios">
+      <g class="srv" data-servicio="geocom-bbr-sw-de-cajas" tabindex="0" role="button" aria-label="Ficha de Geocom / BBR SW de Cajas">
       <text class="s" x="130" y="117">•  Geocom / BBR SW de Cajas</text>
       <text class="d" x="148" y="130">Software POS en cajas de supermercados SMU (Unimarc…</text>
+      </g>
+      <g class="srv" data-servicio="lector-biometrico-dactilar-sovos" tabindex="0" role="button" aria-label="Ficha de Lector biométrico dactilar (Sovos)">
       <text class="s" x="430" y="117">•  Lector biométrico dactilar (Sovos)</text>
       <text class="d" x="448" y="130">Verificación de huella en cajas</text>
+      </g>
+      <g class="srv" data-servicio="tablets-de-autoservicio-y-atencion-de-clientes" tabindex="0" role="button" aria-label="Ficha de Tablets de autoservicio y atención de clientes">
       <text class="s" x="130" y="148">•  Tablets de autoservicio y atención de clientes</text>
       <text class="d" x="148" y="161">Terminales en tienda</text>
+      </g>
+      <g class="srv" data-servicio="portal-web-clientes-unipay" tabindex="0" role="button" aria-label="Ficha de Portal Web Clientes Unipay">
       <text class="s" x="430" y="148">•  Portal Web Clientes Unipay</text>
       <text class="d" x="448" y="161">Acceso transaccional online</text>
+      </g>
+      <g class="srv" data-servicio="app-movil-unipay-wallet" tabindex="0" role="button" aria-label="Ficha de App Móvil Unipay (Wallet)">
       <text class="s" x="130" y="179">•  App Móvil Unipay (Wallet)</text>
       <text class="d" x="148" y="192">Billetera digital</text>
+      </g>
+      <g class="srv" data-servicio="chatbot-whatsapp-chattigo" tabindex="0" role="button" aria-label="Ficha de Chatbot WhatsApp (Chattigo)">
       <text class="s" x="430" y="179">•  Chatbot WhatsApp (Chattigo)</text>
       <text class="d" x="448" y="192">Asistente virtual</text>
+      </g>
+      <g class="srv" data-servicio="waf-https-tls" tabindex="0" role="button" aria-label="Ficha de WAF (HTTPS / TLS)">
       <text class="s" x="130" y="210">•  WAF (HTTPS / TLS)</text>
       <text class="d" x="148" y="223">Protección del tráfico de canales digitales</text>
+      </g>
+      <g class="srv" data-servicio="call-center-ivr-atento-trustcorp" tabindex="0" role="button" aria-label="Ficha de Call Center / IVR (Atento / TrustCorp)">
       <text class="s" x="430" y="210">•  Call Center / IVR (Atento / TrustCorp)</text>
       <text class="d" x="448" y="223">Atención telefónica operada por terceros</text>
+      </g>
+      <g class="srv" data-servicio="portal-unired-cajas-xcash" tabindex="0" role="button" aria-label="Ficha de Portal Unired / cajas XCash">
       <text class="s" x="130" y="241">•  Portal Unired / cajas XCash</text>
       <text class="d" x="148" y="254">Recaudación web y en cajas</text>
+      </g>
+      <g class="srv" data-servicio="fuerza-de-ventas-smu" tabindex="0" role="button" aria-label="Ficha de Fuerza de ventas SMU">
       <text class="s" x="430" y="241">•  Fuerza de ventas SMU <tspan class="m">(+2)</tspan></text>
       <text class="d" x="448" y="254">Captación, afiliación y evaluación presencial</text>
+      </g>
       <text class="m" x="52" y="272">+2 más: Agencias externas Serbanc / AltSolution · WebServices REST</text>
       <text class="m" x="52" y="289">y lotes SFTP diarios</text>
       </g>
@@ -200,18 +242,30 @@
       <text class="m" x="52" y="233">Firewalls FortiGate 100E (HA) · VPN IPSec Site-to-Site (17 túneles) · HAProxy (balanceo L7) · Switches core con HSRP …</text>
       </g>
       <g class="servicios">
+      <g class="srv" data-servicio="firewalls-fortigate-100e-ha" tabindex="0" role="button" aria-label="Ficha de Firewalls FortiGate 100E (HA)">
       <text class="s" x="130" y="233">•  Firewalls FortiGate 100E (HA)</text>
       <text class="d" x="148" y="246">Clúster activo/pasivo; UTM, antivirus, IPS, DMZ y NAT</text>
+      </g>
+      <g class="srv" data-servicio="vpn-ipsec-site-to-site-17-tuneles" tabindex="0" role="button" aria-label="Ficha de VPN IPSec Site-to-Site (17 túneles)">
       <text class="s" x="430" y="233">•  VPN IPSec Site-to-Site (17 túneles)</text>
       <text class="d" x="448" y="246">Concentrador central de VPNs</text>
+      </g>
+      <g class="srv" data-servicio="haproxy-balanceo-l7" tabindex="0" role="button" aria-label="Ficha de HAProxy (balanceo L7)">
       <text class="s" x="130" y="264">•  HAProxy (balanceo L7)</text>
       <text class="d" x="148" y="277">Balanceo hacia workers WSO2, SSL/TLS offload y…</text>
+      </g>
+      <g class="srv" data-servicio="switches-core-con-hsrp-lidice-y-panamericana" tabindex="0" role="button" aria-label="Ficha de Switches core con HSRP (Lídice y Panamericana)">
       <text class="s" x="430" y="264">•  Switches core con HSRP (Lídice y Panamericana)</text>
       <text class="d" x="448" y="277">Redundancia de gateway VIP</text>
+      </g>
+      <g class="srv" data-servicio="vlans-10-3280-3282-3328-3329" tabindex="0" role="button" aria-label="Ficha de VLANs (10, 3280, 3282, 3328, 3329)">
       <text class="s" x="130" y="295">•  VLANs (10, 3280, 3282, 3328, 3329)</text>
       <text class="d" x="148" y="308">Gestión, interconexión de sedes y segmentación LAN</text>
+      </g>
+      <g class="srv" data-servicio="enlaces-dedicados-gtd" tabindex="0" role="button" aria-label="Ficha de Enlaces dedicados GTD">
       <text class="s" x="430" y="295">•  Enlaces dedicados GTD</text>
       <text class="d" x="448" y="308">Conectividad entre sedes y hacia terceros</text>
+      </g>
       </g>
     </g>
     <g class="capa" data-capa="3" data-h0="96" data-h1="165" tabindex="0" role="button" aria-label="Integración y bus de servicios, 6 servicios">
@@ -223,18 +277,30 @@
       <text class="m" x="52" y="349">WSO2 API Manager &amp; ESB (clúster) · Switch transaccional Unicard (ISO 8583) · WSO2 Identity Server · WSO2 Monitoring &amp; …</text>
       </g>
       <g class="servicios">
+      <g class="srv" data-servicio="wso2-api-manager-esb-cluster" tabindex="0" role="button" aria-label="Ficha de WSO2 API Manager &amp; ESB (clúster)">
       <text class="s" x="130" y="349">•  WSO2 API Manager &amp; ESB (clúster)</text>
       <text class="d" x="148" y="362">Orquestación de APIs REST y mediación SOAP/WSDL</text>
+      </g>
+      <g class="srv" data-servicio="switch-transaccional-unicard-iso-8583" tabindex="0" role="button" aria-label="Ficha de Switch transaccional Unicard (ISO 8583)">
       <text class="s" x="430" y="349">•  Switch transaccional Unicard (ISO 8583)</text>
       <text class="d" x="448" y="362">Servidor traductor y enrutamiento Cajas SMU ↔…</text>
+      </g>
+      <g class="srv" data-servicio="wso2-identity-server" tabindex="0" role="button" aria-label="Ficha de WSO2 Identity Server">
       <text class="s" x="130" y="380">•  WSO2 Identity Server</text>
       <text class="d" x="148" y="393">Identidades, tokens OAuth2 y SSO</text>
+      </g>
+      <g class="srv" data-servicio="wso2-monitoring-analytics" tabindex="0" role="button" aria-label="Ficha de WSO2 Monitoring &amp; Analytics">
       <text class="s" x="430" y="380">•  WSO2 Monitoring &amp; Analytics</text>
       <text class="d" x="448" y="393">Métricas y trazabilidad de APIs</text>
+      </g>
+      <g class="srv" data-servicio="active-directory-domain-controllers" tabindex="0" role="button" aria-label="Ficha de Active Directory (Domain Controllers)">
       <text class="s" x="130" y="411">•  Active Directory (Domain Controllers)</text>
       <text class="d" x="148" y="424">Autenticación</text>
+      </g>
+      <g class="srv" data-servicio="servidor-sftp" tabindex="0" role="button" aria-label="Ficha de Servidor SFTP">
       <text class="s" x="430" y="411">•  Servidor SFTP</text>
       <text class="d" x="448" y="424">Intercambio seguro de archivos masivos</text>
+      </g>
       </g>
     </g>
     <g class="capa" data-capa="4" data-h0="96" data-h1="244" tabindex="0" role="button" aria-label="Aplicaciones de negocio y core financiero, 12 servicios">
@@ -246,26 +312,46 @@
       <text class="m" x="52" y="465">CRM Engage · Brider · Credit Maker · Servidor de Riesgo · Control de Gestión · Be Clever · Pasarelas de canales · SAP …</text>
       </g>
       <g class="servicios">
+      <g class="srv" data-servicio="crm-engage" tabindex="0" role="button" aria-label="Ficha de CRM Engage">
       <text class="s" x="130" y="465">•  CRM Engage</text>
       <text class="d" x="148" y="478">Clientes, cuentas y gestión de contratos (Prod, QA y…</text>
+      </g>
+      <g class="srv" data-servicio="brider" tabindex="0" role="button" aria-label="Ficha de Brider">
       <text class="s" x="430" y="465">•  Brider</text>
       <text class="d" x="448" y="478">Administración de pólizas, cobros, primas, denuncias…</text>
+      </g>
+      <g class="srv" data-servicio="credit-maker" tabindex="0" role="button" aria-label="Ficha de Credit Maker">
       <text class="s" x="130" y="496">•  Credit Maker</text>
       <text class="d" x="148" y="509">Motor de crédito, evaluación online y scoring</text>
+      </g>
+      <g class="srv" data-servicio="servidor-de-riesgo" tabindex="0" role="button" aria-label="Ficha de Servidor de Riesgo">
       <text class="s" x="430" y="496">•  Servidor de Riesgo</text>
       <text class="d" x="448" y="509">Definición de cupos y scoring</text>
+      </g>
+      <g class="srv" data-servicio="control-de-gestion" tabindex="0" role="button" aria-label="Ficha de Control de Gestión">
       <text class="s" x="130" y="527">•  Control de Gestión</text>
       <text class="d" x="148" y="540">Reportería de gestión</text>
+      </g>
+      <g class="srv" data-servicio="be-clever" tabindex="0" role="button" aria-label="Ficha de Be Clever">
       <text class="s" x="430" y="527">•  Be Clever</text>
       <text class="d" x="448" y="540">Puntos, promociones y descuentos en cajas SMU y club</text>
+      </g>
+      <g class="srv" data-servicio="pasarelas-de-canales" tabindex="0" role="button" aria-label="Ficha de Pasarelas de canales">
       <text class="s" x="130" y="558">•  Pasarelas de canales</text>
       <text class="d" x="148" y="571">Pasarelas hacia canales</text>
+      </g>
+      <g class="srv" data-servicio="sap-bo" tabindex="0" role="button" aria-label="Ficha de SAP BO">
       <text class="s" x="430" y="558">•  SAP BO</text>
       <text class="d" x="448" y="571">Reportería</text>
+      </g>
+      <g class="srv" data-servicio="app-booking-unicard-transaccional" tabindex="0" role="button" aria-label="Ficha de App Booking Unicard Transaccional">
       <text class="s" x="130" y="589">•  App Booking Unicard Transaccional</text>
       <text class="d" x="148" y="602">Aplicación transaccional</text>
+      </g>
+      <g class="srv" data-servicio="asterisk-pbx" tabindex="0" role="button" aria-label="Ficha de Asterisk PBX">
       <text class="s" x="430" y="589">•  Asterisk PBX <tspan class="m">(+2)</tspan></text>
       <text class="d" x="448" y="602">Telefonía</text>
+      </g>
       <text class="m" x="52" y="620">+2 más: Servidor documental · Relay de correo</text>
       </g>
     </g>
@@ -278,24 +364,42 @@
       <text class="m" x="52" y="581">SQL Server – BD Engage · SQL Server – BD Brider · SQL Server – BD Canales · SQL Server – BD Prodapps108 · MySQL – BD …</text>
       </g>
       <g class="servicios">
+      <g class="srv" data-servicio="sql-server-bd-engage" tabindex="0" role="button" aria-label="Ficha de SQL Server – BD Engage">
       <text class="s" x="130" y="581">•  SQL Server – BD Engage</text>
       <text class="d" x="148" y="594">Alta disponibilidad con Double-Take</text>
+      </g>
+      <g class="srv" data-servicio="sql-server-bd-brider" tabindex="0" role="button" aria-label="Ficha de SQL Server – BD Brider">
       <text class="s" x="430" y="581">•  SQL Server – BD Brider</text>
       <text class="d" x="448" y="594">Alta disponibilidad con Double-Take</text>
+      </g>
+      <g class="srv" data-servicio="sql-server-bd-canales" tabindex="0" role="button" aria-label="Ficha de SQL Server – BD Canales">
       <text class="s" x="130" y="612">•  SQL Server – BD Canales</text>
       <text class="d" x="148" y="625">Replicación con Mimix</text>
+      </g>
+      <g class="srv" data-servicio="sql-server-bd-prodapps108" tabindex="0" role="button" aria-label="Ficha de SQL Server – BD Prodapps108">
       <text class="s" x="430" y="612">•  SQL Server – BD Prodapps108</text>
       <text class="d" x="448" y="625">Auditoría de transacciones web, mensajería y logs</text>
+      </g>
+      <g class="srv" data-servicio="mysql-bd-credit-maker" tabindex="0" role="button" aria-label="Ficha de MySQL – BD Credit Maker">
       <text class="s" x="130" y="643">•  MySQL – BD Credit Maker</text>
       <text class="d" x="148" y="656">Con respaldo y restauración (BKP/RST)</text>
+      </g>
+      <g class="srv" data-servicio="sap-hana" tabindex="0" role="button" aria-label="Ficha de SAP HANA">
       <text class="s" x="430" y="643">•  SAP HANA</text>
       <text class="d" x="448" y="656">Contabilidad general y balances</text>
+      </g>
+      <g class="srv" data-servicio="datamart-bi" tabindex="0" role="button" aria-label="Ficha de Datamart BI">
       <text class="s" x="130" y="674">•  Datamart BI</text>
       <text class="d" x="148" y="687">Reportería</text>
+      </g>
+      <g class="srv" data-servicio="jenkins-malla-batch-nocturna" tabindex="0" role="button" aria-label="Ficha de Jenkins (malla batch nocturna)">
       <text class="s" x="430" y="674">•  Jenkins (malla batch nocturna)</text>
       <text class="d" x="448" y="687">Orquestación de procesos batch</text>
+      </g>
+      <g class="srv" data-servicio="file-server-scl012-y-etls-diarios" tabindex="0" role="button" aria-label="Ficha de File Server SCL012 y ETLs diarios">
       <text class="s" x="130" y="705">•  File Server SCL012 y ETLs diarios</text>
       <text class="d" x="148" y="718">Archivos y cargas diarias</text>
+      </g>
       </g>
     </g>
     <g class="capa" data-capa="6" data-h0="468" data-h1="680" tabindex="0" role="button" aria-label="Ecosistema externo, 19 servicios">
@@ -312,44 +416,82 @@
       <text class="m" x="842" y="207">Financiero) · Geocom Chile y STS Uruguay (conectividad POS)</text>
       </g>
       <g class="servicios">
+      <g class="srv" data-servicio="minsait-payments-nuek-switch-core" tabindex="0" role="button" aria-label="Ficha de Minsait Payments / NUEK (Switch Core)">
       <text class="s" x="842" y="117">•  Minsait Payments / NUEK (Switch Core)</text>
       <text class="d" x="860" y="130">SIA (ISO 8583), SAT (liquidación y compensación) y SFTP de lotes</text>
+      </g>
+      <g class="srv" data-servicio="sovos-autentia" tabindex="0" role="button" aria-label="Ficha de Sovos / Autentia">
       <text class="s" x="842" y="149">•  Sovos / Autentia</text>
       <text class="d" x="860" y="162">Validación biométrica, firma electrónica y certificación digital</text>
+      </g>
+      <g class="srv" data-servicio="transbank" tabindex="0" role="button" aria-label="Ficha de Transbank">
       <text class="s" x="842" y="181">•  Transbank</text>
       <text class="d" x="860" y="194">Compensación interbancaria y ruteo de compras</text>
+      </g>
+      <g class="srv" data-servicio="banchile" tabindex="0" role="button" aria-label="Ficha de Banchile">
       <text class="s" x="842" y="213">•  Banchile</text>
       <text class="d" x="860" y="226">Transferencias electrónicas y recaudación PAC</text>
+      </g>
+      <g class="srv" data-servicio="unired" tabindex="0" role="button" aria-label="Ficha de Unired">
       <text class="s" x="842" y="245">•  Unired</text>
       <text class="d" x="860" y="258">Portal de recaudación y pagos en línea</text>
+      </g>
+      <g class="srv" data-servicio="nexus" tabindex="0" role="button" aria-label="Ficha de Nexus">
       <text class="s" x="842" y="277">•  Nexus</text>
       <text class="d" x="860" y="290">Autorizador de tarjetas vía WebServices y SFTP</text>
+      </g>
+      <g class="srv" data-servicio="mv-servicio-vpn" tabindex="0" role="button" aria-label="Ficha de MV-Servicio VPN">
       <text class="s" x="842" y="309">•  MV-Servicio VPN</text>
       <text class="d" x="860" y="322">Enlace VPN externo</text>
+      </g>
+      <g class="srv" data-servicio="zcc-vpn" tabindex="0" role="button" aria-label="Ficha de ZCC VPN">
       <text class="s" x="842" y="341">•  ZCC VPN</text>
       <text class="d" x="860" y="354">Enlace VPN externo</text>
+      </g>
+      <g class="srv" data-servicio="colektia" tabindex="0" role="button" aria-label="Ficha de Colektia">
       <text class="s" x="842" y="373">•  Colektia</text>
       <text class="d" x="860" y="386">Plataforma de cobranza con IA</text>
+      </g>
+      <g class="srv" data-servicio="aws-unicard-vpn" tabindex="0" role="button" aria-label="Ficha de AWS (Unicard VPN)">
       <text class="s" x="842" y="405">•  AWS (Unicard VPN)</text>
       <text class="d" x="860" y="418">Servicios satélite de cobranza e integración</text>
+      </g>
+      <g class="srv" data-servicio="previred" tabindex="0" role="button" aria-label="Ficha de Previred">
       <text class="s" x="842" y="437">•  Previred</text>
       <text class="d" x="860" y="450">Validación de rentas, cotizaciones y aportes</text>
+      </g>
+      <g class="srv" data-servicio="bci-seguros" tabindex="0" role="button" aria-label="Ficha de Bci Seguros">
       <text class="s" x="842" y="469">•  Bci Seguros</text>
       <text class="d" x="860" y="482">Compañía de seguros</text>
+      </g>
+      <g class="srv" data-servicio="american-assist" tabindex="0" role="button" aria-label="Ficha de American Assist">
       <text class="s" x="842" y="501">•  American Assist</text>
       <text class="d" x="860" y="514">Compañía de seguros / asistencia</text>
+      </g>
+      <g class="srv" data-servicio="servicios-mok" tabindex="0" role="button" aria-label="Ficha de Servicios Mok">
       <text class="s" x="842" y="533">•  Servicios Mok</text>
       <text class="d" x="860" y="546">Compañía de seguros</text>
+      </g>
+      <g class="srv" data-servicio="equifax-dicom" tabindex="0" role="button" aria-label="Ficha de Equifax (Dicom)">
       <text class="s" x="842" y="565">•  Equifax (Dicom)</text>
       <text class="d" x="860" y="578">Información crediticia</text>
+      </g>
+      <g class="srv" data-servicio="sinacofi" tabindex="0" role="button" aria-label="Ficha de Sinacofi">
       <text class="s" x="842" y="597">•  Sinacofi</text>
       <text class="d" x="860" y="610">Información crediticia</text>
+      </g>
+      <g class="srv" data-servicio="transunion" tabindex="0" role="button" aria-label="Ficha de TransUnion">
       <text class="s" x="842" y="629">•  TransUnion</text>
       <text class="d" x="860" y="642">Información crediticia</text>
+      </g>
+      <g class="srv" data-servicio="cmf-comision-para-el-mercado-financiero" tabindex="0" role="button" aria-label="Ficha de CMF (Comisión para el Mercado Financiero)">
       <text class="s" x="842" y="661">•  CMF (Comisión para el Mercado Financiero)</text>
       <text class="d" x="860" y="674">Envío normativo de carteras, deudas, provisiones y balances</text>
+      </g>
+      <g class="srv" data-servicio="geocom-chile-y-sts-uruguay-conectividad-pos" tabindex="0" role="button" aria-label="Ficha de Geocom Chile y STS Uruguay (conectividad POS)">
       <text class="s" x="842" y="693">•  Geocom Chile y STS Uruguay (conectividad POS)</text>
       <text class="d" x="860" y="706">Concentración de terminales POS</text>
+      </g>
       <text class="m pista" x="842" y="735">Clic para ampliar</text>
       </g>
     </g>
@@ -362,14 +504,22 @@
       <text class="m" x="52" y="713">Nagios XI · Vzor Suite · New Relic · PRTG Network Monitor</text>
       </g>
       <g class="servicios">
+      <g class="srv" data-servicio="nagios-xi" tabindex="0" role="button" aria-label="Ficha de Nagios XI">
       <text class="s" x="130" y="713">•  Nagios XI</text>
       <text class="d" x="148" y="726">Salud de servidores Linux y Windows (CPU, RAM, disco)</text>
+      </g>
+      <g class="srv" data-servicio="vzor-suite" tabindex="0" role="button" aria-label="Ficha de Vzor Suite">
       <text class="s" x="430" y="713">•  Vzor Suite</text>
       <text class="d" x="448" y="726">Monitoreo de enlaces, VPNs y disponibilidad del…</text>
+      </g>
+      <g class="srv" data-servicio="new-relic" tabindex="0" role="button" aria-label="Ficha de New Relic">
       <text class="s" x="130" y="744">•  New Relic</text>
       <text class="d" x="148" y="757">APM, trazabilidad y service map de APIs WSO2</text>
+      </g>
+      <g class="srv" data-servicio="prtg-network-monitor" tabindex="0" role="button" aria-label="Ficha de PRTG Network Monitor">
       <text class="s" x="430" y="744">•  PRTG Network Monitor</text>
       <text class="d" x="448" y="757">SNMP, ancho de banda y latencia de enlaces</text>
+      </g>
       <text class="m" x="790" y="713">Hosts: CGESTION01 · PRODAPPS108 · PRODRISK01 · VZOR</text>
       </g>
     </g>
@@ -382,10 +532,14 @@
       <text class="m" x="52" y="833">Azure DevOps · vCloud GTD (IaaS 2.0 / 2.1)</text>
       </g>
       <g class="servicios">
+      <g class="srv" data-servicio="azure-devops" tabindex="0" role="button" aria-label="Ficha de Azure DevOps">
       <text class="s" x="130" y="833">•  Azure DevOps</text>
       <text class="d" x="148" y="846">Repositorios Git, pipelines CI/CD y gestión de cambios</text>
+      </g>
+      <g class="srv" data-servicio="vcloud-gtd-iaas-2-0-2-1" tabindex="0" role="button" aria-label="Ficha de vCloud GTD (IaaS 2.0 / 2.1)">
       <text class="s" x="430" y="833">•  vCloud GTD (IaaS 2.0 / 2.1)</text>
       <text class="d" x="448" y="846">Aprovisionamiento de VMs</text>
+      </g>
       <text class="m" x="790" y="833">Hosts: ADM-Intesis-001 · COLECTOR-UNICARD ·</text>
       <text class="m" x="790" y="850">FORTISIEM-COLLECTOR-UNICARD · Vzor01-001</text>
       </g>
@@ -398,7 +552,7 @@
     <circle class="extc" cx="280" cy="913" r="5"/>
       <text class="m" x="292" y="917">Externo (borde punteado)</text>
       <text class="m" x="470" y="917">Mapeo de servidores por Nivel infraestructura + Sistema · total 58</text>
-      <text class="m" x="1210" y="917" text-anchor="end">Clic para enfocar · Rueda: zoom · Arrastrá: mover · Esc: volver</text>
+      <text class="m" x="1210" y="917" text-anchor="end">Clic para enfocar · clic en un servicio para su ficha · Esc: volver</text>
     </g>
   </g>
 </svg>
@@ -432,32 +586,32 @@
     <g class="flujo" data-flujo="compra-pos" tabindex="0" role="button" aria-label="Flujo Compra en POS">
       <rect class="fila" x="20" y="96" width="1200" height="94" rx="8"/>
       <text class="f" x="36" y="116">Compra en POS</text>
-      <g class="paso" style="--i:0">
+      <g class="paso" style="--i:0" data-servicio="geocom-bbr-sw-de-cajas" tabindex="0" role="button" aria-label="Ficha de Geocom / BBR SW de Cajas">
         <rect class="nodo" x="40" y="134" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="155" text-anchor="middle">Geocom / BBR SW de</text>
       <text class="s" x="110" y="167" text-anchor="middle">Cajas</text>
       </g>
-      <g class="paso" style="--i:1">
+      <g class="paso" style="--i:1" data-servicio="firewalls-fortigate-100e-ha" tabindex="0" role="button" aria-label="Ficha de Firewalls FortiGate 100E (HA)">
         <rect class="nodo" x="240" y="134" width="140" height="42" rx="6"/>
       <text class="s" x="310" y="155" text-anchor="middle">Firewalls FortiGate</text>
       <text class="s" x="310" y="167" text-anchor="middle">100E (HA)</text>
       </g>
-      <g class="paso" style="--i:2">
+      <g class="paso" style="--i:2" data-servicio="switch-transaccional-unicard-iso-8583" tabindex="0" role="button" aria-label="Ficha de Switch transaccional Unicard (ISO 8583)">
         <rect class="nodo" x="440" y="134" width="140" height="42" rx="6"/>
       <text class="s" x="510" y="155" text-anchor="middle">Switch transaccional</text>
       <text class="s" x="510" y="167" text-anchor="middle">Unicard (ISO 8583)</text>
       </g>
-      <g class="paso" style="--i:3">
+      <g class="paso" style="--i:3" data-servicio="app-booking-unicard-transaccional" tabindex="0" role="button" aria-label="Ficha de App Booking Unicard Transaccional">
         <rect class="nodo" x="640" y="134" width="140" height="42" rx="6"/>
       <text class="s" x="710" y="155" text-anchor="middle">App Booking Unicard</text>
       <text class="s" x="710" y="167" text-anchor="middle">Transaccional</text>
       </g>
-      <g class="paso" style="--i:4">
+      <g class="paso" style="--i:4" data-servicio="sql-server-bd-canales" tabindex="0" role="button" aria-label="Ficha de SQL Server – BD Canales">
         <rect class="nodo" x="840" y="134" width="140" height="42" rx="6"/>
       <text class="s" x="910" y="155" text-anchor="middle">SQL Server – BD</text>
       <text class="s" x="910" y="167" text-anchor="middle">Canales</text>
       </g>
-      <g class="paso" style="--i:5">
+      <g class="paso" style="--i:5" data-servicio="minsait-payments-nuek-switch-core" tabindex="0" role="button" aria-label="Ficha de Minsait Payments / NUEK (Switch Core)">
         <rect class="nodo" x="1040" y="134" width="140" height="42" rx="6"/>
       <text class="s" x="1110" y="155" text-anchor="middle">Minsait Payments /</text>
       <text class="s" x="1110" y="167" text-anchor="middle">NUEK (Switch Core)</text>
@@ -475,31 +629,31 @@
     <g class="flujo" data-flujo="compra-wallet" tabindex="0" role="button" aria-label="Flujo Compra desde wallet Unipay">
       <rect class="fila" x="20" y="208" width="1200" height="94" rx="8"/>
       <text class="f" x="36" y="228">Compra desde wallet Unipay</text>
-      <g class="paso" style="--i:0">
+      <g class="paso" style="--i:0" data-servicio="app-movil-unipay-wallet" tabindex="0" role="button" aria-label="Ficha de App Móvil Unipay (Wallet)">
         <rect class="nodo" x="40" y="246" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="267" text-anchor="middle">App Móvil Unipay</text>
       <text class="s" x="110" y="279" text-anchor="middle">(Wallet)</text>
       </g>
-      <g class="paso" style="--i:1">
+      <g class="paso" style="--i:1" data-servicio="firewalls-fortigate-100e-ha" tabindex="0" role="button" aria-label="Ficha de Firewalls FortiGate 100E (HA)">
         <rect class="nodo" x="240" y="246" width="140" height="42" rx="6"/>
       <text class="s" x="310" y="267" text-anchor="middle">Firewalls FortiGate</text>
       <text class="s" x="310" y="279" text-anchor="middle">100E (HA)</text>
       </g>
-      <g class="paso" style="--i:2">
+      <g class="paso" style="--i:2" data-servicio="wso2-api-manager-esb-cluster" tabindex="0" role="button" aria-label="Ficha de WSO2 API Manager &amp; ESB (clúster)">
         <rect class="nodo" x="440" y="246" width="140" height="42" rx="6"/>
       <text class="s" x="510" y="267" text-anchor="middle">WSO2 API Manager &amp;</text>
       <text class="s" x="510" y="279" text-anchor="middle">ESB (clúster)</text>
       </g>
-      <g class="paso" style="--i:3">
+      <g class="paso" style="--i:3" data-servicio="pasarelas-de-canales" tabindex="0" role="button" aria-label="Ficha de Pasarelas de canales">
         <rect class="nodo" x="640" y="246" width="140" height="42" rx="6"/>
       <text class="s" x="710" y="271" text-anchor="middle">Pasarelas de canales</text>
       </g>
-      <g class="paso" style="--i:4">
+      <g class="paso" style="--i:4" data-servicio="sql-server-bd-canales" tabindex="0" role="button" aria-label="Ficha de SQL Server – BD Canales">
         <rect class="nodo" x="840" y="246" width="140" height="42" rx="6"/>
       <text class="s" x="910" y="267" text-anchor="middle">SQL Server – BD</text>
       <text class="s" x="910" y="279" text-anchor="middle">Canales</text>
       </g>
-      <g class="paso" style="--i:5">
+      <g class="paso" style="--i:5" data-servicio="minsait-payments-nuek-switch-core" tabindex="0" role="button" aria-label="Ficha de Minsait Payments / NUEK (Switch Core)">
         <rect class="nodo" x="1040" y="246" width="140" height="42" rx="6"/>
       <text class="s" x="1110" y="267" text-anchor="middle">Minsait Payments /</text>
       <text class="s" x="1110" y="279" text-anchor="middle">NUEK (Switch Core)</text>
@@ -517,26 +671,26 @@
     <g class="flujo" data-flujo="portal-unipay" tabindex="0" role="button" aria-label="Flujo Autogestión en portal web">
       <rect class="fila" x="20" y="320" width="1200" height="94" rx="8"/>
       <text class="f" x="36" y="340">Autogestión en portal web</text>
-      <g class="paso" style="--i:0">
+      <g class="paso" style="--i:0" data-servicio="portal-web-clientes-unipay" tabindex="0" role="button" aria-label="Ficha de Portal Web Clientes Unipay">
         <rect class="nodo" x="40" y="358" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="379" text-anchor="middle">Portal Web Clientes</text>
       <text class="s" x="110" y="391" text-anchor="middle">Unipay</text>
       </g>
-      <g class="paso" style="--i:1">
+      <g class="paso" style="--i:1" data-servicio="firewalls-fortigate-100e-ha" tabindex="0" role="button" aria-label="Ficha de Firewalls FortiGate 100E (HA)">
         <rect class="nodo" x="240" y="358" width="140" height="42" rx="6"/>
       <text class="s" x="310" y="379" text-anchor="middle">Firewalls FortiGate</text>
       <text class="s" x="310" y="391" text-anchor="middle">100E (HA)</text>
       </g>
-      <g class="paso" style="--i:2">
+      <g class="paso" style="--i:2" data-servicio="wso2-api-manager-esb-cluster" tabindex="0" role="button" aria-label="Ficha de WSO2 API Manager &amp; ESB (clúster)">
         <rect class="nodo" x="440" y="358" width="140" height="42" rx="6"/>
       <text class="s" x="510" y="379" text-anchor="middle">WSO2 API Manager &amp;</text>
       <text class="s" x="510" y="391" text-anchor="middle">ESB (clúster)</text>
       </g>
-      <g class="paso" style="--i:3">
+      <g class="paso" style="--i:3" data-servicio="crm-engage" tabindex="0" role="button" aria-label="Ficha de CRM Engage">
         <rect class="nodo" x="640" y="358" width="140" height="42" rx="6"/>
       <text class="s" x="710" y="383" text-anchor="middle">CRM Engage</text>
       </g>
-      <g class="paso" style="--i:4">
+      <g class="paso" style="--i:4" data-servicio="sql-server-bd-engage" tabindex="0" role="button" aria-label="Ficha de SQL Server – BD Engage">
         <rect class="nodo" x="840" y="358" width="140" height="42" rx="6"/>
       <text class="s" x="910" y="379" text-anchor="middle">SQL Server – BD</text>
       <text class="s" x="910" y="391" text-anchor="middle">Engage</text>
@@ -553,26 +707,26 @@
     <g class="flujo" data-flujo="recaudacion" tabindex="0" role="button" aria-label="Flujo Recaudación externa">
       <rect class="fila" x="20" y="432" width="1200" height="94" rx="8"/>
       <text class="f" x="36" y="452">Recaudación externa</text>
-      <g class="paso" style="--i:0">
+      <g class="paso" style="--i:0" data-servicio="portal-unired-cajas-xcash" tabindex="0" role="button" aria-label="Ficha de Portal Unired / cajas XCash">
         <rect class="nodo" x="40" y="470" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="491" text-anchor="middle">Portal Unired /</text>
       <text class="s" x="110" y="503" text-anchor="middle">cajas XCash</text>
       </g>
-      <g class="paso" style="--i:1">
+      <g class="paso" style="--i:1" data-servicio="wso2-api-manager-esb-cluster" tabindex="0" role="button" aria-label="Ficha de WSO2 API Manager &amp; ESB (clúster)">
         <rect class="nodo" x="440" y="470" width="140" height="42" rx="6"/>
       <text class="s" x="510" y="491" text-anchor="middle">WSO2 API Manager &amp;</text>
       <text class="s" x="510" y="503" text-anchor="middle">ESB (clúster)</text>
       </g>
-      <g class="paso" style="--i:2">
+      <g class="paso" style="--i:2" data-servicio="pasarelas-de-canales" tabindex="0" role="button" aria-label="Ficha de Pasarelas de canales">
         <rect class="nodo" x="640" y="470" width="140" height="42" rx="6"/>
       <text class="s" x="710" y="495" text-anchor="middle">Pasarelas de canales</text>
       </g>
-      <g class="paso" style="--i:3">
+      <g class="paso" style="--i:3" data-servicio="sql-server-bd-canales" tabindex="0" role="button" aria-label="Ficha de SQL Server – BD Canales">
         <rect class="nodo" x="840" y="470" width="140" height="42" rx="6"/>
       <text class="s" x="910" y="491" text-anchor="middle">SQL Server – BD</text>
       <text class="s" x="910" y="503" text-anchor="middle">Canales</text>
       </g>
-      <g class="paso" style="--i:4">
+      <g class="paso" style="--i:4" data-servicio="unired" tabindex="0" role="button" aria-label="Ficha de Unired">
         <rect class="nodo" x="1040" y="470" width="140" height="42" rx="6"/>
       <text class="s" x="1110" y="495" text-anchor="middle">Unired</text>
       </g>
@@ -587,21 +741,21 @@
     <g class="flujo" data-flujo="conciliacion-batch" tabindex="0" role="button" aria-label="Flujo Conciliación batch nocturna">
       <rect class="fila" x="20" y="544" width="1200" height="94" rx="8"/>
       <text class="f" x="36" y="564">Conciliación batch nocturna</text>
-      <g class="paso" style="--i:0">
+      <g class="paso" style="--i:0" data-servicio="webservices-rest-y-lotes-sftp-diarios" tabindex="0" role="button" aria-label="Ficha de WebServices REST y lotes SFTP diarios">
         <rect class="nodo" x="40" y="582" width="140" height="42" rx="6"/>
       <text class="s" x="110" y="603" text-anchor="middle">WebServices REST y</text>
       <text class="s" x="110" y="615" text-anchor="middle">lotes SFTP diarios</text>
       </g>
-      <g class="paso" style="--i:1">
+      <g class="paso" style="--i:1" data-servicio="servidor-sftp" tabindex="0" role="button" aria-label="Ficha de Servidor SFTP">
         <rect class="nodo" x="440" y="582" width="140" height="42" rx="6"/>
       <text class="s" x="510" y="607" text-anchor="middle">Servidor SFTP</text>
       </g>
-      <g class="paso" style="--i:2">
+      <g class="paso" style="--i:2" data-servicio="jenkins-malla-batch-nocturna" tabindex="0" role="button" aria-label="Ficha de Jenkins (malla batch nocturna)">
         <rect class="nodo" x="840" y="557" width="140" height="42" rx="6"/>
       <text class="s" x="910" y="578" text-anchor="middle">Jenkins (malla batch</text>
       <text class="s" x="910" y="590" text-anchor="middle">nocturna)</text>
       </g>
-      <g class="paso" style="--i:3">
+      <g class="paso" style="--i:3" data-servicio="datamart-bi" tabindex="0" role="button" aria-label="Ficha de Datamart BI">
         <rect class="nodo" x="840" y="607" width="140" height="42" rx="6"/>
       <text class="s" x="910" y="632" text-anchor="middle">Datamart BI</text>
       </g>
@@ -610,9 +764,17 @@
       <path class="ff" d="M 580 603 H 709 V 578 H 838"/>
       <path class="ff" d="M 910 599 V 607"/>
     </g>
-      <text class="m" x="1210" y="678" text-anchor="end">Clic para aislar · Rueda: zoom · Arrastrá: mover · Esc: volver</text>
+      <text class="m" x="1210" y="678" text-anchor="end">Clic en la fila para aislar · en un nodo para su ficha · Esc: volver</text>
   </g>
 </svg>
+<script type="application/json" id="datos">{"geocom-bbr-sw-de-cajas": {"n": "Geocom / BBR SW de Cajas", "c": "POS / Cajas", "d": "Software POS en cajas de supermercados SMU (Unimarc, Alvi, Mayorista 10)", "e": true, "capa": 1, "cf": "Canales de entrada", "f": ["Compra en POS"]}, "lector-biometrico-dactilar-sovos": {"n": "Lector biométrico dactilar (Sovos)", "c": "Hardware", "d": "Verificación de huella en cajas", "e": true, "capa": 1, "cf": "Canales de entrada", "f": []}, "tablets-de-autoservicio-y-atencion-de-clientes": {"n": "Tablets de autoservicio y atención de clientes", "c": "Hardware", "d": "Terminales en tienda", "e": false, "capa": 1, "cf": "Canales de entrada", "f": []}, "portal-web-clientes-unipay": {"n": "Portal Web Clientes Unipay", "c": "Canal digital", "d": "Acceso transaccional online", "e": false, "capa": 1, "cf": "Canales de entrada", "f": ["Autogestión en portal web"]}, "app-movil-unipay-wallet": {"n": "App Móvil Unipay (Wallet)", "c": "Canal digital", "d": "Billetera digital", "e": false, "capa": 1, "cf": "Canales de entrada", "f": ["Compra desde wallet Unipay"]}, "chatbot-whatsapp-chattigo": {"n": "Chatbot WhatsApp (Chattigo)", "c": "Canal digital", "d": "Asistente virtual", "e": true, "capa": 1, "cf": "Canales de entrada", "f": []}, "waf-https-tls": {"n": "WAF (HTTPS / TLS)", "c": "Seguridad", "d": "Protección del tráfico de canales digitales", "e": false, "capa": 1, "cf": "Canales de entrada", "f": []}, "call-center-ivr-atento-trustcorp": {"n": "Call Center / IVR (Atento / TrustCorp)", "c": "Canal operativo", "d": "Atención telefónica operada por terceros", "e": true, "capa": 1, "cf": "Canales de entrada", "f": []}, "portal-unired-cajas-xcash": {"n": "Portal Unired / cajas XCash", "c": "Recaudación", "d": "Recaudación web y en cajas", "e": true, "capa": 1, "cf": "Canales de entrada", "f": ["Recaudación externa"]}, "fuerza-de-ventas-smu": {"n": "Fuerza de ventas SMU", "c": "Canal operativo", "d": "Captación, afiliación y evaluación presencial", "e": false, "capa": 1, "cf": "Canales de entrada", "f": []}, "agencias-externas-serbanc-altsolution": {"n": "Agencias externas Serbanc / AltSolution", "c": "Cobranza", "d": "Mora temprana y cobranza judicial", "e": true, "capa": 1, "cf": "Canales de entrada", "f": []}, "webservices-rest-y-lotes-sftp-diarios": {"n": "WebServices REST y lotes SFTP diarios", "c": "Integración", "d": "Sincronización de acuerdos y pagos de cartera", "e": false, "capa": 1, "cf": "Canales de entrada", "f": ["Conciliación batch nocturna"]}, "firewalls-fortigate-100e-ha": {"n": "Firewalls FortiGate 100E (HA)", "c": "Seguridad", "d": "Clúster activo/pasivo; UTM, antivirus, IPS, DMZ y NAT", "e": false, "capa": 2, "cf": "Perímetro de seguridad y red core", "f": ["Compra en POS", "Compra desde wallet Unipay", "Autogestión en portal web"]}, "vpn-ipsec-site-to-site-17-tuneles": {"n": "VPN IPSec Site-to-Site (17 túneles)", "c": "Conectividad", "d": "Concentrador central de VPNs", "e": false, "capa": 2, "cf": "Perímetro de seguridad y red core", "f": []}, "haproxy-balanceo-l7": {"n": "HAProxy (balanceo L7)", "c": "Balanceo", "d": "Balanceo hacia workers WSO2, SSL/TLS offload y healthchecks", "e": false, "capa": 2, "cf": "Perímetro de seguridad y red core", "f": []}, "switches-core-con-hsrp-lidice-y-panamericana": {"n": "Switches core con HSRP (Lídice y Panamericana)", "c": "Red", "d": "Redundancia de gateway VIP", "e": false, "capa": 2, "cf": "Perímetro de seguridad y red core", "f": []}, "vlans-10-3280-3282-3328-3329": {"n": "VLANs (10, 3280, 3282, 3328, 3329)", "c": "Red", "d": "Gestión, interconexión de sedes y segmentación LAN", "e": false, "capa": 2, "cf": "Perímetro de seguridad y red core", "f": []}, "enlaces-dedicados-gtd": {"n": "Enlaces dedicados GTD", "c": "Conectividad", "d": "Conectividad entre sedes y hacia terceros", "e": true, "capa": 2, "cf": "Perímetro de seguridad y red core", "f": []}, "wso2-api-manager-esb-cluster": {"n": "WSO2 API Manager & ESB (clúster)", "c": "Integración", "d": "Orquestación de APIs REST y mediación SOAP/WSDL", "e": false, "capa": 3, "cf": "Integración y bus de servicios", "f": ["Compra desde wallet Unipay", "Autogestión en portal web", "Recaudación externa"]}, "switch-transaccional-unicard-iso-8583": {"n": "Switch transaccional Unicard (ISO 8583)", "c": "Transaccional", "d": "Servidor traductor y enrutamiento Cajas SMU ↔ Minsait Payments", "e": false, "capa": 3, "cf": "Integración y bus de servicios", "f": ["Compra en POS"]}, "wso2-identity-server": {"n": "WSO2 Identity Server", "c": "Seguridad / IAM", "d": "Identidades, tokens OAuth2 y SSO", "e": false, "capa": 3, "cf": "Integración y bus de servicios", "f": []}, "wso2-monitoring-analytics": {"n": "WSO2 Monitoring & Analytics", "c": "Monitoreo", "d": "Métricas y trazabilidad de APIs", "e": false, "capa": 3, "cf": "Integración y bus de servicios", "f": []}, "active-directory-domain-controllers": {"n": "Active Directory (Domain Controllers)", "c": "Seguridad / IAM", "d": "Autenticación", "e": false, "capa": 3, "cf": "Integración y bus de servicios", "f": []}, "servidor-sftp": {"n": "Servidor SFTP", "c": "Transferencia de archivos", "d": "Intercambio seguro de archivos masivos", "e": false, "capa": 3, "cf": "Integración y bus de servicios", "f": ["Conciliación batch nocturna"]}, "crm-engage": {"n": "CRM Engage", "c": "Core clientes", "d": "Clientes, cuentas y gestión de contratos (Prod, QA y Dev)", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": ["Autogestión en portal web"]}, "brider": {"n": "Brider", "c": "Core seguros", "d": "Administración de pólizas, cobros, primas, denuncias y liquidaciones", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "credit-maker": {"n": "Credit Maker", "c": "Riesgo", "d": "Motor de crédito, evaluación online y scoring", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "servidor-de-riesgo": {"n": "Servidor de Riesgo", "c": "Riesgo", "d": "Definición de cupos y scoring", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "control-de-gestion": {"n": "Control de Gestión", "c": "Gestión", "d": "Reportería de gestión", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "be-clever": {"n": "Be Clever", "c": "Fidelización", "d": "Puntos, promociones y descuentos en cajas SMU y club", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "pasarelas-de-canales": {"n": "Pasarelas de canales", "c": "Integración", "d": "Pasarelas hacia canales", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": ["Compra desde wallet Unipay", "Recaudación externa"]}, "sap-bo": {"n": "SAP BO", "c": "Reportería", "d": "Reportería", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "app-booking-unicard-transaccional": {"n": "App Booking Unicard Transaccional", "c": "Aplicación", "d": "Aplicación transaccional", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": ["Compra en POS"]}, "asterisk-pbx": {"n": "Asterisk PBX", "c": "Telefonía", "d": "Telefonía", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "servidor-documental": {"n": "Servidor documental", "c": "Documental", "d": "Gestión de documentos", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "relay-de-correo": {"n": "Relay de correo", "c": "Correo", "d": "Envío de correo", "e": false, "capa": 4, "cf": "Aplicaciones de negocio y core financiero", "f": []}, "sql-server-bd-engage": {"n": "SQL Server – BD Engage", "c": "Base de datos", "d": "Alta disponibilidad con Double-Take", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": ["Autogestión en portal web"]}, "sql-server-bd-brider": {"n": "SQL Server – BD Brider", "c": "Base de datos", "d": "Alta disponibilidad con Double-Take", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": []}, "sql-server-bd-canales": {"n": "SQL Server – BD Canales", "c": "Base de datos", "d": "Replicación con Mimix", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": ["Compra en POS", "Compra desde wallet Unipay", "Recaudación externa"]}, "sql-server-bd-prodapps108": {"n": "SQL Server – BD Prodapps108", "c": "Base de datos", "d": "Auditoría de transacciones web, mensajería y logs", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": []}, "mysql-bd-credit-maker": {"n": "MySQL – BD Credit Maker", "c": "Base de datos", "d": "Con respaldo y restauración (BKP/RST)", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": []}, "sap-hana": {"n": "SAP HANA", "c": "Base de datos / ERP", "d": "Contabilidad general y balances", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": []}, "datamart-bi": {"n": "Datamart BI", "c": "BI", "d": "Reportería", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": ["Conciliación batch nocturna"]}, "jenkins-malla-batch-nocturna": {"n": "Jenkins (malla batch nocturna)", "c": "Automatización", "d": "Orquestación de procesos batch", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": ["Conciliación batch nocturna"]}, "file-server-scl012-y-etls-diarios": {"n": "File Server SCL012 y ETLs diarios", "c": "Archivos", "d": "Archivos y cargas diarias", "e": false, "capa": 5, "cf": "Persistencia, BD y batch", "f": []}, "minsait-payments-nuek-switch-core": {"n": "Minsait Payments / NUEK (Switch Core)", "c": "Procesador de pagos", "d": "SIA (ISO 8583), SAT (liquidación y compensación) y SFTP de lotes", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": ["Compra en POS", "Compra desde wallet Unipay"]}, "sovos-autentia": {"n": "Sovos / Autentia", "c": "Identidad y firma", "d": "Validación biométrica, firma electrónica y certificación digital", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "transbank": {"n": "Transbank", "c": "Adquirencia", "d": "Compensación interbancaria y ruteo de compras", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "banchile": {"n": "Banchile", "c": "Banca y pagos", "d": "Transferencias electrónicas y recaudación PAC", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "unired": {"n": "Unired", "c": "Banca y pagos", "d": "Portal de recaudación y pagos en línea", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": ["Recaudación externa"]}, "nexus": {"n": "Nexus", "c": "Banca y pagos", "d": "Autorizador de tarjetas vía WebServices y SFTP", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "mv-servicio-vpn": {"n": "MV-Servicio VPN", "c": "Conectividad VPN", "d": "Enlace VPN externo", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "zcc-vpn": {"n": "ZCC VPN", "c": "Conectividad VPN", "d": "Enlace VPN externo", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "colektia": {"n": "Colektia", "c": "Cobranza", "d": "Plataforma de cobranza con IA", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "aws-unicard-vpn": {"n": "AWS (Unicard VPN)", "c": "Nube", "d": "Servicios satélite de cobranza e integración", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "previred": {"n": "Previred", "c": "Datos previsionales", "d": "Validación de rentas, cotizaciones y aportes", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "bci-seguros": {"n": "Bci Seguros", "c": "Seguros", "d": "Compañía de seguros", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "american-assist": {"n": "American Assist", "c": "Seguros", "d": "Compañía de seguros / asistencia", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "servicios-mok": {"n": "Servicios Mok", "c": "Seguros", "d": "Compañía de seguros", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "equifax-dicom": {"n": "Equifax (Dicom)", "c": "Buró de crédito", "d": "Información crediticia", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "sinacofi": {"n": "Sinacofi", "c": "Buró de crédito", "d": "Información crediticia", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "transunion": {"n": "TransUnion", "c": "Buró de crédito", "d": "Información crediticia", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "cmf-comision-para-el-mercado-financiero": {"n": "CMF (Comisión para el Mercado Financiero)", "c": "Regulador", "d": "Envío normativo de carteras, deudas, provisiones y balances", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "geocom-chile-y-sts-uruguay-conectividad-pos": {"n": "Geocom Chile y STS Uruguay (conectividad POS)", "c": "POS", "d": "Concentración de terminales POS", "e": true, "capa": 6, "cf": "Ecosistema externo", "f": []}, "nagios-xi": {"n": "Nagios XI", "c": "Monitoreo", "d": "Salud de servidores Linux y Windows (CPU, RAM, disco)", "e": false, "capa": 7, "cf": "Operación y monitoreo", "f": []}, "vzor-suite": {"n": "Vzor Suite", "c": "Monitoreo", "d": "Monitoreo de enlaces, VPNs y disponibilidad del negocio", "e": false, "capa": 7, "cf": "Operación y monitoreo", "f": []}, "new-relic": {"n": "New Relic", "c": "APM", "d": "APM, trazabilidad y service map de APIs WSO2", "e": true, "capa": 7, "cf": "Operación y monitoreo", "f": []}, "prtg-network-monitor": {"n": "PRTG Network Monitor", "c": "Monitoreo", "d": "SNMP, ancho de banda y latencia de enlaces", "e": false, "capa": 7, "cf": "Operación y monitoreo", "f": []}, "azure-devops": {"n": "Azure DevOps", "c": "DevOps", "d": "Repositorios Git, pipelines CI/CD y gestión de cambios", "e": true, "capa": 8, "cf": "Hosting, entrega y despliegue", "f": []}, "vcloud-gtd-iaas-2-0-2-1": {"n": "vCloud GTD (IaaS 2.0 / 2.1)", "c": "IaaS", "d": "Aprovisionamiento de VMs", "e": true, "capa": 8, "cf": "Hosting, entrega y despliegue", "f": []}}</script>
+<dialog id="detalle" aria-labelledby="d-nombre">
+  <button id="d-cerrar" type="button" aria-label="Cerrar ficha">Cerrar</button>
+  <h2 id="d-nombre"></h2>
+  <p id="d-meta"></p>
+  <p id="d-desc"></p>
+  <div id="d-flujos"></div>
+</dialog>
 
 <script>
 (function () {
@@ -625,6 +787,8 @@
   var flujos = Array.prototype.slice.call(vistaFlujo.querySelectorAll('.flujo'));
   var escenas = [document.getElementById('escena'), document.getElementById('escena-flujo')];
   var capaActiva = null, flujoActivo = null;
+  var datos = JSON.parse(document.getElementById('datos').textContent);
+  var dialogo = document.getElementById('detalle');
   var zoom = { s: 1, x: 0, y: 0 };
   var arrastre = null, movido = false, suprimir = false;
 
@@ -746,6 +910,7 @@
 
   function volver() {
     resetZoom();
+    if (dialogo.open) dialogo.close();
     if (!capaActiva) return;
     capaActiva = null;
     cuerpo.classList.remove('foco');
@@ -807,7 +972,47 @@
   });
   document.getElementById('volver').addEventListener('click', volver);
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { volver(); limpiarFlujos(); }
+    if (e.key === 'Escape' && !dialogo.open) { volver(); limpiarFlujos(); }
+  });
+
+  function abrirDetalle(id) {
+    var d = datos[id];
+    if (!d) return;
+    document.getElementById('d-nombre').textContent = d.n;
+    document.getElementById('d-meta').textContent =
+      'Capa ' + String(d.capa).padStart(2, '0') + ' · ' + d.cf + ' · ' + d.c +
+      ' · ' + (d.e ? 'Externo' : 'Interno');
+    document.getElementById('d-desc').textContent = d.d || 'Sin descripción en el inventario.';
+    var caja = document.getElementById('d-flujos');
+    caja.textContent = '';
+    var rotulo = document.createElement('p');
+    rotulo.textContent = d.f.length ? 'Aparece en' : 'No aparece en los flujos modelados';
+    caja.appendChild(rotulo);
+    d.f.forEach(function (n) {
+      var p = document.createElement('p');
+      p.textContent = n;
+      caja.appendChild(p);
+    });
+    if (!dialogo.open) dialogo.showModal();
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll('[data-servicio]')).forEach(function (s) {
+    var abrir = function (e) {
+      e.stopPropagation();
+      abrirDetalle(s.dataset.servicio);
+    };
+    s.addEventListener('click', abrir);
+    s.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(e); }
+    });
+  });
+
+  document.getElementById('d-cerrar').addEventListener('click', function () { dialogo.close(); });
+  dialogo.addEventListener('click', function (e) {
+    var r = dialogo.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+      dialogo.close();
+    }
   });
 
   [vistaCapas, vistaFlujo].forEach(function (svg) {
