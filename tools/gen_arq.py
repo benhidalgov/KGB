@@ -125,6 +125,7 @@ def construir(xlsx: str) -> dict:
         capas[numero]["servicios"].append({
             "id": _id(nombre), "nombre": nombre,
             "categoria": str(fila.iloc[1]).strip(),
+            "descripcion": str(fila.iloc[3]).strip(),
             "externo": str(fila.iloc[4]).strip().lower() == "externo",
         })
     capas[8]["nombre"] = NOMBRE_CAPA_8

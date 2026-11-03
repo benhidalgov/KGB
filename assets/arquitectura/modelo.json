@@ -16,72 +16,84 @@
      "id": "geocom-bbr-sw-de-cajas",
      "nombre": "Geocom / BBR SW de Cajas",
      "categoria": "POS / Cajas",
+     "descripcion": "Software POS en cajas de supermercados SMU (Unimarc, Alvi, Mayorista 10)",
      "externo": true
     },
     {
      "id": "lector-biometrico-dactilar-sovos",
      "nombre": "Lector biométrico dactilar (Sovos)",
      "categoria": "Hardware",
+     "descripcion": "Verificación de huella en cajas",
      "externo": true
     },
     {
      "id": "tablets-de-autoservicio-y-atencion-de-clientes",
      "nombre": "Tablets de autoservicio y atención de clientes",
      "categoria": "Hardware",
+     "descripcion": "Terminales en tienda",
      "externo": false
     },
     {
      "id": "portal-web-clientes-unipay",
      "nombre": "Portal Web Clientes Unipay",
      "categoria": "Canal digital",
+     "descripcion": "Acceso transaccional online",
      "externo": false
     },
     {
      "id": "app-movil-unipay-wallet",
      "nombre": "App Móvil Unipay (Wallet)",
      "categoria": "Canal digital",
+     "descripcion": "Billetera digital",
      "externo": false
     },
     {
      "id": "chatbot-whatsapp-chattigo",
      "nombre": "Chatbot WhatsApp (Chattigo)",
      "categoria": "Canal digital",
+     "descripcion": "Asistente virtual",
      "externo": true
     },
     {
      "id": "waf-https-tls",
      "nombre": "WAF (HTTPS / TLS)",
      "categoria": "Seguridad",
+     "descripcion": "Protección del tráfico de canales digitales",
      "externo": false
     },
     {
      "id": "call-center-ivr-atento-trustcorp",
      "nombre": "Call Center / IVR (Atento / TrustCorp)",
      "categoria": "Canal operativo",
+     "descripcion": "Atención telefónica operada por terceros",
      "externo": true
     },
     {
      "id": "portal-unired-cajas-xcash",
      "nombre": "Portal Unired / cajas XCash",
      "categoria": "Recaudación",
+     "descripcion": "Recaudación web y en cajas",
      "externo": true
     },
     {
      "id": "fuerza-de-ventas-smu",
      "nombre": "Fuerza de ventas SMU",
      "categoria": "Canal operativo",
+     "descripcion": "Captación, afiliación y evaluación presencial",
      "externo": false
     },
     {
      "id": "agencias-externas-serbanc-altsolution",
      "nombre": "Agencias externas Serbanc / AltSolution",
      "categoria": "Cobranza",
+     "descripcion": "Mora temprana y cobranza judicial",
      "externo": true
     },
     {
      "id": "webservices-rest-y-lotes-sftp-diarios",
      "nombre": "WebServices REST y lotes SFTP diarios",
      "categoria": "Integración",
+     "descripcion": "Sincronización de acuerdos y pagos de cartera",
      "externo": false
     }
    ],
@@ -97,36 +109,42 @@
      "id": "firewalls-fortigate-100e-ha",
      "nombre": "Firewalls FortiGate 100E (HA)",
      "categoria": "Seguridad",
+     "descripcion": "Clúster activo/pasivo; UTM, antivirus, IPS, DMZ y NAT",
      "externo": false
     },
     {
      "id": "vpn-ipsec-site-to-site-17-tuneles",
      "nombre": "VPN IPSec Site-to-Site (17 túneles)",
      "categoria": "Conectividad",
+     "descripcion": "Concentrador central de VPNs",
      "externo": false
     },
     {
      "id": "haproxy-balanceo-l7",
      "nombre": "HAProxy (balanceo L7)",
      "categoria": "Balanceo",
+     "descripcion": "Balanceo hacia workers WSO2, SSL/TLS offload y healthchecks",
      "externo": false
     },
     {
      "id": "switches-core-con-hsrp-lidice-y-panamericana",
      "nombre": "Switches core con HSRP (Lídice y Panamericana)",
      "categoria": "Red",
+     "descripcion": "Redundancia de gateway VIP",
      "externo": false
     },
     {
      "id": "vlans-10-3280-3282-3328-3329",
      "nombre": "VLANs (10, 3280, 3282, 3328, 3329)",
      "categoria": "Red",
+     "descripcion": "Gestión, interconexión de sedes y segmentación LAN",
      "externo": false
     },
     {
      "id": "enlaces-dedicados-gtd",
      "nombre": "Enlaces dedicados GTD",
      "categoria": "Conectividad",
+     "descripcion": "Conectividad entre sedes y hacia terceros",
      "externo": true
     }
    ],
@@ -142,36 +160,42 @@
      "id": "wso2-api-manager-esb-cluster",
      "nombre": "WSO2 API Manager & ESB (clúster)",
      "categoria": "Integración",
+     "descripcion": "Orquestación de APIs REST y mediación SOAP/WSDL",
      "externo": false
     },
     {
      "id": "switch-transaccional-unicard-iso-8583",
      "nombre": "Switch transaccional Unicard (ISO 8583)",
      "categoria": "Transaccional",
+     "descripcion": "Servidor traductor y enrutamiento Cajas SMU ↔ Minsait Payments",
      "externo": false
     },
     {
      "id": "wso2-identity-server",
      "nombre": "WSO2 Identity Server",
      "categoria": "Seguridad / IAM",
+     "descripcion": "Identidades, tokens OAuth2 y SSO",
      "externo": false
     },
     {
      "id": "wso2-monitoring-analytics",
      "nombre": "WSO2 Monitoring & Analytics",
      "categoria": "Monitoreo",
+     "descripcion": "Métricas y trazabilidad de APIs",
      "externo": false
     },
     {
      "id": "active-directory-domain-controllers",
      "nombre": "Active Directory (Domain Controllers)",
      "categoria": "Seguridad / IAM",
+     "descripcion": "Autenticación",
      "externo": false
     },
     {
      "id": "servidor-sftp",
      "nombre": "Servidor SFTP",
      "categoria": "Transferencia de archivos",
+     "descripcion": "Intercambio seguro de archivos masivos",
      "externo": false
     }
    ],
@@ -187,72 +211,84 @@
      "id": "crm-engage",
      "nombre": "CRM Engage",
      "categoria": "Core clientes",
+     "descripcion": "Clientes, cuentas y gestión de contratos (Prod, QA y Dev)",
      "externo": false
     },
     {
      "id": "brider",
      "nombre": "Brider",
      "categoria": "Core seguros",
+     "descripcion": "Administración de pólizas, cobros, primas, denuncias y liquidaciones",
      "externo": false
     },
     {
      "id": "credit-maker",
      "nombre": "Credit Maker",
      "categoria": "Riesgo",
+     "descripcion": "Motor de crédito, evaluación online y scoring",
      "externo": false
     },
     {
      "id": "servidor-de-riesgo",
      "nombre": "Servidor de Riesgo",
      "categoria": "Riesgo",
+     "descripcion": "Definición de cupos y scoring",
      "externo": false
     },
     {
      "id": "control-de-gestion",
      "nombre": "Control de Gestión",
      "categoria": "Gestión",
+     "descripcion": "Reportería de gestión",
      "externo": false
     },
     {
      "id": "be-clever",
      "nombre": "Be Clever",
      "categoria": "Fidelización",
+     "descripcion": "Puntos, promociones y descuentos en cajas SMU y club",
      "externo": false
     },
     {
      "id": "pasarelas-de-canales",
      "nombre": "Pasarelas de canales",
      "categoria": "Integración",
+     "descripcion": "Pasarelas hacia canales",
      "externo": false
     },
     {
      "id": "sap-bo",
      "nombre": "SAP BO",
      "categoria": "Reportería",
+     "descripcion": "Reportería",
      "externo": false
     },
     {
      "id": "app-booking-unicard-transaccional",
      "nombre": "App Booking Unicard Transaccional",
      "categoria": "Aplicación",
+     "descripcion": "Aplicación transaccional",
      "externo": false
     },
     {
      "id": "asterisk-pbx",
      "nombre": "Asterisk PBX",
      "categoria": "Telefonía",
+     "descripcion": "Telefonía",
      "externo": false
     },
     {
      "id": "servidor-documental",
      "nombre": "Servidor documental",
      "categoria": "Documental",
+     "descripcion": "Gestión de documentos",
      "externo": false
     },
     {
      "id": "relay-de-correo",
      "nombre": "Relay de correo",
      "categoria": "Correo",
+     "descripcion": "Envío de correo",
      "externo": false
     }
    ],
@@ -268,54 +304,63 @@
      "id": "sql-server-bd-engage",
      "nombre": "SQL Server – BD Engage",
      "categoria": "Base de datos",
+     "descripcion": "Alta disponibilidad con Double-Take",
      "externo": false
     },
     {
      "id": "sql-server-bd-brider",
      "nombre": "SQL Server – BD Brider",
      "categoria": "Base de datos",
+     "descripcion": "Alta disponibilidad con Double-Take",
      "externo": false
     },
     {
      "id": "sql-server-bd-canales",
      "nombre": "SQL Server – BD Canales",
      "categoria": "Base de datos",
+     "descripcion": "Replicación con Mimix",
      "externo": false
     },
     {
      "id": "sql-server-bd-prodapps108",
      "nombre": "SQL Server – BD Prodapps108",
      "categoria": "Base de datos",
+     "descripcion": "Auditoría de transacciones web, mensajería y logs",
      "externo": false
     },
     {
      "id": "mysql-bd-credit-maker",
      "nombre": "MySQL – BD Credit Maker",
      "categoria": "Base de datos",
+     "descripcion": "Con respaldo y restauración (BKP/RST)",
      "externo": false
     },
     {
      "id": "sap-hana",
      "nombre": "SAP HANA",
      "categoria": "Base de datos / ERP",
+     "descripcion": "Contabilidad general y balances",
      "externo": false
     },
     {
      "id": "datamart-bi",
      "nombre": "Datamart BI",
      "categoria": "BI",
+     "descripcion": "Reportería",
      "externo": false
     },
     {
      "id": "jenkins-malla-batch-nocturna",
      "nombre": "Jenkins (malla batch nocturna)",
      "categoria": "Automatización",
+     "descripcion": "Orquestación de procesos batch",
      "externo": false
     },
     {
      "id": "file-server-scl012-y-etls-diarios",
      "nombre": "File Server SCL012 y ETLs diarios",
      "categoria": "Archivos",
+     "descripcion": "Archivos y cargas diarias",
      "externo": false
     }
    ],
@@ -331,114 +376,133 @@
      "id": "minsait-payments-nuek-switch-core",
      "nombre": "Minsait Payments / NUEK (Switch Core)",
      "categoria": "Procesador de pagos",
+     "descripcion": "SIA (ISO 8583), SAT (liquidación y compensación) y SFTP de lotes",
      "externo": true
     },
     {
      "id": "sovos-autentia",
      "nombre": "Sovos / Autentia",
      "categoria": "Identidad y firma",
+     "descripcion": "Validación biométrica, firma electrónica y certificación digital",
      "externo": true
     },
     {
      "id": "transbank",
      "nombre": "Transbank",
      "categoria": "Adquirencia",
+     "descripcion": "Compensación interbancaria y ruteo de compras",
      "externo": true
     },
     {
      "id": "banchile",
      "nombre": "Banchile",
      "categoria": "Banca y pagos",
+     "descripcion": "Transferencias electrónicas y recaudación PAC",
      "externo": true
     },
     {
      "id": "unired",
      "nombre": "Unired",
      "categoria": "Banca y pagos",
+     "descripcion": "Portal de recaudación y pagos en línea",
      "externo": true
     },
     {
      "id": "nexus",
      "nombre": "Nexus",
      "categoria": "Banca y pagos",
+     "descripcion": "Autorizador de tarjetas vía WebServices y SFTP",
      "externo": true
     },
     {
      "id": "mv-servicio-vpn",
      "nombre": "MV-Servicio VPN",
      "categoria": "Conectividad VPN",
+     "descripcion": "Enlace VPN externo",
      "externo": true
     },
     {
      "id": "zcc-vpn",
      "nombre": "ZCC VPN",
      "categoria": "Conectividad VPN",
+     "descripcion": "Enlace VPN externo",
      "externo": true
     },
     {
      "id": "colektia",
      "nombre": "Colektia",
      "categoria": "Cobranza",
+     "descripcion": "Plataforma de cobranza con IA",
      "externo": true
     },
     {
      "id": "aws-unicard-vpn",
      "nombre": "AWS (Unicard VPN)",
      "categoria": "Nube",
+     "descripcion": "Servicios satélite de cobranza e integración",
      "externo": true
     },
     {
      "id": "previred",
      "nombre": "Previred",
      "categoria": "Datos previsionales",
+     "descripcion": "Validación de rentas, cotizaciones y aportes",
      "externo": true
     },
     {
      "id": "bci-seguros",
      "nombre": "Bci Seguros",
      "categoria": "Seguros",
+     "descripcion": "Compañía de seguros",
      "externo": true
     },
     {
      "id": "american-assist",
      "nombre": "American Assist",
      "categoria": "Seguros",
+     "descripcion": "Compañía de seguros / asistencia",
      "externo": true
     },
     {
      "id": "servicios-mok",
      "nombre": "Servicios Mok",
      "categoria": "Seguros",
+     "descripcion": "Compañía de seguros",
      "externo": true
     },
     {
      "id": "equifax-dicom",
      "nombre": "Equifax (Dicom)",
      "categoria": "Buró de crédito",
+     "descripcion": "Información crediticia",
      "externo": true
     },
     {
      "id": "sinacofi",
      "nombre": "Sinacofi",
      "categoria": "Buró de crédito",
+     "descripcion": "Información crediticia",
      "externo": true
     },
     {
      "id": "transunion",
      "nombre": "TransUnion",
      "categoria": "Buró de crédito",
+     "descripcion": "Información crediticia",
      "externo": true
     },
     {
      "id": "cmf-comision-para-el-mercado-financiero",
      "nombre": "CMF (Comisión para el Mercado Financiero)",
      "categoria": "Regulador",
+     "descripcion": "Envío normativo de carteras, deudas, provisiones y balances",
      "externo": true
     },
     {
      "id": "geocom-chile-y-sts-uruguay-conectividad-pos",
      "nombre": "Geocom Chile y STS Uruguay (conectividad POS)",
      "categoria": "POS",
+     "descripcion": "Concentración de terminales POS",
      "externo": true
     }
    ],
@@ -454,24 +518,28 @@
      "id": "nagios-xi",
      "nombre": "Nagios XI",
      "categoria": "Monitoreo",
+     "descripcion": "Salud de servidores Linux y Windows (CPU, RAM, disco)",
      "externo": false
     },
     {
      "id": "vzor-suite",
      "nombre": "Vzor Suite",
      "categoria": "Monitoreo",
+     "descripcion": "Monitoreo de enlaces, VPNs y disponibilidad del negocio",
      "externo": false
     },
     {
      "id": "new-relic",
      "nombre": "New Relic",
      "categoria": "APM",
+     "descripcion": "APM, trazabilidad y service map de APIs WSO2",
      "externo": true
     },
     {
      "id": "prtg-network-monitor",
      "nombre": "PRTG Network Monitor",
      "categoria": "Monitoreo",
+     "descripcion": "SNMP, ancho de banda y latencia de enlaces",
      "externo": false
     }
    ],
@@ -487,12 +555,14 @@
      "id": "azure-devops",
      "nombre": "Azure DevOps",
      "categoria": "DevOps",
+     "descripcion": "Repositorios Git, pipelines CI/CD y gestión de cambios",
      "externo": true
     },
     {
      "id": "vcloud-gtd-iaas-2-0-2-1",
      "nombre": "vCloud GTD (IaaS 2.0 / 2.1)",
      "categoria": "IaaS",
+     "descripcion": "Aprovisionamiento de VMs",
      "externo": true
     }
    ],

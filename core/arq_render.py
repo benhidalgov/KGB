@@ -86,6 +86,7 @@ CSS = """
   .s { font-size: 11.5px; }
   .b { font-size: 11px; fill: var(--muted); }
   .m { font-size: 10.5px; fill: var(--muted); }
+  .d { font-size: 10px; fill: var(--muted); }
   .idx { font-family: var(--mono); font-size: 11px; font-weight: 500; fill: var(--muted); }
   .stamp { font-family: var(--mono); font-size: 10px; }
   .capa.on .idx { fill: var(--accent); }
@@ -123,6 +124,8 @@ CSS = """
   body.foco #volver { display: inline-block; }
   body.foco .stamp { opacity: 0; }
   .stamp { transition: opacity .3s ease; }
+  body.foco .leyenda { opacity: 0; }
+  .leyenda { transition: opacity .3s ease; }
   body.foco .pista { opacity: 0; }
   .pista { transition: opacity .3s ease; }
 """
@@ -246,9 +249,13 @@ JS = """
     });
     var foco = capas.filter(function (c) { return c.dataset.capa === id; })[0];
     var b = foco.getBBox();
-    var s = Math.min(1200 / b.width, 900 / b.height, 1.4);
-    foco.style.transform = 'translate(' + (620 - s * (b.x + b.width / 2)) + 'px,' +
-                            (480 - s * (b.y + b.height / 2)) + 'px) scale(' + s + ')';
+    var svg = foco.closest('svg'), vb = svg.viewBox.baseVal;
+    var k = escalaDe(svg);
+    var aw = Math.min(vb.width, svg.clientWidth / k);    // area visible en unidades del viewBox
+    var ah = Math.min(vb.height, svg.clientHeight / k);
+    var s = Math.min(aw * .92 / b.width, ah * .92 / b.height, 1.4);
+    foco.style.transform = 'translate(' + (vb.width / 2 - s * (b.x + b.width / 2)) + 'px,' +
+                            (ah / 2 - s * (b.y + b.height / 2)) + 'px) scale(' + s + ')';
     ordenar();
     foco.focus({ preventScroll: true });
   }
@@ -394,21 +401,24 @@ def _badge(capa: dict) -> str:
     return " · ".join(partes)
 
 
+def _recortar(texto: str, limite: int) -> str:
+    """Recorta a `limite` caracteres con elipsis, sin partir la ultima palabra."""
+    if len(texto) <= limite:
+        return texto
+    corte = texto[:limite - 1].rsplit(" ", 1)[0] or texto[:limite - 1]
+    return corte.rstrip(" ,;.") + "…"
+
+
 def _filas_servicios(capa: dict, dos_columnas: bool, maximo: int = None) -> tuple:
     """Filas de servicio en orden de lectura; el resto se resume aparte."""
     servicios = capa["servicios"]
     tope = maximo if maximo is not None else (10 if dos_columnas else 8)
     mostrados = servicios if len(servicios) <= tope else servicios[:tope]
     resto = servicios[len(mostrados):]
-    filas = []
     if dos_columnas:
-        for i in range(0, len(mostrados), 2):
-            fila = [f"•  {_t(s['nombre'])}" for s in mostrados[i:i + 2]]
-            if resto and i + 2 >= len(mostrados):
-                fila[-1] += f' <tspan class="m">(+{len(resto)})</tspan>'
-            filas.append(fila)
+        filas = [mostrados[i:i + 2] for i in range(0, len(mostrados), 2)]
     else:
-        filas = [[f"•  {_t(s['nombre'])}"] for s in mostrados]
+        filas = [[s] for s in mostrados]
     return filas, resto
 
 
@@ -521,8 +531,10 @@ def _svg_capas(modelo: dict) -> tuple:
         lineas_resto = _lineas_resto(resto, dos_columnas, FUENTE_NOTA if dos_columnas else FUENTE_DER)
         hosts = [h["hostname"] for h in hosts_por_capa.get(cid, [])] if capa["plano"] == "gestion" else []
         lineas_hosts = _envolver("Hosts: " + " · ".join(hosts), FUENTE_NOTA) if hosts else []
-        filas_totales = max(len(filas) + len(lineas_resto), len(lineas_hosts) if dos_columnas else 0)
-        alto1 = max(ALTO_COLAPSADO, 62 + espacio * filas_totales + 10)
+        paso = espacio + 14                              # nombre + descripcion
+        alto_srv = 62 + paso * len(filas) + espacio * len(lineas_resto) + 10
+        alto_hosts = 62 + espacio * len(lineas_hosts) + 10 if lineas_hosts else 0
+        alto1 = max(ALTO_COLAPSADO, alto_srv, alto_hosts)
 
         clases = "band ops" if capa["plano"] == "gestion" else ("band ext" if cid == 6 else "band")
         piezas.append(f'    <g class="capa" data-capa="{cid}" data-h0="{alto}" data-h1="{alto1}" '
@@ -546,10 +558,17 @@ def _svg_capas(modelo: dict) -> tuple:
 
         piezas.append('      <g class="servicios">')
         yy = y0 + 62
-        for fila in filas:
-            for j, celda in enumerate(fila):
-                piezas.append(_texto(x + (100 + 300 * j if dos_columnas else 22), yy, "s", celda))
-            yy += espacio
+        for fi, fila in enumerate(filas):
+            for j, servicio in enumerate(fila):
+                cx = x + (100 + 300 * j if dos_columnas else 22)
+                marca = ""
+                if resto and fi == len(filas) - 1 and j == len(fila) - 1:
+                    marca = f' <tspan class="m">(+{len(resto)})</tspan>'
+                piezas.append(_texto(cx, yy, "s", f"•  {_t(servicio['nombre'])}{marca}"))
+                if servicio.get("descripcion"):
+                    piezas.append(_texto(cx + 18, yy + 13, "d",
+                                         _t(_recortar(servicio["descripcion"], 54 if dos_columnas else 64))))
+            yy += paso
         for linea in lineas_resto:
             piezas.append(_texto(x + 22, yy, "m", linea))
             yy += espacio
@@ -564,6 +583,7 @@ def _svg_capas(modelo: dict) -> tuple:
         piezas.append("    </g>")
 
     meta = modelo["meta"]
+    piezas.append('    <g class="leyenda">')
     piezas.append(f'    <circle class="crit" cx="{X0 + 6:g}" cy="{leyenda_y:g}" r="5"/>')
     piezas.append(_texto(X0 + 18, leyenda_y + 4, "m", f"Servidor crítico ({meta['total_criticos']})"))
     piezas.append(f'    <circle class="int" cx="{X0 + 166:g}" cy="{leyenda_y:g}" r="5"/>')
@@ -576,6 +596,7 @@ def _svg_capas(modelo: dict) -> tuple:
     piezas.append(_texto(ANCHO - 30, leyenda_y + 4, "m",
                          "Clic para enfocar · Rueda: zoom · Arrastrá: mover · Esc: volver",
                          ' text-anchor="end"'))
+    piezas.append("    </g>")
     piezas.append("  </g>")
     return piezas, alto_svg
 

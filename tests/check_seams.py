@@ -219,6 +219,7 @@ def check_arquitectura_html():
     assert "addEventListener('wheel'" in claro and "passive: false" in claro, "falta el zoom con rueda"
     assert "function resetZoom" in claro and "#escena, #escena-flujo" in claro, "falta el paneo"
     assert 'class="idx"' in claro and 'class="regla"' in claro, "falta la numeracion de capa"
+    assert 'class="d"' in claro, "falta la descripcion de servicio en el foco"
     assert 'preserveAspectRatio="xMidYMin meet"' in claro, "la vista debe anclarse arriba"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
     for svg in re.findall(r"<svg .*?</svg>", claro, re.S):
@@ -251,6 +252,9 @@ def check_arquitectura_modelo():
     assert sum(1 for h in modelo["hosts"] if h["critico"]) == modelo["meta"]["total_criticos"] == 43, \
         "criticos inconsistentes"
     assert sum(c["servidores"] for c in capas.values()) == 58, "los badges deben sumar el inventario"
+
+    con_desc = sum(1 for c in capas.values() for s in c["servicios"] if s.get("descripcion"))
+    assert con_desc >= 65, f"faltan descripciones: {con_desc} de {total_servicios}"
 
     ips = [h["ip"] for h in modelo["hosts"]]
     assert len(set(ips)) == len(ips), "IP duplicada: dos filas describen el mismo equipo"
