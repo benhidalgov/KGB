@@ -543,6 +543,23 @@ def check_arquitectura_atributos():
             assert "onfocus" not in nodo.attrib, "atributo inyectado por el nombre"
 
 
+def check_arquitectura_modelo_incompleto():
+    """Un modelo sin capa 4 o con un paso roto no debe tumbar el render."""
+    from core.arq_render import cargar_modelo, render_html
+    from core.configuracion import ARQ_MODELO_PATH
+
+    base = cargar_modelo(ARQ_MODELO_PATH)
+
+    sin_capa = copy.deepcopy(base)
+    sin_capa["capas"] = [c for c in sin_capa["capas"] if c["id"] != 4]
+    assert "<svg" in render_html(sin_capa), "sin capa 4 el render debe seguir"
+
+    roto = copy.deepcopy(base)
+    roto["flujos"][0]["pasos"][2]["servicio"] = "no-existe"
+    html = render_html(roto)
+    assert "no-existe" in html, "el paso roto debe verse como nodo, no romper el render"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -559,6 +576,7 @@ if __name__ == "__main__":
     check_arquitectura_modelo()
     check_arquitectura_render()
     check_arquitectura_atributos()
+    check_arquitectura_modelo_incompleto()
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
     print("[OK] check_seams")

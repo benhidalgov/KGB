@@ -81,6 +81,13 @@ def check_xss_escapado():
     assert "<img src=x" not in local.lower() and "<script" not in local.lower()
     assert "&lt;img" in local
 
+    # Sin coincidencias se ejecuta la rama que ecoa el término buscado.
+    vacio = motor.generar_respuesta_asistente_local(
+        payload, {}, df_srv=pd.DataFrame(), doc_matches=[]
+    )
+    assert "<img src=x" not in vacio.lower(), "el eco del término no debe inyectar HTML"
+    assert "&lt;img" in vacio, "el término debe aparecer escapado"
+
     motor._QUERY_RESPONSE_CACHE.clear()
     with mock.patch.object(motor, "obtener_secreto", lambda *a, **k: "clave_prueba"), \
          mock.patch.object(motor, "buscar_servidores_duckdb", lambda t: pd.DataFrame()), \

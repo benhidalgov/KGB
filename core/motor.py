@@ -452,7 +452,7 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         return html_out
 
     return f"""<div class="bento-card">
-    <div style="font-weight: 500; font-size: 0.95rem; margin-bottom: 6px;"><span class="badge-warn">[Sin resultados]</span> No se encontraron coincidencias para: <code>{prompt_usuario}</code></div>
+    <div style="font-weight: 500; font-size: 0.95rem; margin-bottom: 6px;"><span class="badge-warn">[Sin resultados]</span> No se encontraron coincidencias para: <code>{html.escape(prompt_usuario)}</code></div>
     <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">Prueba con un servidor (<code>BALANCER001</code>), número de serie (<code>SN-8842-A</code>), dirección IP (<code>10.24.0.125</code>) o término técnico (<code>JWT</code>, <code>Failover</code>).</div>
     <div class="search-meta-footer"><span>Origen: Base técnica local</span><span>0 coincidencias</span></div>
 </div>"""

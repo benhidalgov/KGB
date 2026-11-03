@@ -600,8 +600,13 @@ def _svg_capas(modelo: dict) -> tuple:
         y += ALTO_COLAPSADO + SEPARACION
     fondo_izq = y - SEPARACION
     # La columna externa solo baja hasta la ultima capa que la llama: estirarla
-    # hasta el batch deja media caja vacia.
-    fin_ext = geometria[4][1] + geometria[4][3] + 24
+    # hasta el batch deja media caja vacia. Si el modelo no trae relaciones a la
+    # capa 6, se usa la ultima capa de trafico como respaldo.
+    fuentes_ext = [rel["desde"] for rel in modelo["relaciones"]
+                   if rel["hasta"] == 6 and rel["desde"] in geometria]
+    ultima = max(fuentes_ext, default=max((cid for cid in geometria if cid <= 5), default=None))
+    fin_ext = (geometria[ultima][1] + geometria[ultima][3] + 24
+               if ultima is not None else TOP + ALTO_COLAPSADO)
     geometria[6] = (X_DER, TOP, ANCHO_DER, fin_ext - TOP)
     y = fondo_izq + 36
     for capa in gestion:
@@ -620,6 +625,8 @@ def _svg_capas(modelo: dict) -> tuple:
     # mas baja que monitorean: una por capa destino cruzaria las cajas del medio.
     gestion_destino = {}
     for rel in modelo["relaciones"]:
+        if rel["desde"] not in geometria or rel["hasta"] not in geometria:
+            continue
         if rel["tipo"] == "gestion":
             actual = gestion_destino.get(rel["desde"])
             if actual is None or geometria[rel["hasta"]][1] > geometria[actual][1]:
@@ -628,6 +635,8 @@ def _svg_capas(modelo: dict) -> tuple:
     dibujadas = 0
     for rel in modelo["relaciones"]:
         desde, hasta = rel["desde"], rel["hasta"]
+        if desde not in geometria or hasta not in geometria:
+            continue
         if rel["tipo"] == "gestion":
             if gestion_destino[desde] != hasta:
                 continue                                  # cubierta por la flecha comun
@@ -784,10 +793,13 @@ def _svg_flujo(modelo: dict) -> tuple:
             total = conteo[capa_id]
             x = COL_X0 + (capa_id - 1) * COL_W
             y = centro - alto_pila[capa_id] / 2 + indice * (NODO_H + 8)
-            servicio = next(s for s in capas[capa_id]["servicios"] if s["id"] == paso["servicio"])
-            lineas = _envolver(servicio["nombre"], FUENTE_NODO)[:2]
+            servicio = next((s for s in capas.get(capa_id, {}).get("servicios", [])
+                             if s["id"] == paso["servicio"]), None)
+            # Un paso roto se dibuja con su id en vez de tumbar la vista entera.
+            nombre_servicio = servicio["nombre"] if servicio else paso["servicio"]
+            lineas = _envolver(nombre_servicio, FUENTE_NODO)[:2]
             piezas.append(f'      <g class="paso" style="--i:{k}" data-servicio="{_attr(paso["servicio"])}" '
-                          f'tabindex="0" role="button" aria-label="Ficha de {_attr(servicio["nombre"])}">')
+                          f'tabindex="0" role="button" aria-label="Ficha de {_attr(nombre_servicio)}">')
             piezas.append(f'        <rect class="nodo" x="{x:g}" y="{y:g}" width="{NODO_W}" height="{NODO_H}" rx="6"/>')
             base = y + NODO_H / 2 + (0 if len(lineas) == 1 else -4) + 4
             for i, linea in enumerate(lineas):

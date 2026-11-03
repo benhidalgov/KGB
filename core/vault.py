@@ -63,8 +63,14 @@ def _claves_candidatas() -> List[bytes]:
     nueva_clave = Fernet.generate_key()
     try:
         os.makedirs(os.path.dirname(VAULT_KEY_PATH), exist_ok=True)
-        with open(VAULT_KEY_PATH, "wb") as f:
+        # 0o600: la llave no debe ser legible por otras cuentas del host.
+        descriptor = os.open(VAULT_KEY_PATH, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+        with os.fdopen(descriptor, "wb") as f:
             f.write(nueva_clave)
+        try:
+            os.chmod(VAULT_KEY_PATH, 0o600)   # el umask puede recortar el modo de os.open
+        except OSError:
+            pass
     except Exception:
         # Cifrar con una clave que no se pudo persistir = secretos perdidos al
         # próximo arranque. Solo se tolera si aún no hay bóveda que descifrar.

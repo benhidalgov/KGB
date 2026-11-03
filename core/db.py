@@ -69,7 +69,7 @@ def obtener_engine():
         )
         return _ENGINE
     except Exception as e:
-        logger.warning(f"[DB] No se pudo inicializar el motor de PostgreSQL: {e}")
+        logger.error(f"[DB] PostgreSQL no disponible (driver o configuración): {e}")
         return None
 
 

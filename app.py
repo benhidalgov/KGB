@@ -14,7 +14,7 @@ logger = logging.getLogger("infra_copilot.app")
 # la conexión DuckDB y todos los lru_cache de core.*.
 
 from core.estilos import cargar_estilos_css
-from core.configuracion import CSV_PATH
+from core.configuracion import CSV_PATH, ES_PRODUCCION
 from core.preflight import problemas_de_entorno
 from core.auth import (
     es_usuario_autenticado,
@@ -109,6 +109,12 @@ def _verificar_entorno() -> None:
 
 
 st.set_page_config(page_title="Consola de Infraestructura y Operaciones", layout="wide", initial_sidebar_state="expanded")
+if ES_PRODUCCION:
+    # En produccion el usuario ve un mensaje generico; la traza queda en el log.
+    try:
+        st.set_option("client.showErrorDetails", "none")
+    except Exception:
+        pass
 tema_actual_app = st.session_state.get("tema_visual", "Claro")
 st.markdown(cargar_estilos_css(tema_actual_app), unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
