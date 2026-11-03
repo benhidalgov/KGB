@@ -6,9 +6,8 @@
 <title>Arquitectura de plataforma SMUCORP</title>
 <style>
   :root {
-    --bg: #FAF9F6; --panel: #FFFFFF; --panel2: #F4F3EE; --text: #18181B; --muted: #71717A;
-    --line: #E8E8E3; --accent: #1D5CA8; --crit: #9C2A2A; --int: #276738; --ext: #6366F1;
-    --band: #F4F3EE; --band-ops: #ECEAE4;
+    --bg: #FAF9F6; --panel: #FFFFFF; --panel2: #F4F3EE; --text: #18181B; --muted: #52525B;
+    --line: #E8E8E3; --accent: #1D5CA8; --crit: #9C2A2A; --int: #276738; --ext: #6366F1;    --band: #F4F3EE; --band-ops: #ECEAE4;
     --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
     --dur-rapida: .16s; --dur-media: .28s; --ease: cubic-bezier(.2, .6, .2, 1);
   }
@@ -142,12 +141,12 @@
 <button id="volver" type="button" aria-label="Volver al esquema">← Volver</button>
 <header id="tabs">
   <div id="tabs-lista" role="tablist">
-    <button class="tab" type="button" role="tab" data-vista="capas" aria-selected="true">Capas</button>
-    <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false">Flujo</button>
+    <button class="tab" type="button" role="tab" data-vista="capas" aria-selected="true" aria-controls="vista-capas">Capas</button>
+    <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false" aria-controls="vista-flujo">Flujo</button>
   </div>
   <button id="zoom" type="button" hidden aria-label="Restablecer el zoom"></button>
 </header>
-<svg id="vista-capas" class="vista" viewBox="0 0 1240 960" preserveAspectRatio="xMidYMin meet" role="img" aria-label="Esquema de arquitectura por capas">
+<svg id="vista-capas" class="vista" viewBox="0 0 1240 960" preserveAspectRatio="xMidYMin meet" role="tabpanel" aria-label="Esquema de arquitectura por capas">
   <defs>
     <marker id="flecha-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
             markerHeight="6" orient="auto-start-reverse">
@@ -608,7 +607,7 @@
     </g>
   </g>
 </svg>
-<svg id="vista-flujo" class="vista" viewBox="0 0 1240 690" preserveAspectRatio="xMidYMin meet" role="img" aria-label="Flujos transaccionales por capas" hidden="hidden">
+<svg id="vista-flujo" class="vista" viewBox="0 0 1240 690" preserveAspectRatio="xMidYMin meet" role="tabpanel" aria-label="Flujos transaccionales por capas" hidden="hidden">
   <defs>
     <marker id="flecha-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
             markerHeight="6" orient="auto-start-reverse">
@@ -889,12 +888,26 @@
   }
 
   function alRodar(e, svg) {
-    if (capaActiva) return;
+    if (capaActiva || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
     var p = punto(e, svg);
     var nuevo = Math.min(3, Math.max(1, zoom.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
-    zoom.x += p.x * (zoom.s - nuevo);
-    zoom.y += p.y * (zoom.s - nuevo);
+    zoom.x = p.x - nuevo * (p.x - zoom.x) / zoom.s;
+    zoom.y = p.y - nuevo * (p.y - zoom.y) / zoom.s;
+    zoom.s = nuevo;
+    fijar(svg);
+    aplicarZoom();
+  }
+
+  function zoomCentro(factor) {
+    if (capaActiva) return;
+    var svg = cuerpo.dataset.vista === 'flujo' ? vistaFlujo : vistaCapas;
+    var vb = svg.viewBox.baseVal, k = escalaDe(svg);
+    var cx = vb.width / 2;
+    var cy = Math.min(vb.height, svg.clientHeight / k) / 2;
+    var nuevo = Math.min(3, Math.max(1, zoom.s * factor));
+    zoom.x = cx - nuevo * (cx - zoom.x) / zoom.s;
+    zoom.y = cy - nuevo * (cy - zoom.y) / zoom.s;
     zoom.s = nuevo;
     fijar(svg);
     aplicarZoom();
@@ -1041,6 +1054,12 @@
   botonZoom.addEventListener('click', resetZoom);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !dialogo.open) { volver(); limpiarFlujos(); }
+    if (dialogo.open || capaActiva || e.ctrlKey || e.metaKey || e.altKey) return;
+    var etiqueta = (e.target.tagName || '').toLowerCase();
+    if (etiqueta === 'input' || etiqueta === 'textarea' || etiqueta === 'select') return;
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomCentro(1.12); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomCentro(1 / 1.12); }
+    else if (e.key === '0') { e.preventDefault(); resetZoom(); }
   });
 
   function abrirDetalle(id) {
@@ -1092,15 +1111,27 @@
   window.addEventListener('pointercancel', alSoltar);
 
   tabs.forEach(function (t) {
+    t.tabIndex = t.getAttribute('aria-selected') === 'true' ? 0 : -1;
     t.addEventListener('click', function () {
       var vista = t.dataset.vista;
       cuerpo.dataset.vista = vista;
-      tabs.forEach(function (o) { o.setAttribute('aria-selected', o === t ? 'true' : 'false'); });
+      tabs.forEach(function (o) {
+        o.setAttribute('aria-selected', o === t ? 'true' : 'false');
+        o.tabIndex = o === t ? 0 : -1;
+      });
       vistaCapas.toggleAttribute('hidden', vista !== 'capas');
       vistaFlujo.toggleAttribute('hidden', vista !== 'flujo');
       volver();
       limpiarFlujos();
       alinear();
+    });
+    t.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      var i = tabs.indexOf(t);
+      var destino = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+      destino.focus();
+      destino.click();
     });
   });
   window.addEventListener('resize', alinear);

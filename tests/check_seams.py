@@ -6,6 +6,7 @@ por sustitutos en tempdir/mock, nunca los módulos internos.
 
 Ejecutar:  python tests/check_seams.py
 """
+import copy
 import json
 import os
 import sys
@@ -223,6 +224,10 @@ def check_arquitectura_html():
     assert 'class="banda"' in claro, "falta la franja de encabezado"
     assert 'id="zoom"' in claro and "Borde punteado: ecosistema externo" in claro, \
         "faltan el reset de zoom y la leyenda util"
+    assert 'role="img"' not in claro, "el SVG no debe ocultar los controles al lector de pantalla"
+    assert claro.count('role="tabpanel"') == 2, "faltan los paneles de las pestañas"
+    assert 'aria-controls="vista-capas"' in claro and 'aria-controls="vista-flujo"' in claro, \
+        "las pestañas deben declarar su panel"
     assert 'class="d"' in claro, "falta la descripcion de servicio en el foco"
     assert 'preserveAspectRatio="xMidYMin meet"' in claro, "la vista debe anclarse arriba"
     assert "http://" not in claro and "https://" not in claro, "el HTML debe ser autocontenido"
@@ -521,6 +526,23 @@ def check_auth_maestra_sin_pg_falla_cerrado():
     auth._INTENTOS_FALLIDOS.clear()
 
 
+def check_arquitectura_atributos():
+    """Un nombre con comillas no debe inyectar atributos en el SVG."""
+    import re
+    import xml.etree.ElementTree as ET
+
+    from core.arq_render import cargar_modelo, render_html
+    from core.configuracion import ARQ_MODELO_PATH
+
+    modelo = copy.deepcopy(cargar_modelo(ARQ_MODELO_PATH))
+    modelo["capas"][0]["servicios"][0]["nombre"] = 'Servicio" onfocus="alert(1)'
+    html = render_html(modelo)
+    assert "&quot;" in html, "las comillas de los atributos deben escaparse"
+    for svg in re.findall(r"<svg .*?</svg>", html, re.S):
+        for nodo in ET.fromstring(svg).iter():
+            assert "onfocus" not in nodo.attrib, "atributo inyectado por el nombre"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -536,6 +558,7 @@ if __name__ == "__main__":
     check_arquitectura_html()
     check_arquitectura_modelo()
     check_arquitectura_render()
+    check_arquitectura_atributos()
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
     print("[OK] check_seams")

@@ -35,9 +35,8 @@ FUENTE_NODO = 20
 
 CSS = """
   :root {
-    --bg: #FAF9F6; --panel: #FFFFFF; --panel2: #F4F3EE; --text: #18181B; --muted: #71717A;
-    --line: #E8E8E3; --accent: #1D5CA8; --crit: #9C2A2A; --int: #276738; --ext: #6366F1;
-    --band: #F4F3EE; --band-ops: #ECEAE4;
+    --bg: #FAF9F6; --panel: #FFFFFF; --panel2: #F4F3EE; --text: #18181B; --muted: #52525B;
+    --line: #E8E8E3; --accent: #1D5CA8; --crit: #9C2A2A; --int: #276738; --ext: #6366F1;    --band: #F4F3EE; --band-ops: #ECEAE4;
     --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
     --dur-rapida: .16s; --dur-media: .28s; --ease: cubic-bezier(.2, .6, .2, 1);
   }
@@ -218,12 +217,26 @@ JS = """
   }
 
   function alRodar(e, svg) {
-    if (capaActiva) return;
+    if (capaActiva || e.ctrlKey || e.metaKey) return;
     e.preventDefault();
     var p = punto(e, svg);
     var nuevo = Math.min(3, Math.max(1, zoom.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
-    zoom.x += p.x * (zoom.s - nuevo);
-    zoom.y += p.y * (zoom.s - nuevo);
+    zoom.x = p.x - nuevo * (p.x - zoom.x) / zoom.s;
+    zoom.y = p.y - nuevo * (p.y - zoom.y) / zoom.s;
+    zoom.s = nuevo;
+    fijar(svg);
+    aplicarZoom();
+  }
+
+  function zoomCentro(factor) {
+    if (capaActiva) return;
+    var svg = cuerpo.dataset.vista === 'flujo' ? vistaFlujo : vistaCapas;
+    var vb = svg.viewBox.baseVal, k = escalaDe(svg);
+    var cx = vb.width / 2;
+    var cy = Math.min(vb.height, svg.clientHeight / k) / 2;
+    var nuevo = Math.min(3, Math.max(1, zoom.s * factor));
+    zoom.x = cx - nuevo * (cx - zoom.x) / zoom.s;
+    zoom.y = cy - nuevo * (cy - zoom.y) / zoom.s;
     zoom.s = nuevo;
     fijar(svg);
     aplicarZoom();
@@ -370,6 +383,12 @@ JS = """
   botonZoom.addEventListener('click', resetZoom);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !dialogo.open) { volver(); limpiarFlujos(); }
+    if (dialogo.open || capaActiva || e.ctrlKey || e.metaKey || e.altKey) return;
+    var etiqueta = (e.target.tagName || '').toLowerCase();
+    if (etiqueta === 'input' || etiqueta === 'textarea' || etiqueta === 'select') return;
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomCentro(1.12); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomCentro(1 / 1.12); }
+    else if (e.key === '0') { e.preventDefault(); resetZoom(); }
   });
 
   function abrirDetalle(id) {
@@ -421,15 +440,27 @@ JS = """
   window.addEventListener('pointercancel', alSoltar);
 
   tabs.forEach(function (t) {
+    t.tabIndex = t.getAttribute('aria-selected') === 'true' ? 0 : -1;
     t.addEventListener('click', function () {
       var vista = t.dataset.vista;
       cuerpo.dataset.vista = vista;
-      tabs.forEach(function (o) { o.setAttribute('aria-selected', o === t ? 'true' : 'false'); });
+      tabs.forEach(function (o) {
+        o.setAttribute('aria-selected', o === t ? 'true' : 'false');
+        o.tabIndex = o === t ? 0 : -1;
+      });
       vistaCapas.toggleAttribute('hidden', vista !== 'capas');
       vistaFlujo.toggleAttribute('hidden', vista !== 'flujo');
       volver();
       limpiarFlujos();
       alinear();
+    });
+    t.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      var i = tabs.indexOf(t);
+      var destino = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+      destino.focus();
+      destino.click();
     });
   });
   window.addEventListener('resize', alinear);
@@ -440,6 +471,11 @@ JS = """
 
 def _t(texto) -> str:
     return html.escape(str(texto), quote=False)
+
+
+def _attr(texto) -> str:
+    """Escapa un valor para interpolarlo entre comillas de un atributo."""
+    return html.escape(str(texto), quote=True)
 
 
 def _n(cantidad: int, singular: str, plural: str) -> str:
@@ -634,7 +670,7 @@ def _svg_capas(modelo: dict) -> tuple:
 
         clases = "band ops" if capa["plano"] == "gestion" else ("band ext" if cid == 6 else "band")
         piezas.append(f'    <g class="capa" data-capa="{cid}" data-h0="{alto}" data-h1="{alto1}" '
-                      f'tabindex="0" role="button" aria-label="{_t(capa["nombre"])}, '
+                      f'tabindex="0" role="button" aria-label="{_attr(capa["nombre"])}, '
                       f'{_n(len(capa["servicios"]), "servicio", "servicios")}">')
         piezas.append(f'      <rect class="{clases}" x="{x:g}" y="{y0:g}" width="{ancho:g}" height="{alto:g}" rx="8"/>')
         piezas.append(_banda(x + 1, y0 + 1, ancho - 2, 44, capa["plano"] == "gestion"))
@@ -677,8 +713,8 @@ def _svg_capas(modelo: dict) -> tuple:
                 marca = ""
                 if resto and fi == len(filas) - 1 and j == len(fila) - 1:
                     marca = f' <tspan class="m">(+{len(resto)})</tspan>'
-                piezas.append(f'      <g class="srv" data-servicio="{servicio["id"]}" tabindex="0" '
-                              f'role="button" aria-label="Ficha de {_t(servicio["nombre"])}">')
+                piezas.append(f'      <g class="srv" data-servicio="{_attr(servicio["id"])}" tabindex="0" '
+                              f'role="button" aria-label="Ficha de {_attr(servicio["nombre"])}">')
                 piezas.append(_texto(cx, yy, "s", f"•  {_t(servicio['nombre'])}{marca}"))
                 if servicio.get("descripcion"):
                     piezas.append(_texto(cx + 18, yy + 13, "d",
@@ -729,8 +765,8 @@ def _svg_flujo(modelo: dict) -> tuple:
     for k, flujo in enumerate(modelo["flujos"]):
         y0 = TOP_FLUJO + k * FILA_FLUJO
         centro = y0 + (FILA_FLUJO - 18) / 2 + 12
-        piezas.append(f'    <g class="flujo" data-flujo="{flujo["id"]}" tabindex="0" role="button" '
-                      f'aria-label="Flujo {_t(flujo["nombre"])}">')
+        piezas.append(f'    <g class="flujo" data-flujo="{_attr(flujo["id"])}" tabindex="0" role="button" '
+                      f'aria-label="Flujo {_attr(flujo["nombre"])}">')
         piezas.append(f'      <rect class="fila" x="20" y="{y0:g}" width="1200" height="{FILA_FLUJO - 18}" rx="8"/>')
         piezas.append(_banda(21, y0 + 1, 1198, 28))
         piezas.append(f'      <line class="regla" x1="21" y1="{y0 + 29:g}" x2="1219" y2="{y0 + 29:g}"/>')
@@ -750,8 +786,8 @@ def _svg_flujo(modelo: dict) -> tuple:
             y = centro - alto_pila[capa_id] / 2 + indice * (NODO_H + 8)
             servicio = next(s for s in capas[capa_id]["servicios"] if s["id"] == paso["servicio"])
             lineas = _envolver(servicio["nombre"], FUENTE_NODO)[:2]
-            piezas.append(f'      <g class="paso" style="--i:{k}" data-servicio="{paso["servicio"]}" '
-                          f'tabindex="0" role="button" aria-label="Ficha de {_t(servicio["nombre"])}">')
+            piezas.append(f'      <g class="paso" style="--i:{k}" data-servicio="{_attr(paso["servicio"])}" '
+                          f'tabindex="0" role="button" aria-label="Ficha de {_attr(servicio["nombre"])}">')
             piezas.append(f'        <rect class="nodo" x="{x:g}" y="{y:g}" width="{NODO_W}" height="{NODO_H}" rx="6"/>')
             base = y + NODO_H / 2 + (0 if len(lineas) == 1 else -4) + 4
             for i, linea in enumerate(lineas):
@@ -817,7 +853,7 @@ def render_html(modelo: dict) -> str:
     def envolver_svg(svg_id, piezas, alto, prefijo, etiqueta, oculto=False):
         return (f'<svg id="{svg_id}" class="vista" viewBox="0 0 {ANCHO} {alto:g}" '
                 f'preserveAspectRatio="xMidYMin meet" '
-                f'role="img" aria-label="{etiqueta}"'
+                f'role="tabpanel" aria-label="{etiqueta}"'
                 f'{" hidden=\"hidden\"" if oculto else ""}>\n  <defs>'
                 + DEFS.format(flecha=f"flecha-{prefijo}", flecha_m=f"flecha-{prefijo}m")
                 + "\n  </defs>\n"
@@ -834,8 +870,8 @@ def render_html(modelo: dict) -> str:
         '<button id="volver" type="button" aria-label="Volver al esquema">← Volver</button>\n'
         '<header id="tabs">\n'
         '  <div id="tabs-lista" role="tablist">\n'
-        '    <button class="tab" type="button" role="tab" data-vista="capas" aria-selected="true">Capas</button>\n'
-        '    <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false">Flujo</button>\n'
+        '    <button class="tab" type="button" role="tab" data-vista="capas" aria-selected="true" aria-controls="vista-capas">Capas</button>\n'
+        '    <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false" aria-controls="vista-flujo">Flujo</button>\n'
         "  </div>\n"
         '  <button id="zoom" type="button" hidden aria-label="Restablecer el zoom"></button>\n'
         "</header>\n"
