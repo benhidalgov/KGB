@@ -233,7 +233,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                                     upd_cnt += 1
                                     st.toast(f"{msg}")
                                 elif st_res == "sin_cambios":
-                                    asignar_tags_documento(c_name, cat_seleccionadas, autor=autor_act)
+                                    asignar_tags_documento(c_name, cat_seleccionadas)
                                     st.toast(f"Categorías actualizadas: {c_name}")
 
                         limpiar_cache_consultas()

@@ -371,7 +371,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             tags_finales_xl = list(tags_xl_sel)
                             if nueva_cat_xl.strip():
                                 tags_finales_xl.append(nueva_cat_xl.strip())
-                            asignar_tags_documento(doc_act_edit, tags_finales_xl, autor=aut_e.strip())
+                            asignar_tags_documento(doc_act_edit, tags_finales_xl)
                             limpiar_cache_consultas()
                             st.toast(f"Versión v{nv} guardada.")
                             st.rerun()
@@ -411,7 +411,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                         tags_finales = list(tags_e_sel)
                         if nueva_cat_e.strip():
                             tags_finales.append(nueva_cat_e.strip())
-                        asignar_tags_documento(doc_act_edit, tags_finales, autor=aut_e.strip())
+                        asignar_tags_documento(doc_act_edit, tags_finales)
                         limpiar_cache_consultas()
                         if nv == u_ver_e:
                             st.toast(f"Categorías actualizadas para {doc_act_edit}")
@@ -531,7 +531,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                                 doc_tags_map[row["Archivo"]] = [cat_dest_sel]
 
                         if doc_tags_map:
-                            n_act = asignar_tags_en_lote(doc_tags_map, autor="Operaciones")
+                            n_act = asignar_tags_en_lote(doc_tags_map)
                             limpiar_cache_consultas()
                             limpiar_cache_documentos()
                             # Los multiselect del editor conservaban la selección

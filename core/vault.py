@@ -79,11 +79,6 @@ def _claves_candidatas() -> List[bytes]:
     return [nueva_clave]
 
 
-def obtener_clave_maestra() -> bytes:
-    """Clave primaria Fernet para cifrar la bóveda."""
-    return _claves_candidatas()[0]
-
-
 def _descifrar_boveda(cifrado: bytes) -> Dict[str, str]:
     ultimo_error: Exception | None = None
     for kb in _claves_candidatas():
@@ -113,7 +108,7 @@ def _leer_todos_los_secretos_boveda() -> Dict[str, str]:
 
 def _guardar_todos_los_secretos_boveda(secretos: Dict[str, str]) -> bool:
     try:
-        fernet = Fernet(obtener_clave_maestra())
+        fernet = Fernet(_claves_candidatas()[0])
         cifrado = fernet.encrypt(json.dumps(secretos, ensure_ascii=False).encode("utf-8"))
         os.makedirs(os.path.dirname(VAULT_FILE_PATH), exist_ok=True)
         # Escritura atómica: un crash a mitad de escritura no corrompe la bóveda.

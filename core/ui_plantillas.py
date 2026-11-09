@@ -124,7 +124,7 @@ def renderizar_pestana_plantillas(doc_store: dict):
                     inicializar_version_inicial_si_no_existe(nom_f, doc_gen_md, autor=autor, comentario=f"Creación mediante plantilla: {tipo_plantilla}")
 
                 doc_store[nom_f] = doc_gen_md
-                asignar_tags_documento(nom_f, [cat_final_rb], autor=autor)
+                asignar_tags_documento(nom_f, [cat_final_rb])
                 limpiar_cache_consultas()
                 st.toast(f"Guardado como {nom_f} en [{cat_final_rb}]")
                 if ya_existia:

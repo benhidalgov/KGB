@@ -28,22 +28,18 @@ MIME_MAP = {
 EXTENSIONES_IMAGEN_RASTER = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
 
 
-def _parece_svg(ruta: str) -> bool:
-    """Comprueba la cabecera: un archivo .svg renombrado tampoco es un SVG."""
-    try:
-        with open(ruta, "rb") as f:
-            return b"<svg" in f.read(4096).lower()
-    except OSError:
-        return False
-
-
 def es_imagen_visualizable(ruta: str | None) -> bool:
     """Indica si el archivo se puede mostrar como imagen en la consola."""
     if not ruta or not os.path.isfile(ruta):
         return False
     ext = os.path.splitext(ruta)[1].lower()
     if ext == ".svg":
-        return _parece_svg(ruta)
+        # Cabecera: un archivo .svg renombrado tampoco es un SVG.
+        try:
+            with open(ruta, "rb") as f:
+                return b"<svg" in f.read(4096).lower()
+        except OSError:
+            return False
     if ext not in EXTENSIONES_IMAGEN_RASTER:
         return False
     try:
@@ -324,7 +320,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
             )
         elif md_content and md_content.strip():
             with st.container(height=height):
-                st.markdown(preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original), unsafe_allow_html=True)
+                st.markdown(preparar_markdown_con_imagenes(md_content, ruta_original=ruta_original), unsafe_allow_html=True)
         else:
             st.info(f"No se pudo generar la vista previa del documento {fname}.")
     elif ext in (".pptx", ".ppt"):
@@ -349,7 +345,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
                     """, unsafe_allow_html=True)
         elif md_content and md_content.strip():
             with st.container(height=height):
-                st.markdown(preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original), unsafe_allow_html=True)
+                st.markdown(preparar_markdown_con_imagenes(md_content, ruta_original=ruta_original), unsafe_allow_html=True)
         else:
             st.info(f"No se pudo generar la vista previa de la presentación {fname}.")
     elif ext in (".txt", ".csv", ".json", ".sql", ".py", ".md"):
@@ -365,22 +361,18 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
     st.download_button(label=f"Descargar Archivo ({fname})", data=bytes_orig, file_name=fname, mime=MIME_MAP.get(ext, "application/octet-stream"), width="stretch", key=f"dl_btn_orig_{fname}_{key_suffix}")
 
 
-def renderizar_codigo_seguro(md_content: str):
-    """Renderiza código Markdown protegiendo el DOM si el texto es muy extenso (> 50 KB)."""
-    if len(md_content) > 50_000:
-        st.info(f"Documento largo ({len(md_content)/1024:.1f} KB). Se muestran los primeros 50 KB.")
-        st.code(md_content[:50_000] + "\n\n... [Truncado en visor de código]", language="markdown")
-    else:
-        st.code(md_content, language="markdown")
-
-
 def _render_md_tabs(md_content: str, doc_name: str, ruta_original: str | None):
     tab_rendered, tab_source = st.tabs(["Vista Formateada", "Código Markdown"])
     with tab_rendered:
         with st.container(border=True):
-            st.markdown(preparar_markdown_con_imagenes(md_content, doc_name=doc_name, ruta_original=ruta_original), unsafe_allow_html=True)
+            st.markdown(preparar_markdown_con_imagenes(md_content, ruta_original=ruta_original), unsafe_allow_html=True)
     with tab_source:
-        renderizar_codigo_seguro(md_content)
+        # El DOM solo aguanta hasta 50 KB de codigo en un bloque st.code.
+        if len(md_content) > 50_000:
+            st.info(f"Documento largo ({len(md_content)/1024:.1f} KB). Se muestran los primeros 50 KB.")
+            st.code(md_content[:50_000] + "\n\n... [Truncado en visor de codigo]", language="markdown")
+        else:
+            st.code(md_content, language="markdown")
 
 
 def renderizar_lado_a_lado(doc_name: str, md_content: str, ruta_original: str | None, ultima_version: int = 1, ultimo_editor: str = "Técnico Responsable", ultimo_timestamp: str = "N/A", key_suffix: str = ""):
@@ -461,10 +453,7 @@ def resaltar_termino_en_html(html_o_md: str, termino: str) -> tuple[str, int]:
 
 def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | None, u_ver: int = 1, u_edit: str = "Técnico", u_time: str = "N/A"):
     """Renderiza el entorno inmersivo Zen Studio con TOC interactivo, buscador interno, personalización de lectura y visor multimodal."""
-    if hasattr(st, "html"):
-        st.html("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>")
-    else:
-        st.markdown("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>", unsafe_allow_html=True)
+    st.html("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>")
 
     col_zt_title, col_zt_search, col_zt_theme, col_zt_exit = st.columns([3.2, 2.4, 2.2, 1.2], vertical_alignment="center")
 
@@ -658,11 +647,11 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
 
         cnt_coincidencias = 0
         if zen_search_query.strip():
-            texto_preparado = preparar_markdown_con_imagenes(texto_a_mostrar, doc_name=doc_name, ruta_original=ruta_original)
+            texto_preparado = preparar_markdown_con_imagenes(texto_a_mostrar, ruta_original=ruta_original)
             html_resaltado, cnt_coincidencias = resaltar_termino_en_html(texto_preparado, zen_search_query)
             st.markdown(f"<div style='font-size:0.8rem;margin-bottom:6px;'><span class='badge-ok'>[{cnt_coincidencias} Coincidencias]</span> para '<b>{html.escape(zen_search_query)}</b>'</div>", unsafe_allow_html=True)
         else:
-            html_resaltado = preparar_markdown_con_imagenes(texto_a_mostrar, doc_name=doc_name, ruta_original=ruta_original)
+            html_resaltado = preparar_markdown_con_imagenes(texto_a_mostrar, ruta_original=ruta_original)
 
         tiene_orig = ruta_original and os.path.exists(ruta_original)
         if tiene_orig:

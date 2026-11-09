@@ -375,13 +375,8 @@ def consultar_gemini_rag(prompt_usuario: str, contexto_rag: str, api_key: str) -
         return False, str(e)[:120], ""
 
 
-def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_srv: pd.DataFrame = None, doc_matches: list = None) -> str:
+def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_srv: pd.DataFrame, doc_matches: list) -> str:
     """Genera la respuesta técnica determinista del motor local autónomo (DuckDB + Text Search)."""
-    if df_srv is None:
-        df_srv = buscar_servidores_duckdb(prompt_usuario)
-    if doc_matches is None:
-        doc_matches = buscar_en_documentos(prompt_usuario, doc_store)
-
     if df_srv is not None and not df_srv.empty:
         total = len(df_srv)
         row = df_srv.iloc[0]

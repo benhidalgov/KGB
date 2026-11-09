@@ -46,12 +46,6 @@ def renderizar_boton_entrar_consola(key_prefix: str, paso_num: int, label: str =
             st.rerun()
 
 
-def _cb_autocompletar_cuenta_manual(usuario: str):
-    """Callback seguro previo a la instanciación de widgets para autocompletar credenciales."""
-    st.session_state["login_username_val"] = usuario
-    st.session_state["login_password_val"] = st.session_state.get(f"_pwd_{usuario}", f"{usuario}2026")
-
-
 def renderizar_manual_lanzamiento():
     """Guía de inicio rápido en la pantalla de login antes de autenticar."""
     st.markdown("""

@@ -65,56 +65,6 @@
     --pastel-neutral-border: #E2E2DC;
 }
 
-/* Modo Oscuro Sincronizado Exclusivamente con el Tema de Streamlit */
-[data-theme="dark"],
-.stApp[data-theme="dark"],
-[data-testid="stAppViewContainer"][data-theme="dark"] {
-    --bg-canvas: #161719;
-    --bg-surface: #1E2023;
-    --bg-surface-subtle: #25282D;
-    --bg-surface-hover: #2C3036;
-    --border-subtle: rgba(255, 255, 255, 0.1);
-    --border-medium: rgba(255, 255, 255, 0.18);
-    --border-strong: rgba(255, 255, 255, 0.28);
-
-    --text-primary: #EDECE8;
-    --text-secondary: #A09F98;
-    --text-muted: #74736C;
-
-    --btn-primary-bg: #EDEDEC;
-    --btn-primary-text: #161719;
-    --btn-primary-hover: #FFFFFF;
-
-    --btn-secondary-bg: #1E2023;
-    --btn-secondary-text: #EDECE8;
-    --btn-secondary-border: rgba(255, 255, 255, 0.15);
-    --btn-secondary-hover: #25282D;
-
-    --input-bg: #22252A;
-    --input-border: rgba(255, 255, 255, 0.18);
-    --input-text: #EDECE8;
-
-    --pastel-green-bg: rgba(52, 101, 56, 0.25);
-    --pastel-green-text: #8BE893;
-    --pastel-green-border: rgba(139, 232, 147, 0.28);
-
-    --pastel-amber-bg: rgba(149, 100, 0, 0.25);
-    --pastel-amber-text: #F5BD38;
-    --pastel-amber-border: rgba(245, 189, 56, 0.28);
-
-    --pastel-crit-bg: rgba(159, 47, 45, 0.25);
-    --pastel-crit-text: #FF8580;
-    --pastel-crit-border: rgba(255, 133, 128, 0.28);
-
-    --pastel-blue-bg: rgba(31, 108, 159, 0.25);
-    --pastel-blue-text: #8AC7FF;
-    --pastel-blue-border: rgba(138, 199, 255, 0.28);
-
-    --pastel-neutral-bg: rgba(255, 255, 255, 0.08);
-    --pastel-neutral-text: #C4C3BC;
-    --pastel-neutral-border: rgba(255, 255, 255, 0.16);
-}
-
 /* 2. Jerarquia Tipografica Global y Canvas */
 .stApp, [data-testid="stAppViewContainer"] {
     background-color: var(--bg-canvas) !important;
@@ -162,7 +112,7 @@ li:not(button *) {
 }
 
 /* Tipografia Monoespaciada y Codigo */
-code, .stMarkdown code, pre, .stCode, kbd, [data-testid="stCode"] * {
+code, .stMarkdown code, pre, .stCode, [data-testid="stCode"] * {
     font-family: var(--font-mono) !important;
 }
 
@@ -173,18 +123,6 @@ code, .stMarkdown code {
     padding: 1px 5px !important;
     border-radius: 4px !important;
     font-size: 0.84em !important;
-}
-
-kbd {
-    display: inline-block;
-    padding: 2px 6px;
-    font-size: 0.76rem;
-    font-weight: 500;
-    line-height: 1.2;
-    color: var(--text-secondary);
-    background-color: var(--bg-surface-subtle);
-    border: 1px solid var(--border-subtle);
-    border-radius: 4px;
 }
 
 /* Separador Estructural Limpio */
@@ -535,39 +473,6 @@ button[kind="secondaryFormSubmit"] *,
     border: 1px solid var(--pastel-neutral-border);
 }
 
-.badge-pulse-online {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--pastel-green-text);
-    background-color: var(--pastel-green-bg);
-    border: 1px solid var(--pastel-green-border);
-    border-radius: 9999px;
-    padding: 2px 8px;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-}
-
-.pulse-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--pastel-green-text);
-}
-
-.navbar-brand-badge {
-    background-color: var(--pastel-neutral-bg);
-    border: 1px solid var(--pastel-neutral-border);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 2px 7px;
-    border-radius: 4px;
-    text-transform: uppercase;
-}
-
 /* 7. Desplegables (Expanders) */
 [data-testid="stExpander"] {
     border: 1px solid var(--border-subtle) !important;
@@ -642,14 +547,6 @@ button[kind="secondaryFormSubmit"] *,
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     color: var(--text-secondary);
-}
-
-.sidebar-footer {
-    padding: 12px 0;
-    border-top: 1px solid var(--border-subtle);
-    margin-top: 14px;
-    font-size: 0.74rem;
-    color: var(--text-muted);
 }
 
 /* 8.1 Tarjeta Micro-Bento de Sesión de Usuario en Sidebar */
@@ -884,118 +781,6 @@ div[data-testid="stDataEditor"] {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
 }
 
-/* 11. Comparador Diff */
-.diff-container {
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    background: var(--bg-surface);
-    overflow: hidden;
-    margin: 10px 0;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-}
-
-.diff-stats-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: var(--bg-surface-subtle);
-    border-bottom: 1px solid var(--border-subtle);
-    font-size: 0.76rem;
-    color: var(--text-secondary);
-}
-
-.diff-stat-group {
-    display: flex;
-    gap: 8px;
-}
-
-.diff-header-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    background: var(--bg-surface-subtle);
-    border-bottom: 1px solid var(--border-subtle);
-    font-weight: 600;
-    color: var(--text-secondary);
-}
-
-.diff-header-col {
-    padding: 6px 10px;
-    text-align: center;
-    border-right: 1px solid var(--border-subtle);
-}
-
-.diff-header-col:last-child {
-    border-right: none;
-}
-
-.diff-body {
-    max-height: 480px;
-    overflow-y: auto;
-    background: var(--bg-surface);
-}
-
-.diff-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-bottom: 1px solid var(--border-subtle);
-}
-
-.diff-cell {
-    display: flex;
-    padding: 3px 8px;
-    border-right: 1px solid var(--border-subtle);
-    min-height: 22px;
-    line-height: 1.45;
-}
-
-.diff-cell:last-child {
-    border-right: none;
-}
-
-.diff-num {
-    width: 38px;
-    flex-shrink: 0;
-    text-align: right;
-    padding-right: 8px;
-    color: var(--text-muted);
-    user-select: none;
-}
-
-.diff-text {
-    flex-grow: 1;
-    white-space: pre-wrap;
-    word-break: break-all;
-    color: var(--text-primary);
-}
-
-.diff-add {
-    background-color: var(--pastel-green-bg) !important;
-    color: var(--pastel-green-text) !important;
-}
-
-.diff-del {
-    background-color: var(--pastel-crit-bg) !important;
-    color: var(--pastel-crit-text) !important;
-}
-
-/* 12. Timeline de Versiones */
-.version-timeline-container {
-    border-left: 1px solid var(--border-medium);
-    margin-left: 8px;
-    padding-left: 14px;
-    margin-top: 10px;
-}
-
-.version-timeline-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-}
-
 /* 13. Visor Multimodal */
 .visor-source-meta-bar {
     background: var(--bg-surface);
@@ -1023,29 +808,6 @@ div[data-testid="stDataEditor"] {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-}
-
-.visor-office-notice-card {
-    background: var(--bg-surface-subtle);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    padding: 18px 20px;
-    text-align: center;
-    margin: 14px 0;
-}
-
-.visor-office-title {
-    font-family: var(--font-serif);
-    font-weight: 500;
-    font-size: 1.05rem;
-    color: var(--text-primary);
-    margin-bottom: 6px;
-}
-
-.visor-office-desc {
-    font-size: 0.84rem;
-    color: var(--text-secondary);
-    line-height: 1.5;
 }
 
 /* 13.1. Visor Enriquecido de Documentos Word (.docx) */

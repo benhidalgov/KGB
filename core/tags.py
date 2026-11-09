@@ -109,7 +109,7 @@ def obtener_tags_documento(doc_name: str) -> list[str]:
     return []
 
 
-def asignar_tags_documento(doc_name: str, tags: list[str], autor: str = "Técnico") -> bool:
+def asignar_tags_documento(doc_name: str, tags: list[str]) -> bool:
     """Asocia una lista de tags/categorías a un documento y asegura su registro en el catálogo."""
     tags_limpios = _limpiar_tags(tags)
 
@@ -185,7 +185,7 @@ def obtener_documentos_sin_categoria(doc_list: list[str]) -> list[str]:
     return pendientes
 
 
-def asignar_tags_en_lote(doc_tags_map: dict[str, list[str]], autor: str = "Operaciones") -> int:
+def asignar_tags_en_lote(doc_tags_map: dict[str, list[str]]) -> int:
     """Asigna categorías a múltiples documentos en una única operación atómica."""
     if not doc_tags_map:
         return 0

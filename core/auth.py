@@ -276,7 +276,7 @@ def _limpiar_estado_sesion():
     st.session_state["auth_activa"] = False
     st.session_state["usuario_actual"] = None
     for clave in ("login_password_val", "login_username_val", "historial_busquedas",
-                  "messages", "nav_seccion_activa", "tab4_doc_selector",
+                  "nav_seccion_activa", "tab4_doc_selector",
                   "auth_chequeo", "auth_ultima_actividad"):
         st.session_state.pop(clave, None)
 
@@ -395,10 +395,7 @@ def _cb_cambiar_tema_auth():
 
 def renderizar_pantalla_login():
     """Renderiza la pantalla corporativa dividida: formulario a la izquierda y manual a la derecha."""
-    if hasattr(st, "html"):
-        st.html("<style>[data-testid=\"stSidebar\"], [data-testid=\"stSidebarCollapsedControl\"] { display: none !important; }</style>")
-    else:
-        st.markdown("<style>[data-testid=\"stSidebar\"], [data-testid=\"stSidebarCollapsedControl\"] { display: none !important; }</style>", unsafe_allow_html=True)
+    st.html("<style>[data-testid=\"stSidebar\"], [data-testid=\"stSidebarCollapsedControl\"] { display: none !important; }</style>")
 
     col_h_left, col_h_right = st.columns([3.8, 1.2], vertical_alignment="center")
     with col_h_left:

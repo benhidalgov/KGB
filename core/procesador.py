@@ -306,7 +306,7 @@ def resolver_ruta_imagen_a_base64(src_path: str, ruta_original: str | None = Non
     return ""
 
 
-def preparar_markdown_con_imagenes(md_content: str, doc_name: str = "", ruta_original: str | None = None) -> str:
+def preparar_markdown_con_imagenes(md_content: str, ruta_original: str | None = None) -> str:
     """Prepara el contenido Markdown para la pestaña de Vista Formateada protegiendo el DOM."""
     if not md_content:
         return ""
@@ -427,8 +427,8 @@ def procesar_e_ingestar_binario(
             categoria=origen_detalle
         )
         if tags:
-            asignar_tags_documento(clean_name, tags, autor=autor)
-            asignar_tags_documento(doc_md_name, tags, autor=autor)
+            asignar_tags_documento(clean_name, tags)
+            asignar_tags_documento(doc_md_name, tags)
 
         if os.path.exists(md_save_path):
             with open(md_save_path, "r", encoding="utf-8", errors="ignore") as f_ex:
@@ -464,7 +464,7 @@ def procesar_e_ingestar_binario(
     # 3. Documentos Ofimáticos, Excel, PDF y Texto
     else:
         if tags:    
-            asignar_tags_documento(clean_name, tags, autor=autor)
+            asignar_tags_documento(clean_name, tags)
 
         os.makedirs(DOCS_DIR, exist_ok=True)
         save_path = os.path.join(DOCS_DIR, clean_name)

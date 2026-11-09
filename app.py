@@ -144,7 +144,7 @@ if not es_usuario_autenticado():
 # -------------------------------------------------------------
 # 3. INICIALIZACIÓN DE ESTADO Y ALMACÉN DOCUMENTAL
 # -------------------------------------------------------------
-for k, default_v in [("historial_busquedas", []), ("messages", []), ("quick_pills_version", 0)]:
+for k, default_v in [("historial_busquedas", [])]:
     if k not in st.session_state:
         st.session_state[k] = default_v
 
