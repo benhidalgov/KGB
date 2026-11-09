@@ -938,16 +938,11 @@ div[data-testid="stDataEditor"] {
     margin: 0 auto;
     padding: 28px 36px;
     line-height: 1.75;
-    font-size: 0.96rem;
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
     border-radius: 8px;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .zen-toc-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
     border-radius: 6px;
     padding: 12px;
     margin-bottom: 12px;
@@ -958,13 +953,7 @@ div[data-testid="stDataEditor"] {
     font-size: 0.82rem;
     border-radius: 4px;
     cursor: pointer;
-    color: var(--text-secondary);
     transition: background 0.15s ease, color 0.15s ease;
-}
-
-.zen-toc-item:hover {
-    background-color: var(--bg-surface-hover);
-    color: var(--text-primary);
 }
 
 /* 15. Seguridad: Ocultamiento del visor de contrasenas nativo */

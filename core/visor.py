@@ -521,8 +521,6 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
         border: 1px solid {p_lec['border']} !important;
         color: {p_lec['fg']} !important;
         font-size: {font_size_val} !important;
-        line-height: 1.75 !important;
-        border-radius: 8px !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
     }}
     .zen-reader-canvas p,

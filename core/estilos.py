@@ -59,99 +59,20 @@ def _generar_overrides_tema(t: str) -> str:
     --pastel-neutral-bg: {c['neu_bg']} !important; --pastel-neutral-text: {c['neu_tx']} !important;
     --pastel-neutral-border: {c['neu_bd']} !important; background-color: {c['canvas']} !important; color: {c['text_p']} !important;
 }}
-.stApp, [data-testid="stAppViewContainer"] {{ background-color: {c['canvas']} !important; color: {c['text_p']} !important; }}
 [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child, [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
     background-color: {c['subtle']} !important; border-right-color: {c['border_s']} !important;
 }}
-div[data-testid="stVerticalBlockBorderWrapper"],
-.bento-card, .search-result-card, [data-testid="stExpander"],
-div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {{
-    background-color: {c['surface']} !important; border: 1px solid {c['border_s']} !important;
-}}
-div[data-testid="stVerticalBlockBorderWrapper"] > div,
-div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {{
-    border: none !important; background-color: transparent !important; box-shadow: none !important;
-}}
-.stTextInput input, .stTextInput > div > div > input,
-.stTextArea textarea, .stTextArea > div > div > textarea,
-.stSelectbox > div > div, div[data-baseweb="select"], div[data-baseweb="select"] > div,
-div[data-baseweb="input"], div[data-baseweb="input"] > div,
-div[data-testid="stDateInput"] input {{
-    background-color: {c['inp_bg']} !important; border-color: {c['inp_bd']} !important; color: {c['inp_tx']} !important;
-}}
-div[data-baseweb="select"] *, div[data-baseweb="select"] span, div[data-baseweb="select"] div,
-div[data-testid="stSelectbox"] * {{
-    color: {c['inp_tx']} !important;
-}}
-div[data-baseweb="select"] svg {{
-    fill: {c['text_s']} !important; color: {c['text_s']} !important;
-}}
-div[data-baseweb="select"] > div > div {{
-    background-color: transparent !important;
-}}
-div[data-baseweb="tag"], span[data-baseweb="tag"] {{
-    background-color: {c['neu_bg']} !important; border: 1px solid {c['neu_bd']} !important;
-}}
-div[data-baseweb="tag"] *, span[data-baseweb="tag"] * {{
-    color: {c['text_p']} !important;
-}}
-div[data-baseweb="tag"] svg, span[data-baseweb="tag"] svg {{
-    fill: {c['text_s']} !important; color: {c['text_s']} !important;
-}}
-div[data-baseweb="popover"], div[data-baseweb="popover"] > div, ul[data-baseweb="menu"], div[data-baseweb="menu"] {{
-    background-color: {c['surface']} !important; border: 1px solid {c['border_m']} !important;
-}}
-li[data-baseweb="menu-item"], li[data-baseweb="menu-item"] * {{
-    background-color: transparent !important; color: {c['text_p']} !important;
-}}
-li[data-baseweb="menu-item"]:hover, li[data-baseweb="menu-item"][aria-selected="true"] {{
-    background-color: {c['hover']} !important; color: {c['text_p']} !important;
-}}
-.stTextInput input:focus, .stTextInput > div > div > input:focus,
-.stTextArea textarea:focus, div[data-baseweb="select"]:focus-within > div {{
-    border-color: {c['border_st']} !important; box-shadow: none !important;
-}}
-[data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] *, label[data-testid="stWidgetLabel"] p,
-.stTextInput label, .stTextArea label, .stSelectbox label,
-div[data-testid="stCheckbox"] label, div[data-testid="stCheckbox"] label * {{ color: {c['text_p']} !important; font-weight: 500 !important; }}
 button:not([kind="primary"]):not([kind="primaryFormSubmit"]) {{
     background-color: {c['btn_s_bg']} !important; border: 1px solid {c['btn_s_bd']} !important; color: {c['btn_s_tx']} !important;
 }}
 button:not([kind="primary"]):not([kind="primaryFormSubmit"]):hover {{
     background-color: {c['btn_s_hv']} !important; color: {c['text_p']} !important;
 }}
-[data-testid="stSidebar"] .st-key-btn_logout_sidebar button,
-[data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] button {{
-    background-color: {c['subtle']} !important; border: 1px solid {c['border_m']} !important; color: {c['text_s']} !important;
-}}
-[data-testid="stSidebar"] .st-key-btn_logout_sidebar button:hover,
-[data-testid="stSidebar"] div[class*="st-key-btn_logout_sidebar"] button:hover {{
-    background-color: {c['hover']} !important; border-color: {c['border_st']} !important; color: {c['text_p']} !important;
-}}
-div[data-testid="stAlert"] {{
-    background-color: {c['neu_bg']} !important; border: 1px solid {c['border_m']} !important; border-radius: 6px !important;
-}}
 div[data-testid="stAlert"] * {{ color: {c['text_p']} !important; font-weight: 500 !important; }}
-div[data-testid="stAlert"]:has([data-testid="stNotificationContentError"]) {{
-    background-color: {c['crit_bg']} !important; border-color: {c['crit_bd']} !important;
-}}
 div[data-testid="stAlert"]:has([data-testid="stNotificationContentError"]) * {{ color: {c['crit_tx']} !important; }}
-div[data-testid="stAlert"]:has([data-testid="stNotificationContentWarning"]) {{
-    background-color: {c['amb_bg']} !important; border-color: {c['amb_bd']} !important;
-}}
 div[data-testid="stAlert"]:has([data-testid="stNotificationContentWarning"]) * {{ color: {c['amb_tx']} !important; }}
-div[data-testid="stAlert"]:has([data-testid="stNotificationContentSuccess"]) {{
-    background-color: {c['grn_bg']} !important; border-color: {c['grn_bd']} !important;
-}}
 div[data-testid="stAlert"]:has([data-testid="stNotificationContentSuccess"]) * {{ color: {c['grn_tx']} !important; }}
-div[data-testid="stAlert"]:has([data-testid="stNotificationContentInfo"]) {{
-    background-color: {c['blu_bg']} !important; border-color: {c['blu_bd']} !important;
-}}
 div[data-testid="stAlert"]:has([data-testid="stNotificationContentInfo"]) * {{ color: {c['blu_tx']} !important; }}
-div[data-testid="stToast"] {{
-    background-color: {c['surface']} !important; border: 1px solid {c['border_m']} !important; border-radius: 6px !important;
-}}
-div[data-testid="stToast"] * {{ color: {c['text_p']} !important; }}
 """.strip()
 
 
