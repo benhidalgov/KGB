@@ -16,7 +16,9 @@ from core.db import es_postgres_disponible, insertar_evento_auditoria_pg, obtene
 logger = logging.getLogger("infra_copilot.auditoria")
 
 # ponytail: lock de proceso. Con varias réplicas, PostgreSQL es la fuente de
-# verdad en producción y el log local queda solo como respaldo.
+# verdad en producción y el log local queda solo como respaldo. Sin cambio:
+# el upgrade ya esta implementado (registrar_evento_auditoria exige PG en
+# produccion) y el compose no admite escalado (container_name fijo).
 _LOG_LOCK = threading.Lock()
 
 # Fecha/hora UTC con zona: PostgreSQL guarda timestamptz y la imagen fija TZ=UTC.

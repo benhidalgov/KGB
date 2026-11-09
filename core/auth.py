@@ -21,6 +21,9 @@ _NOMBRES_MAESTROS = {"admin": "Administrador Principal", "operador": "Operador d
 # Limite de intentos fallidos por (usuario, origen) (mitigacion en proceso).
 # ponytail: estado local del proceso; para bloqueo real entre varias instancias,
 # usar el proxy inverso o un almacen compartido. Se reinicia al reiniciar el contenedor.
+# Sin cambio: la ventana es de 60 s, asi que persistir entre reinicios no baja los
+# intentos reales (5 por minuto se obtienen igual) y hoy solo hay un proceso.
+# El upgrade llega con el proxy inverso del P2 pendiente.
 _INTENTOS_FALLIDOS: Dict[str, list] = {}
 _MAX_INTENTOS = 5
 _VENTANA_BLOQUEO_S = 60.0
