@@ -606,6 +606,14 @@ def check_arquitectura_documentacion():
     assert falso.session_state["tab4_cat_selector"] == "Todas"
     assert falso.session_state["tab4_type_selector"] == "Todos"
 
+    # La categoría del modelo actúa como tag: un doc sin el nombre del
+    # servicio entra por la categoría y se fusiona por score máximo.
+    doc_store["guia_monitoreo.md"] = "procedimiento de monitoreo de alertas"
+    with mock.patch.object(ua, "_categoria_de_servicio", lambda n: "monitoreo"):
+        falso = correr({"arq_rel": "servicio-falso"})
+    assert falso.session_state["arq_docs_relacionados"]["docs"] == ["guia_monitoreo.md"], \
+        "la categoría debe rescatar al documento"
+
     # Sin parámetro no se toca nada: el resto de la consola no debe enterarse.
     falso = correr({})
     assert falso.session_state == {"nav_seccion_activa": "Arquitectura"}

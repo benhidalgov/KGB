@@ -15,6 +15,41 @@ _CACHE = {"mtime": 0.0, "html": ""}
 _UMBRAL_ALTA = 20
 
 
+def _categoria_de_servicio(nombre: str) -> str:
+    """Categoría del servicio en el modelo (vacío si no está, p. ej. en tests)."""
+    try:
+        from core.arq_render import cargar_modelo
+        for capa in cargar_modelo()["capas"]:
+            for s in capa["servicios"]:
+                if s["nombre"] == nombre:
+                    return s["categoria"]
+    except Exception:
+        pass
+    return ""
+
+
+def _buscar_documentos(servicio: str, doc_store: dict) -> list:
+    """Documentos del servicio, probando también su categoría como boost.
+
+    La categoría del modelo ("Monitoreo", "POS / Cajas"…) es la tag que el
+    servicio ya trae: sumarla a la consulta sube de 52 a 64 de 70 servicios
+    con coincidencia fuerte. Se fusiona por score máximo, así la consulta más
+    larga (que pierde el +30 de frase) nunca empeora el resultado.
+    """
+    from core.motor import buscar_en_documentos
+
+    encontrados = buscar_en_documentos(servicio, doc_store)
+    categoria = _categoria_de_servicio(servicio)
+    if not categoria:
+        return encontrados
+    fusion = {n: (c, s) for n, c, s in encontrados}
+    for n, c, s in buscar_en_documentos(servicio + " " + categoria, doc_store):
+        if s > fusion.get(n, ("", -1))[1]:
+            fusion[n] = (c, s)
+    return sorted(((n, c, s) for n, (c, s) in fusion.items()),
+                  key=lambda x: x[2], reverse=True)
+
+
 def procesar_parametros_arquitectura(doc_store: dict) -> None:
     """Convierte un clic del diagrama (?arq_lee / ?arq_rel) en navegación de la consola.
 
@@ -34,10 +69,8 @@ def procesar_parametros_arquitectura(doc_store: dict) -> None:
     except Exception:
         pass
 
-    from core.motor import buscar_en_documentos
-
     servicio = leer or relacionar
-    encontrados = buscar_en_documentos(servicio, doc_store)
+    encontrados = _buscar_documentos(servicio, doc_store)
 
     # Modo lectura directo solo con coincidencia fuerte: con ruido de contenido
     # se abre un documento equivocado; sin umbral se prefiere la lista.
