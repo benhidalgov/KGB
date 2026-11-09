@@ -33,7 +33,7 @@ from core.ui_consultas import renderizar_modulo_consultas
 from core.ui_mantenimientos import renderizar_modulo_mantenimientos
 from core.ui_documentos import renderizar_pestana_documentacion
 from core.ui_plantillas import renderizar_pestana_plantillas
-from core.ui_arquitectura import renderizar_seccion_arquitectura
+from core.ui_arquitectura import renderizar_seccion_arquitectura, procesar_parametros_arquitectura
 
 
 @st.cache_data(show_spinner=False, ttl=60)
@@ -151,6 +151,9 @@ for k, default_v in [("historial_busquedas", []), ("messages", []), ("quick_pill
 if "doc_store" not in st.session_state:
     st.session_state.doc_store = {}
     cargar_documentos_locales(st.session_state.doc_store)
+
+# Clic en el diagrama de arquitectura: el iframe solo puede hablar por la URL.
+procesar_parametros_arquitectura(st.session_state.doc_store)
 
 # 3.1 Modo Zen Studio (Lector Inmersivo de Documentos)
 if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_sel"):

@@ -560,6 +560,58 @@ def check_arquitectura_modelo_incompleto():
     assert "no-existe" in html, "el paso roto debe verse como nodo, no romper el render"
 
 
+def check_arquitectura_documentacion():
+    """El clic del diagrama abre Modo Lectura o la lista de documentos relacionados."""
+    from core import ui_arquitectura as ua
+    from core.arq_render import cargar_modelo, render_html
+    from core.configuracion import ARQ_MODELO_PATH
+
+    html = render_html(cargar_modelo(ARQ_MODELO_PATH))
+    for marca in ('id="d-lectura"', 'id="d-relacionados"', 'id="d-aviso"', "function lanzar("):
+        assert marca in html, f"falta {marca} en la ficha del visor"
+
+    doc_store = {
+        "matriz_alertamiento.md": "nagios newrelic alertamiento de incidentes",
+        "sin_relacion.md": "archivo aparte",
+    }
+
+    class _StFalso:
+        def __init__(self, params):
+            self.query_params = dict(params)
+            self.session_state = {"nav_seccion_activa": "Arquitectura"}
+
+    def correr(params):
+        falso = _StFalso(params)
+        with mock.patch.object(ua, "st", falso):
+            ua.procesar_parametros_arquitectura(doc_store)
+        return falso
+
+    # Coincidencia fuerte: abre Modo Lectura en el mismo rerun y limpia la URL.
+    falso = correr({"arq_lee": "nagios"})
+    assert falso.session_state.get("zen_studio_activo") is True, "debe abrir Modo Lectura"
+    assert falso.session_state["zen_doc_sel"] == "matriz_alertamiento.md"
+    assert falso.query_params == {}, "el parámetro debe limpiarse tras leerlo"
+    assert "arq_docs_relacionados" not in falso.session_state
+
+    # Sin coincidencia: no fuerza un documento, cae a la lista de relacionados.
+    falso = correr({"arq_lee": "termine-inexistente"})
+    assert "zen_studio_activo" not in falso.session_state, "sin umbral no se abre nada"
+    rel = falso.session_state["arq_docs_relacionados"]
+    assert rel["docs"] == [] and rel["etiqueta"] == "termine-inexistente"
+    assert falso.session_state["nav_seccion_activa"] == "Documentación Técnica"
+
+    # Lista de relacionados con top 5 y filtros de la pestaña en su valor neutro.
+    falso = correr({"arq_rel": "nagios"})
+    assert falso.session_state["arq_docs_relacionados"]["docs"] == ["matriz_alertamiento.md"]
+    assert falso.session_state["tab4_cat_selector"] == "Todas"
+    assert falso.session_state["tab4_type_selector"] == "Todos"
+
+    # Sin parámetro no se toca nada: el resto de la consola no debe enterarse.
+    falso = correr({})
+    assert falso.session_state == {"nav_seccion_activa": "Arquitectura"}
+    assert falso.query_params == {}
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -577,6 +629,7 @@ if __name__ == "__main__":
     check_arquitectura_render()
     check_arquitectura_atributos()
     check_arquitectura_modelo_incompleto()
+    check_arquitectura_documentacion()
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
     print("[OK] check_seams")

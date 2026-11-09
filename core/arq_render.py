@@ -143,6 +143,16 @@ CSS = """
   #d-flujos p { margin: 0 0 3px; font-size: 12.5px; }
   #d-flujos p:first-child { margin-bottom: 6px; font-size: 10.5px;
                             font-family: var(--mono); color: var(--muted); }
+  #d-docs { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #d-docs button { font: 600 12px/1 inherit; cursor: pointer; padding: 9px 12px;
+                   border-radius: 8px; border: 1px solid var(--line);
+                   background: var(--panel2); color: var(--text); }
+  #d-lectura { background: var(--accent) !important; border-color: var(--accent) !important;
+               color: var(--bg) !important; }
+  #d-docs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #d-aviso { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; color: var(--crit); }
+  #d-aviso:empty { display: none; }
 
   /* Foco por flujo */
   .flujo { cursor: pointer; transition: opacity .3s ease; outline: none; }
@@ -179,6 +189,7 @@ JS = """
   var capaActiva = null, flujoActivo = null;
   var datos = JSON.parse(document.getElementById('datos').textContent);
   var dialogo = document.getElementById('detalle');
+  var servicioActual = null;
   var botonZoom = document.getElementById('zoom');
   var zoom = { s: 1, x: 0, y: 0 };
   var arrastre = null, movido = false, suprimir = false;
@@ -394,6 +405,8 @@ JS = """
   function abrirDetalle(id) {
     var d = datos[id];
     if (!d) return;
+    servicioActual = d.n;
+    document.getElementById('d-aviso').textContent = '';
     document.getElementById('d-nombre').textContent = d.n;
     document.getElementById('d-meta').textContent =
       'Capa ' + String(d.capa).padStart(2, '0') + ' · ' + d.cf + ' · ' + d.c +
@@ -411,6 +424,41 @@ JS = """
     });
     if (!dialogo.open) dialogo.showModal();
   }
+
+  // El visor vive en un iframe y Streamlit no deja devolver valores desde uno:
+  // el unico canal hacia Python es la URL (st.query_params). Se escribe el
+  // parametro y se fuerza el rerun con un clic real en la radio del sidebar.
+  function lanzar(param, valor) {
+    var aviso = document.getElementById('d-aviso');
+    aviso.textContent = '';
+    try {
+      var padre = window.parent;
+      if (padre === window) throw new Error('visor abierto sin consola');
+      var radio = padre.document.querySelector('[data-testid="stRadio"]');
+      var opciones = radio ? radio.querySelectorAll('[role="radio"], label') : [];
+      var destino = null;
+      for (var i = 0; i < opciones.length; i++) {
+        if ((opciones[i].textContent || '').trim().indexOf('Documentación Técnica') === 0) {
+          destino = opciones[i];
+          break;
+        }
+      }
+      if (!destino) throw new Error('navegacion no encontrada');
+      var url = new URL(padre.location.href);
+      url.search = '?' + param + '=' + encodeURIComponent(valor);
+      padre.history.replaceState(null, '', url.pathname + url.search);
+      destino.click();
+    } catch (e) {
+      aviso.textContent = 'No se pudo abrir la documentación desde el visor.';
+    }
+  }
+
+  document.getElementById('d-lectura').addEventListener('click', function () {
+    if (servicioActual) lanzar('arq_lee', servicioActual);
+  });
+  document.getElementById('d-relacionados').addEventListener('click', function () {
+    if (servicioActual) lanzar('arq_rel', servicioActual);
+  });
 
   Array.prototype.slice.call(document.querySelectorAll('[data-servicio]')).forEach(function (s) {
     var abrir = function (e) {
@@ -900,6 +948,11 @@ def render_html(modelo: dict) -> str:
         '  <p id="d-meta"></p>\n'
         '  <p id="d-desc"></p>\n'
         '  <div id="d-flujos"></div>\n'
+        '  <div id="d-docs">\n'
+        '    <button id="d-lectura" type="button">Abrir en Modo Lectura</button>\n'
+        '    <button id="d-relacionados" type="button">Documentación relacionada</button>\n'
+        '    <p id="d-aviso" role="status"></p>\n'
+        '  </div>\n'
         "</dialog>\n"
         + "\n<script>" + JS + "</script>\n</body>\n</html>\n"
     )

@@ -137,8 +137,26 @@ def renderizar_pestana_documentacion(doc_store: dict):
                     key="tab4_date_range_selector"
                 )
 
+        # Filtro que llega del diagrama de arquitectura (clic en un servicio).
+        rel_arq = st.session_state.get("arq_docs_relacionados")
+        docs_rel = (rel_arq or {}).get("docs") or []
+        if rel_arq is not None:
+            etiqueta_rel = rel_arq.get("etiqueta") or ""
+            col_rel_txt, col_rel_btn = st.columns([4, 1], vertical_alignment="center")
+            with col_rel_txt:
+                if docs_rel:
+                    st.caption(f"Documentación relacionada con «{etiqueta_rel}» · {len(docs_rel)} documento(s)")
+                else:
+                    st.warning(f"Sin documentos relacionados con «{etiqueta_rel}».")
+            with col_rel_btn:
+                if st.button("Quitar filtro", key="arq_quitar_relacionados"):
+                    st.session_state.pop("arq_docs_relacionados", None)
+                    st.rerun()
+
         docs_disp = []
         for d in sorted(doc_store.keys()):
+            if rel_arq is not None and d not in docs_rel:
+                continue
             ext_d = os.path.splitext(d)[1].lower()
             is_diag = d.startswith("DIAGRAMA__") or ext_d in IMAGE_EXTENSIONS
             if filtro_t4 == "Diagramas" and not is_diag:
