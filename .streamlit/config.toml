@@ -12,3 +12,7 @@ gatherUsageStats = false
 [server]
 # Tope del cuerpo multipart de subida; complementa los limites de ingesta.
 maxUploadSize = 100
+
+[client]
+# Oculta el boton Deploy de Streamlit en la consola.
+toolbarMode = "minimal"

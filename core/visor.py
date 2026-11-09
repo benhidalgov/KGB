@@ -460,7 +460,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_zt_title:
         st.markdown(f"""
         <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
-            <span class="badge-ok" style="font-size:0.7rem;padding:2px 8px;font-weight:600;">[MODO LECTURA]</span>
+            <span class="badge-ok" style="font-size:0.7rem;padding:2px 8px;font-weight:600;">[Modo Lectura]</span>
             <span style="font-family:var(--font-serif);font-size:1.2rem;font-weight:500;color:var(--text-primary);">{normalizar_titulo_display(doc_name)}</span>
             <span class="badge-info" style="font-size:0.68rem;">v{u_ver}</span>
         </div>

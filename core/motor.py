@@ -392,7 +392,7 @@ def generar_respuesta_asistente_local(prompt_usuario: str, doc_store: dict, df_s
         html_out = f"""<div class="bento-card">
     <div class="search-header-row">
         <div><span class="badge-info">[Inventario]</span><span class="search-doc-title" style="margin-left: 8px;">{_e(row['servidor_id'])}</span></div>
-        <div><span class="{st_badge}">[{_e(estado.upper())}]</span><span class="badge-tag" style="margin-left: 6px;">{_e(row['nivel_arquitectura'])}</span></div>
+        <div><span class="{st_badge}">[{_e(estado)}]</span><span class="badge-tag" style="margin-left: 6px;">{_e(row['nivel_arquitectura'])}</span></div>
     </div>
 
 | Dato | Valor |

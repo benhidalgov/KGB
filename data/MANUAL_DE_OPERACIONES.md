@@ -6,7 +6,7 @@
 
 <div class="search-result-card" style="border-left: 4px solid #6366F1; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge-info">[MÓDULO 1 DE 8]</span>
+                <span class="badge-info">[Módulo 1 de 8]</span>
                 <span class="badge-tag">Seguridad y Bóveda</span>
             </div>
             <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Módulo 1: Control de Acceso (RBAC), Sesiones y Bóveda Cifrada (AES-256)</h3>
@@ -46,7 +46,7 @@
 
 <div class="search-result-card" style="border-left: 4px solid #10B981; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge-ok">[MÓDULO 2 DE 8]</span>
+                <span class="badge-ok">[Módulo 2 de 8]</span>
                 <span class="badge-tag">Motor en RAM</span>
             </div>
             <h3 style="margin-top: 8px; margin-bottom: 4px; color: #10B981;">Módulo 2: Búsqueda Textual Instantánea y Algoritmo de Scoring</h3>
@@ -84,7 +84,7 @@
 
 <div class="search-result-card" style="border-left: 4px solid #6366F1; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge-info">[MÓDULO 3 DE 8]</span>
+                <span class="badge-info">[Módulo 3 de 8]</span>
                 <span class="badge-tag">IA Generativa RAG</span>
             </div>
             <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Módulo 3: Asistente Técnico Generativo (Google Gemini 2.5 Flash RAG)</h3>
@@ -123,7 +123,7 @@
 
 <div class="search-result-card" style="border-left: 4px solid #10B981; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge-ok">[MÓDULO 4 DE 8]</span>
+                <span class="badge-ok">[Módulo 4 de 8]</span>
                 <span class="badge-tag">Telemetría y SQL</span>
             </div>
             <h3 style="margin-top: 8px; margin-bottom: 4px; color: #10B981;">Módulo 4: Historial de Mantenimientos y Consola SQL en Memoria</h3>
@@ -167,7 +167,7 @@
 
 <div class="search-result-card" style="border-left: 4px solid #D97706; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge-warn">[MÓDULO 5 DE 8]</span>
+                <span class="badge-warn">[Módulo 5 de 8]</span>
                 <span class="badge-tag">Visor Multimodal</span>
             </div>
             <h3 style="margin-top: 8px; margin-bottom: 4px; color: #D97706;">Módulo 5: Visor Lado a Lado y Renderizado Adaptativo de Documentos</h3>
@@ -204,7 +204,7 @@
 
 <div class="search-result-card" style="border-left: 4px solid #6366F1; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge-info">[MÓDULO 6 DE 8]</span>
+                <span class="badge-info">[Módulo 6 de 8]</span>
                 <span class="badge-tag">Lectura Inmersiva</span>
             </div>
             <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6366F1;">Módulo 6: Modo Lectura con Buscador Interno</h3>
@@ -241,7 +241,7 @@
 
 <div class="search-result-card" style="border-left: 4px solid #6A397B; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge-crit">[MÓDULO 7 DE 8]</span>
+                <span class="badge-crit">[Módulo 7 de 8]</span>
                 <span class="badge-tag">Control de Versiones</span>
             </div>
             <h3 style="margin-top: 8px; margin-bottom: 4px; color: #6A397B;">Módulo 7: Edición Colaborativa, Comparador Diff y Rollback Seguro</h3>
@@ -282,7 +282,7 @@
 
 <div class="search-result-card" style="border-left: 4px solid #10B981; margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge-ok">[MÓDULO 8 DE 8]</span>
+                <span class="badge-ok">[Módulo 8 de 8]</span>
                 <span class="badge-tag">Ingesta y Plantillas</span>
             </div>
             <h3 style="margin-top: 8px; margin-bottom: 4px; color: #10B981;">Módulo 8: Ingesta Masiva de Archivos ZIP y Generación de Runbooks</h3>

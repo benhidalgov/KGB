@@ -31,7 +31,7 @@ from core.vault import (
 )
 
 
-def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> str:
+def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
     """Renderiza el panel lateral: navegación principal por módulos, usuario, ingesta y bóveda."""
     with st.sidebar:
         # 1. Selector de Modo Claro / Modo Oscuro
@@ -68,9 +68,9 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                 st.markdown(
                     f'<span style="display:inline-flex; align-items:center; gap:8px; line-height:1;">'
                     f'<span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:var(--bg-surface-subtle); border:1px solid var(--border-subtle); color:var(--text-secondary); flex-shrink:0;">'
-                    f'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+                    f'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
                     f'</span>'
-                    f'<span style="font-family:var(--font-mono); font-size:0.82rem; font-weight:600; color:var(--text-primary); letter-spacing:-0.01em;">{user_act.get("username", "usuario")}</span>'
+                    f'<span style="font-family:var(--font-mono); font-size:0.82rem; font-weight:600; color:var(--text-primary);">{user_act.get("username", "usuario")}</span>'
                     f'</span>',
                     unsafe_allow_html=True
                 )
@@ -81,12 +81,10 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
         # 3. Navegación Principal (Módulos de Trabajo)
-        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin-bottom:6px;">Menú</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.7rem; font-weight:600; opacity:0.65; margin-bottom:6px;">Menú</div>', unsafe_allow_html=True)
 
-        cant_docs = len(doc_store)
-        # Opciones estables: si el contador viaja en la etiqueta, al cambiar
-        # (subida, recarga) el valor guardado deja de existir y Streamlit
-        # resetea la radio a la primera opción, arrastrando al usuario de módulo.
+        # Opciones estables: la etiqueta es el valor guardado, para que
+        # Streamlit no resetee la radio si la etiqueta deja de existir.
         opciones_nav = [
             "Consultas y Búsqueda",
             "Arquitectura",
@@ -95,7 +93,6 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
             "Plantillas y Runbooks",
             "Modo Lectura",
         ]
-        contadores_nav = {"Historial de Mantenimientos": total_srvs, "Documentación Técnica": cant_docs}
 
         if st.session_state.pop("_ir_consola", False):
             st.session_state["nav_seccion_activa"] = opciones_nav[0]
@@ -103,12 +100,11 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
         seccion_sel = st.radio(
             "Navegación Principal",
             options=opciones_nav,
-            format_func=lambda o: f"{o} ({contadores_nav[o]})" if o in contadores_nav else o,
             key="nav_seccion_activa",
             label_visibility="collapsed"
         )
 
-        st.markdown('<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; opacity:0.65; margin:14px 0 6px 0;">Herramientas</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.7rem; font-weight:600; opacity:0.65; margin:14px 0 6px 0;">Herramientas</div>', unsafe_allow_html=True)
 
         # 4. Ingesta de Archivos
         st.session_state.setdefault("uploader_key_ver", 0)
@@ -266,7 +262,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict, total_srvs: int = 0) -> 
                     cfg_cnt = sum(1 for s in sec_list if s["estado"] == "[CONFIGURADO]")
                     st.markdown(f"<div style='font-size:0.72rem;margin-bottom:8px;opacity:0.8;'>Estado: <b>{cfg_cnt} configurada(s)</b>.</div>", unsafe_allow_html=True)
                     for s in sec_list:
-                        badge_s = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[CONFIGURADO]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[NO CONFIGURADO]</span>'
+                        badge_s = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[Configurado]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[No configurado]</span>'
                         prev_s = f"({s['vista_previa']})" if s['vista_previa'] != '-' else ""
                         st.markdown(f"<div style='font-size:0.72rem;padding:3px 0;display:flex;justify-content:space-between;align-items:center;'><span style='font-family:monospace;font-weight:600;'>{s['clave']}</span>{badge_s}</div><div style='font-size:0.64rem;opacity:0.6;margin-bottom:4px;'>Origen: {s['origen']} {prev_s}</div>", unsafe_allow_html=True)
 

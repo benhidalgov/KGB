@@ -46,7 +46,7 @@ def renderizar_modulo_consultas(doc_store: dict):
         if not active_duck_term:
             st.markdown("""
             <div class="empty-state-container">
-                <div class="empty-state-console-icon">&gt;_ Buscador :1</div>
+                <div class="empty-state-console-icon">&gt;_ Buscador</div>
                 <div class="empty-state-title">Búsqueda de documentos</div>
                 <div class="empty-state-subtitle">Escribe un término para buscar entre tus documentos técnicos.</div>
             </div>""", unsafe_allow_html=True)

@@ -405,7 +405,7 @@ def renderizar_pantalla_login():
                 <div>
                     <span class="search-doc-title" style="margin-left: 8px;">Consola de Infraestructura y Operaciones</span>
                 </div>
-                <span class="badge-info">[INICIO]</span>
+                <span class="badge-info">[Inicio]</span>
             </div>
             <div style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 6px;">
                 Inicia sesión para consultar la base técnica y el inventario operativo.
@@ -434,7 +434,7 @@ def renderizar_pantalla_login():
         with st.container(border=True):
             st.markdown("""
             <div style="margin-bottom: 12px;">
-                <span class="badge-info">[ACCESO]</span>
+                <span class="badge-info">[Acceso]</span>
                 <div style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 500; margin-top: 8px; color: var(--text-primary);">Inicio de sesión</div>
                 <div style="font-size: 0.82rem; color: var(--text-secondary);">Credenciales autorizadas de infraestructura</div>
             </div>

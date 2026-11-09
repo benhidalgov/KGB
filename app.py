@@ -176,9 +176,8 @@ if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_s
 user_act = obtener_usuario_actual()
 mtime_csv = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
 df_mantenimientos_cache = obtener_dataframe_mantenimientos(mtime_csv)
-total_srvs = len(df_mantenimientos_cache)
 
-seccion_activa = renderizar_sidebar(user_act, st.session_state.doc_store, total_srvs)
+seccion_activa = renderizar_sidebar(user_act, st.session_state.doc_store)
 
 # -------------------------------------------------------------
 # 5. ENRUTAMIENTO DEL PANEL PRINCIPAL (ESPACIO 100% ENFOCADO)
