@@ -31,6 +31,12 @@ from core.vault import (
     ErrorBoveda,
 )
 
+# Extensiones que acepta la ingesta directa (antes el `type=` del widget). El
+# widget ya no lo declara: esa validación corre ANTES del script dentro de
+# Streamlit y un archivo con otra extensión reventaba el run con
+# StreamlitAPIException sin capturar. El mismo filtro vive ahora en el loop.
+EXT_SUBIDAS = (".pdf", ".docx", ".xlsx", ".csv", ".txt", ".md", ".pptx", ".png", ".jpg", ".jpeg", ".svg", ".webp", ".zip")
+
 
 def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
     """Renderiza el panel lateral: navegación principal por módulos, usuario, ingesta y bóveda."""
@@ -113,7 +119,6 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
             st.markdown('<div class="sidebar-format-tags" style="margin-bottom:8px;"><span class="sidebar-format-tag">[ZIP]</span><span class="sidebar-format-tag">[PDF]</span><span class="sidebar-format-tag">[DOCX]</span><span class="sidebar-format-tag">[XLSX]</span><span class="sidebar-format-tag">[DIAGRAMAS]</span><span class="sidebar-format-tag">[MD]</span></div>', unsafe_allow_html=True)
             uploaded_files = st.file_uploader(
                 "Arrastra archivos o un paquete .zip:",
-                type=["pdf", "docx", "xlsx", "csv", "txt", "md", "pptx", "png", "jpg", "jpeg", "svg", "webp", "zip"],
                 accept_multiple_files=True,
                 label_visibility="collapsed",
                 key=f"uploader_files_{st.session_state.uploader_key_ver}"
@@ -162,6 +167,9 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                         for uf in uploaded_files:
                             c_name = normalizar_nombre_archivo(uf.name)
                             ext_u = os.path.splitext(c_name)[1].lower()
+                            if ext_u not in EXT_SUBIDAS:
+                                st.warning(f"Se omitió '{c_name}': extensión no soportada.")
+                                continue
                             if uf.size and uf.size > MAX_SUBIDA_BYTES:
                                 st.warning(f"Se omitió '{c_name}': excede {MAX_SUBIDA_BYTES // (1024 * 1024)} MB.")
                                 continue
@@ -277,7 +285,11 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                     col_vs, col_vd = st.columns([2, 1])
                     with col_vs:
                         if st.button("Guardar Llave", width="stretch", type="primary", key="sb_btn_guardar_key"):
-                            if k_final and v_val:
+                            if not tiene_permiso("puede_editar_vault"):
+                                st.error("Tu rol no permite administrar credenciales.")
+                            elif not k_final.strip() or not v_val.strip():
+                                st.error("Escribe un nombre y un valor.")
+                            else:
                                 try:
                                     if guardar_secreto(k_final.strip().upper(), v_val.strip()):
                                         st.toast(f"Clave '{k_final.strip().upper()}' guardada.")
@@ -287,11 +299,11 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                                         st.error("No se pudo guardar la clave.")
                                 except ErrorBoveda as eb:
                                     st.error(f"Error al guardar: {eb}")
-                            else:
-                                st.error("Escribe un nombre y un valor.")
                     with col_vd:
                         if st.button("Eliminar", width="stretch", key="sb_btn_eliminar_key", help="Elimina la clave de la bóveda"):
-                            if k_final and k_final != "OTRA_CLAVE_PERSONALIZADA":
+                            if not tiene_permiso("puede_editar_vault"):
+                                st.error("Tu rol no permite administrar credenciales.")
+                            elif k_final and k_final != "OTRA_CLAVE_PERSONALIZADA":
                                 try:
                                     if eliminar_secreto(k_final.strip().upper()):
                                         st.toast(f"Clave '{k_final.strip().upper()}' eliminada.")

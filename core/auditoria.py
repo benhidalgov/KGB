@@ -177,6 +177,11 @@ def generar_diff_texto(texto_ant: str, texto_nuevo: str, label_ant: str = "Versi
 @_versionado_bloqueado
 def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: str, autor: str = "Sistema", comentario: str = "Versión base inicial") -> list:
     """Inicializa la versión v1 si no existe registro histórico previo con su firma SHA-256."""
+    # Import local: core.auth importa este módulo arriba (evita ciclo). Una sesión
+    # autenticada sin puede_editar_docs no debe escribir al sólo consultar un doc.
+    from core.auth import tiene_permiso
+    if st.session_state.get("auth_activa") and not tiene_permiso("puede_editar_docs"):
+        return obtener_historial_versiones(doc_name)
     doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
     if not os.path.exists(os.path.join(doc_hist_dir, "metadata.json")):
         os.makedirs(doc_hist_dir, exist_ok=True)

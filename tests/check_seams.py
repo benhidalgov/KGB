@@ -668,6 +668,136 @@ def check_plantillas_permiso_y_escapes():
         assert marca in inspect.getsource(mod), f"falta escape de usuario en {mod.__name__}: {marca}"
 
 
+def _sesion_app(rol: str) -> str:
+    """Precarga de sesión autenticada para AppTest (patrón de check_seams)."""
+    return (
+        "import time\n"
+        f"st.session_state['usuario_actual'] = {{'username': 'prueba', 'rol': {rol!r}, "
+        f"'nombre': 'Prueba', 'activo': True}}\n"
+        "st.session_state['auth_activa'] = True\n"
+        "st.session_state['auth_ultima_actividad'] = time.time()\n"
+        "st.session_state['auth_chequeo'] = time.time()\n"
+    )
+
+
+def check_ronda_pares_escrituras():
+    """Medias de la ronda de pares: un rol sin puede_editar_docs no escribe
+    historial al consultar un doc ni activa plantillas con [+ Usar]."""
+    with tempfile.TemporaryDirectory() as td:
+        hist_md = os.path.join(td, "history", "consulta_aud.md")
+        at = _app_test(
+            "import os\n"
+            "import streamlit as st\n"
+            "import core.auditoria as aud\n"
+            f"aud.HISTORY_DIR = {os.path.join(td, 'history')!r}\n"
+            f"aud.DOCS_DIR = {os.path.join(td, 'docs')!r}\n"
+            f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
+            "aud._obtener_historial_versiones_cached.cache_clear()\n"
+            "h1 = aud.inicializar_version_inicial_si_no_existe('sin_sesion.md', 'hola')\n"
+            "assert len(h1) == 1, h1\n"
+            + _sesion_app("Auditor") +
+            "h2 = aud.inicializar_version_inicial_si_no_existe('consulta_aud.md', 'hola')\n"
+            "assert h2 == [], f'el Auditor no debe recibir historial que no existe: {h2}'\n"
+            f"assert not os.path.exists({hist_md!r}), 'consultar no debe escribir historial'\n"
+        )
+        at.run()
+        assert not at.exception, f"falla la inicializacion condicionada: {at.exception}"
+
+    with tempfile.TemporaryDirectory() as td2:
+        custom = os.path.join(td2, "plantillas_custom.json")
+        at = _app_test(
+            "import time\n"
+            "import streamlit as st\n"
+            "import core.ui_plantillas as pl\n"
+            "import core.plantillas as plant\n"
+            "import core.auditoria as aud\n"
+            "import core.tags as tg\n"
+            f"pl.DOCS_DIR = {os.path.join(td2, 'docs')!r}\n"
+            f"plant.PLANTILLAS_CUSTOM_PATH = {custom!r}\n"
+            f"aud.HISTORY_DIR = {os.path.join(td2, 'history')!r}\n"
+            f"aud.DOCS_DIR = {os.path.join(td2, 'docs')!r}\n"
+            f"aud.AUDIT_LOG_PATH = {os.path.join(td2, 'audit_log.json')!r}\n"
+            f"tg.CATEGORIAS_PATH = {os.path.join(td2, 'categorias.json')!r}\n"
+            + _sesion_app("Auditor") +
+            "pl.renderizar_pestana_plantillas({})\n"
+        )
+        at.run()
+        assert not at.exception, f"el render de plantillas falló: {at.exception}"
+        at.button(key="btn_activar_plantilla_base").click().run()
+        assert not at.exception, f"[+ Usar] falló con excepción: {at.exception}"
+        assert not os.path.exists(custom), "el rol Auditor escribió plantillas_custom.json"
+        assert any("no permite editar documentos" in e.value for e in at.error), \
+            "[+ Usar] debe cortar con el mensaje de permiso"
+
+
+def check_ronda_pares_sidebar():
+    """Medias de la ronda de pares: una extensión ajena no revienta el run ni se
+    ingestea, la bóveda rechaza valor en blanco y sus callbacks exigen
+    puede_editar_vault (clave que antes no consultaba nadie)."""
+    import inspect
+    import core.ui_sidebar as ui_sb
+
+    # (a) "../../x.py" sin `type=` en el widget: antes reventaba el run con
+    # StreamlitAPIException ANTES de ejecutar el script (no alcanza ningún try).
+    with tempfile.TemporaryDirectory() as td:
+        dirs = {n: os.path.join(td, n) for n in ("docs", "assets", "orig", "inbox")}
+        for d in dirs.values():
+            os.makedirs(d)
+        at = _app_test(
+            "import streamlit as st\n"
+            "import core.procesador as proc\n"
+            "import core.tags as tg\n"
+            "import core.ui_sidebar as sb\n"
+            f"proc.DOCS_DIR = {dirs['docs']!r}\n"
+            f"proc.ASSETS_DIR = {dirs['assets']!r}\n"
+            f"proc.ORIGINALS_DIR = {dirs['orig']!r}\n"
+            f"proc.INBOX_DIR = {dirs['inbox']!r}\n"
+            f"tg.CATEGORIAS_PATH = {os.path.join(td, 'categorias.json')!r}\n"
+            "sb.listar_secretos_disponibles = lambda: []\n"
+            + _sesion_app("Administrador") +
+            "sb.renderizar_sidebar({'username': 'admin', 'rol': 'Administrador', "
+            "'nombre': 'Admin'}, {})\n"
+        )
+        at.run()
+        assert not at.exception, at.exception
+        at.file_uploader(key="uploader_files_0").set_value(
+            [("../../x.py", b"print('no debe salir')\n", "text/x-python")])
+        at.run()
+        assert not at.exception, f"una extensión ajena rompió el run: {at.exception}"
+        at.text_input(key="sb_nueva_cat_ini_0").set_value("CatPar")
+        at.button(key="btn_confirmar_ingesta_tags").click().run()
+        assert not at.exception, f"la ingesta falló con excepción: {at.exception}"
+        assert not any(os.listdir(d) for d in dirs.values()), \
+            "un archivo con extensión ajena no debe ingestarse"
+
+    # (b) Valor en blanco: sin la validación se guardaba "" con toast de éxito.
+    with tempfile.TemporaryDirectory() as td2:
+        at = _app_test(
+            "import streamlit as st\n"
+            "import core.ui_sidebar as sb\n"
+            "sb._prueba_llamadas = []\n"
+            "sb.listar_secretos_disponibles = lambda: [{'clave': 'API_KEY', "
+            "'estado': '[CONFIGURADO]', 'vista_previa': '***', 'origen': 'env'}]\n"
+            "sb.guardar_secreto = lambda k, v: (sb._prueba_llamadas.append((k, v)), True)[1]\n"
+            "sb.eliminar_secreto = lambda k: True\n"
+            + _sesion_app("Administrador") +
+            "sb.renderizar_sidebar({'username': 'admin', 'rol': 'Administrador', "
+            "'nombre': 'Admin'}, {})\n"
+        )
+        at.run()
+        assert not at.exception, at.exception
+        at.text_input(key="sb_vault_val_0").set_value("   ")
+        at.button(key="sb_btn_guardar_key").click().run()
+        assert not at.exception, at.exception
+        assert ui_sb._prueba_llamadas == [], \
+            f"un valor en blanco no debe guardarse: {ui_sb._prueba_llamadas}"
+        assert any("Escribe un nombre y un valor" in e.value for e in at.error), \
+            "la bóveda debe rechazar el valor en blanco con mensaje claro"
+
+    assert inspect.getsource(ui_sb).count('tiene_permiso("puede_editar_vault")') >= 2, \
+        "los callbacks de bóveda deben revalidar puede_editar_vault"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -689,4 +819,6 @@ if __name__ == "__main__":
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
     check_plantillas_permiso_y_escapes()
+    check_ronda_pares_escrituras()
+    check_ronda_pares_sidebar()
     print("[OK] check_seams")

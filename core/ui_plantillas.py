@@ -51,9 +51,12 @@ def renderizar_pestana_plantillas(doc_store: dict):
                 st.write("")
                 st.write("")
                 if st.button("[+ Usar]", key="btn_activar_plantilla_base", width="stretch"):
-                    guardar_plantilla_personalizada(base_act, f"Plantilla activada: {base_act}", ["criterio", "pasos", "verif"])
-                    st.toast(f"Plantilla '{base_act}' activada.")
-                    st.rerun()
+                    if not tiene_permiso("puede_editar_docs"):
+                        st.error("Tu rol no permite editar documentos.")
+                    else:
+                        guardar_plantilla_personalizada(base_act, f"Plantilla activada: {base_act}", ["criterio", "pasos", "verif"])
+                        st.toast(f"Plantilla '{base_act}' activada.")
+                        st.rerun()
 
         col_g1, col_g2 = st.columns(2)
         with col_g1:
