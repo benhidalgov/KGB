@@ -163,11 +163,16 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                 if btn_confirmar_subida:
                     if not tiene_permiso("puede_ingestar_archivos"):
                         st.error("Tu rol no permite subir archivos.")
-                    elif not cat_seleccionadas:
+                    # Un lote sólo de ZIP no exige categoría elegida: cada paquete
+                    # aporta la suya, derivada del nombre de la carpeta comprimida.
+                    elif not cat_seleccionadas and any(
+                            os.path.splitext(normalizar_nombre_archivo(uf.name))[1].lower() != ".zip"
+                            for uf in uploaded_files):
                         st.warning("Elige una categoría existente o escribe una nueva para continuar.")
                     else:
                         autor_act = f"{user_act.get('username', 'Técnico')} ({user_act.get('rol', 'Operador')})"
                         proc_cnt, new_cnt, upd_cnt = 0, 0, 0
+                        cats_lote = list(cat_seleccionadas)
                         for uf in uploaded_files:
                             c_name = normalizar_nombre_archivo(uf.name)
                             ext_u = os.path.splitext(c_name)[1].lower()
@@ -180,6 +185,13 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                             buf = uf.getbuffer().tobytes()
 
                             if ext_u == ".zip":
+                                # El nombre original del paquete (antes del snake_case)
+                                # se usa como categoría de sus entradas: _limpiar_tags
+                                # lo estandariza y lo registra si aún no existe.
+                                cat_zip = os.path.splitext(os.path.basename(uf.name))[0].strip()
+                                tags_zip = cat_seleccionadas + ([cat_zip] if cat_zip else [])
+                                if cat_zip and cat_zip not in cats_lote:
+                                    cats_lote.append(cat_zip)
                                 try:
                                     with zipfile.ZipFile(io.BytesIO(buf)) as z:
                                         zip_cnt = 0
@@ -208,7 +220,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                                             st_res, _ = procesar_e_ingestar_binario(
                                                 in_cl, datos, doc_store,
                                                 autor=autor_act, origen_detalle=f"Lote ZIP: {c_name}",
-                                                tags=cat_seleccionadas
+                                                tags=tags_zip
                                             )
                                             zip_cnt += 1
                                             proc_cnt += 1
@@ -247,7 +259,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
 
                         limpiar_cache_consultas()
                         st.session_state["uploader_key_ver"] += 1
-                        st.toast(f"{proc_cnt} archivo(s) clasificados en: {', '.join(cat_seleccionadas)}")
+                        st.toast(f"{proc_cnt} archivo(s) clasificados en: {', '.join(cats_lote)}")
                         st.rerun()
         # 5. Herramientas del Sistema y Bóveda
         with st.expander("Herramientas y Bóveda", expanded=False):

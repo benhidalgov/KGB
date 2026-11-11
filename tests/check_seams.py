@@ -913,6 +913,61 @@ def check_ronda_pares_bajas():
     assert "Ingesta" in desc_op, "la descripción debe mencionar la ingesta que sí puede"
 
 
+def check_ingesta_zip_crea_categoria():
+    """Al subir sólo un ZIP, el nombre del paquete crea la categoría y se asigna
+    a sus entradas; el lote sin categoría elegida no debe quedar bloqueado."""
+    import io
+    import zipfile as zf
+
+    buf = io.BytesIO()
+    with zf.ZipFile(buf, "w") as z:
+        z.writestr("nota_carpeta.md", "# Nota de prueba\n\nContenido de la carpeta.\n")
+    zip_bytes = buf.getvalue()
+
+    with tempfile.TemporaryDirectory() as td:
+        dirs = {n: os.path.join(td, n) for n in ("docs", "assets", "orig", "inbox")}
+        for d in dirs.values():
+            os.makedirs(d)
+        cats_path = os.path.join(td, "categorias.json")
+        at = _app_test(
+            "import streamlit as st\n"
+            "import core.procesador as proc\n"
+            "import core.auditoria as aud\n"
+            "import core.tags as tg\n"
+            "import core.ui_sidebar as sb\n"
+            f"proc.DOCS_DIR = {dirs['docs']!r}\n"
+            f"proc.ASSETS_DIR = {dirs['assets']!r}\n"
+            f"proc.ORIGINALS_DIR = {dirs['orig']!r}\n"
+            f"proc.INBOX_DIR = {dirs['inbox']!r}\n"
+            f"aud.HISTORY_DIR = {os.path.join(td, 'history')!r}\n"
+            f"aud.DOCS_DIR = {dirs['docs']!r}\n"
+            f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
+            f"tg.CATEGORIAS_PATH = {cats_path!r}\n"
+            "sb.listar_secretos_disponibles = lambda: []\n"
+            + _sesion_app("Administrador") +
+            "sb.renderizar_sidebar({'username': 'admin', 'rol': 'Administrador', "
+            "'nombre': 'Admin'}, {})\n"
+        )
+        at.run()
+        assert not at.exception, at.exception
+        at.file_uploader(key="uploader_files_0").set_value(
+            [("Carpeta Prueba.zip", zip_bytes, "application/zip")])
+        at.run()
+        assert not at.exception, at.exception
+        # Sin categoría elegida: el lote sólo de ZIP pasa la validación.
+        at.button(key="btn_confirmar_ingesta_tags").click().run()
+        assert not at.exception, f"la ingesta del ZIP falló: {at.exception}"
+
+        assert os.listdir(dirs["docs"]), "la entrada del ZIP debe ingestarse"
+        with open(cats_path, encoding="utf-8") as f:
+            data = json.load(f)
+        assert "Carpeta Prueba" in data["categorias"], \
+            f"el nombre del ZIP debe crear la categoría: {data['categorias']}"
+        docs_cat = data.get("documentos", {})
+        assert any("Carpeta Prueba" in v for v in docs_cat.values()), \
+            f"las entradas del ZIP deben quedar clasificadas: {docs_cat}"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -937,4 +992,5 @@ if __name__ == "__main__":
     check_ronda_pares_escrituras()
     check_ronda_pares_sidebar()
     check_ronda_pares_bajas()
+    check_ingesta_zip_crea_categoria()
     print("[OK] check_seams")
