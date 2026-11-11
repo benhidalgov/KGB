@@ -798,6 +798,121 @@ def check_ronda_pares_sidebar():
         "los callbacks de bóveda deben revalidar puede_editar_vault"
 
 
+def check_ronda_pares_bajas():
+    """Bajas de la ronda de pares: sin permiso no se renderizan controles de
+    edición/ingesta, el Registro de Actividad exige puede_ver_auditoria, el
+    rollback sólo aparece con puede_rollback y el login distingue cuenta
+    bloqueada de credenciales inválidas."""
+    import inspect
+    import core.ui_documentos as ui_doc
+
+    # (a)+(d) Editor y Registro de Actividad por rol, sobre el mismo historial.
+    with tempfile.TemporaryDirectory() as td:
+        os.makedirs(os.path.join(td, "history"))
+        docs = os.path.join(td, "docs")
+        os.makedirs(docs)
+
+        def _docs_app(rol):
+            return _app_test(
+                "import os\n"
+                "import streamlit as st\n"
+                "import core.tags as tags\n"
+                "import core.auditoria as aud\n"
+                f"tags.CATEGORIAS_PATH = {os.path.join(td, 'categorias.json')!r}\n"
+                f"aud.HISTORY_DIR = {os.path.join(td, 'history')!r}\n"
+                f"aud.DOCS_DIR = {docs!r}\n"
+                f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
+                "aud._obtener_historial_versiones_cached.cache_clear()\n"
+                "aud._obtener_todos_los_eventos_auditoria_cached.cache_clear()\n"
+                "st.session_state.setdefault('historial_busquedas', [])\n"
+                + _sesion_app(rol) +
+                "from core.ui_documentos import renderizar_pestana_documentacion\n"
+                "renderizar_pestana_documentacion({'a.md': 'contenido de prueba'})\n"
+            )
+
+        # Operador: sí ve editor, no ve Registro de Actividad (y su init crea
+        # historial + evento que luego consumirá la pasada del Auditor).
+        at = _docs_app("Operador")
+        at.run()
+        at.run()
+        assert not at.exception, f"render Operador: {at.exception}"
+        at.text_area(key="textarea_edit_a.md")
+        assert not any(cb.key == "chk_aud_a.md" for cb in at.checkbox), \
+            "el Operador no debe ver el Registro de Actividad"
+
+        # Auditor: nada editable y el Registro de Actividad sí está disponible.
+        at = _docs_app("Auditor")
+        at.run()
+        at.run()
+        assert not at.exception, f"render Auditor: {at.exception}"
+        assert any("no permite editar documentos" in i.value for i in at.info), \
+            "la pestaña de edición debe mostrar el aviso de permiso"
+        assert not any(w.key == "textarea_edit_a.md" for w in at.text_area), \
+            "el Auditor no debe recibir el textarea del editor"
+        assert not any("Guardar Versión" in b.label for b in at.button), \
+            "el Auditor no debe ver el botón de guardar versión"
+        at.checkbox(key="chk_aud_a.md")
+
+    # (b) El bloque de rollback no se renderiza sin puede_rollback.
+    assert 'it_sel["version"] != u_ver and tiene_permiso("puede_rollback")' in inspect.getsource(ui_doc), \
+        "la sección de rollback debe exigir puede_rollback al renderizar"
+
+    # (c) Sidebar: el Auditor no ve el uploader, sólo el aviso de permiso.
+    with tempfile.TemporaryDirectory() as td2:
+        at = _app_test(
+            "import streamlit as st\n"
+            "import core.ui_sidebar as sb\n"
+            + _sesion_app("Auditor") +
+            "sb.renderizar_sidebar({'username': 'aud', 'rol': 'Auditor', "
+            "'nombre': 'Auditor'}, {})\n"
+        )
+        at.run()
+        assert not at.exception, f"sidebar Auditor: {at.exception}"
+        assert len(at.file_uploader) == 0, "el Auditor no debe ver el uploader"
+        assert any("no permite subir archivos" in c.value for c in at.caption), \
+            "el expander de ingesta debe explicar el permiso"
+
+    # (e) Login: malas credenciales → mensaje genérico; bloqueo → aviso explícito.
+    auth._INTENTOS_FALLIDOS.clear()
+    with tempfile.TemporaryDirectory() as td3:
+        def _login_app(bloqueado):
+            return _app_test(
+                "import streamlit as st\n"
+                "import core.auth as auth\n"
+                "import core.auditoria as aud\n"
+                f"aud.AUDIT_LOG_PATH = {os.path.join(td3, 'audit_log.json')!r}\n"
+                + (("for _ in range(auth._MAX_INTENTOS):\n"
+                    "    auth._registrar_fallo(auth._clave_intentos('op', auth._origen_actual()))\n")
+                   if bloqueado else "")
+                + "auth.renderizar_pantalla_login()\n"
+            )
+
+        at = _login_app(False)
+        at.run()
+        assert not at.exception, f"login: {at.exception}"
+        at.text_input(key="login_username_val").set_value("op")
+        at.text_input(key="login_password_val").set_value("clave_mala")
+        next(b for b in at.button if b.label == "Iniciar Sesión").click().run()
+        assert not at.exception, f"login fallido: {at.exception}"
+        assert any("Usuario o contraseña incorrectos" in e.value for e in at.error), \
+            "un intento normal debe dar el mensaje genérico"
+
+        at = _login_app(True)
+        at.run()
+        at.text_input(key="login_username_val").set_value("op")
+        at.text_input(key="login_password_val").set_value("la_correcta")
+        next(b for b in at.button if b.label == "Iniciar Sesión").click().run()
+        assert not at.exception, f"login bloqueado: {at.exception}"
+        assert any("bloqueada" in e.value for e in at.error), \
+            "una cuenta bloqueada debe avisarlo en lugar de fallar en silencio"
+    auth._INTENTOS_FALLIDOS.clear()
+
+    # (f) La descripción del Operador refleja sus permisos reales.
+    desc_op = auth.ROLES_PERMISOS["Operador"]["descripcion"]
+    assert "Registro de Incidencias" not in desc_op, "la descripción del Operador está desalineada"
+    assert "Ingesta" in desc_op, "la descripción debe mencionar la ingesta que sí puede"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -821,4 +936,5 @@ if __name__ == "__main__":
     check_plantillas_permiso_y_escapes()
     check_ronda_pares_escrituras()
     check_ronda_pares_sidebar()
+    check_ronda_pares_bajas()
     print("[OK] check_seams")

@@ -245,7 +245,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 with col_hv2:
                     st.caption(f"Guardado el **{it_sel['timestamp']}** por **{it_sel['autor']}**.")
 
-                if it_sel["version"] != u_ver:
+                if it_sel["version"] != u_ver and tiene_permiso("puede_rollback"):
                     st.markdown("---")
                     st.markdown(f"##### Volver a la Versión v{it_sel['version']}")
                     col_ra, col_rm = st.columns([1, 2])
@@ -291,12 +291,13 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             v_comp = st.selectbox("Versión Comparada:", n_vers, index=len(n_vers)-1, key=f"diff_comp_{doc_sel}")
                         st.code(generar_diff_texto(obtener_contenido_version(doc_sel, map_v[v_base]["archivo_snapshot"]), obtener_contenido_version(doc_sel, map_v[v_comp]["archivo_snapshot"]), v_base, v_comp), language="diff")
 
-                with st.expander("Registro de Actividad", expanded=False):
-                    evs = obtener_todos_los_eventos_auditoria()
-                    if evs:
-                        df_aud = pd.DataFrame(evs)
-                        df_aud_disp = df_aud[df_aud["documento"] == doc_sel] if st.checkbox("Filtrar solo este documento", value=True, key=f"chk_aud_{doc_sel}") else df_aud
-                        st.dataframe(df_aud_disp.rename(columns={"timestamp": "Timestamp", "documento": "Documento", "accion": "Acción", "version_anterior": "Versión Ant.", "version_nueva": "Versión Nueva", "editor_responsable": "Editor", "motivo_justificacion": "Motivo"}), width="stretch", hide_index=True)
+                if tiene_permiso("puede_ver_auditoria"):
+                    with st.expander("Registro de Actividad", expanded=False):
+                        evs = obtener_todos_los_eventos_auditoria()
+                        if evs:
+                            df_aud = pd.DataFrame(evs)
+                            df_aud_disp = df_aud[df_aud["documento"] == doc_sel] if st.checkbox("Filtrar solo este documento", value=True, key=f"chk_aud_{doc_sel}") else df_aud
+                            st.dataframe(df_aud_disp.rename(columns={"timestamp": "Timestamp", "documento": "Documento", "accion": "Acción", "version_anterior": "Versión Ant.", "version_nueva": "Versión Nueva", "editor_responsable": "Editor", "motivo_justificacion": "Motivo"}), width="stretch", hide_index=True)
 
     # -------------------------------------------------------------
     # SUBPESTAÑA 2: EDITAR DOCUMENTO ACTIVO
@@ -307,7 +308,9 @@ def renderizar_pestana_documentacion(doc_store: dict):
         # validación el editor seguía abriendo el último documento filtrado fuera.
         if doc_act_edit not in docs_disp:
             doc_act_edit = docs_disp[0] if docs_disp else None
-        if not doc_act_edit:
+        if not tiene_permiso("puede_editar_docs"):
+            st.info("Tu rol no permite editar documentos.")
+        elif not doc_act_edit:
             st.info("Selecciona un documento en 'Ver Documentos' para editarlo.")
         else:
             doc_cont_e = doc_store.get(doc_act_edit, "")

@@ -84,15 +84,15 @@ def _obtener_password_maestra(usuario: str) -> str:
 ROLES_PERMISOS = {
     "Administrador": {
         "descripcion": "Acceso total: Consultas al Asistente, Búsqueda DuckDB, Ingesta Batch, Gestión de Bóveda y Auditoría.",
-        "puede_ver_vault": True, "puede_editar_vault": True, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": True, "puede_ejecutar_sql": True,
+        "puede_ver_vault": True, "puede_editar_vault": True, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": True, "puede_ejecutar_sql": True, "puede_ver_auditoria": True,
     },
     "Operador": {
-        "descripcion": "Acceso técnico: Consultas al Asistente, Búsqueda DuckDB, Visor Lado a Lado y Registro de Incidencias.",
-        "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": False,
+        "descripcion": "Acceso técnico: Consultas al Asistente, Búsqueda DuckDB, Ingesta Batch y edición de documentos.",
+        "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": True, "puede_editar_docs": True, "puede_rollback": False, "puede_ver_auditoria": False,
     },
     "Auditor": {
         "descripcion": "Acceso de auditoría: Búsqueda de documentos, visualización de CMDB y verificación de eventos.",
-        "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": False, "puede_editar_docs": False, "puede_rollback": False,
+        "puede_ver_vault": False, "puede_editar_vault": False, "puede_ingestar_archivos": False, "puede_editar_docs": False, "puede_rollback": False, "puede_ver_auditoria": True,
     }
 }
 
@@ -190,6 +190,12 @@ def _origen_actual() -> str:
         return ""
 
 
+def _clave_intentos(username: str, origen: str) -> str:
+    """Identidad de bloqueo (usuario normalizado + origen). Compartida entre la
+    verificación y el login: el aviso de cuenta bloqueada debe apuntar al mismo candado."""
+    return f"{username.strip().lower()}|{origen}"
+
+
 def verificar_credenciales(username_input: str, password_input: str, origen: str = "") -> Optional[Dict[str, Any]]:
     """Valida el usuario y contraseña contra PostgreSQL, almacén local o secrets.
 
@@ -197,7 +203,7 @@ def verificar_credenciales(username_input: str, password_input: str, origen: str
     fuera al usuario legitimo que entra desde otra.
     """
     u, p = username_input.strip().lower(), password_input.strip()
-    clave = f"{u}|{origen}"
+    clave = _clave_intentos(username_input, origen)
     if not u or not p or _esta_bloqueado(clave):
         return None
 
@@ -472,7 +478,10 @@ def renderizar_pantalla_login():
                     st.rerun()
                 else:
                     registrar_evento_auditoria(doc_name="autenticacion", accion="LOGIN_FALLIDO", version_ant=1, version_nueva=1, autor=username_in.strip() or "desconocido", motivo="Credenciales inválidas.")
-                    st.error("Usuario o contraseña incorrectos.")
+                    if username_in.strip() and _esta_bloqueado(_clave_intentos(username_in, _origen_actual())):
+                        st.error("Cuenta bloqueada por intentos fallidos. Espera unos minutos y vuelve a intentar.")
+                    else:
+                        st.error("Usuario o contraseña incorrectos.")
 
     with col_manual:
         with st.container(border=True):

@@ -116,13 +116,17 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
         # 4. Ingesta de Archivos
         st.session_state.setdefault("uploader_key_ver", 0)
         with st.expander("Subir Archivos", expanded=False):
-            st.markdown('<div class="sidebar-format-tags" style="margin-bottom:8px;"><span class="sidebar-format-tag">[ZIP]</span><span class="sidebar-format-tag">[PDF]</span><span class="sidebar-format-tag">[DOCX]</span><span class="sidebar-format-tag">[XLSX]</span><span class="sidebar-format-tag">[DIAGRAMAS]</span><span class="sidebar-format-tag">[MD]</span></div>', unsafe_allow_html=True)
-            uploaded_files = st.file_uploader(
-                "Arrastra archivos o un paquete .zip:",
-                accept_multiple_files=True,
-                label_visibility="collapsed",
-                key=f"uploader_files_{st.session_state.uploader_key_ver}"
-            )
+            if not tiene_permiso("puede_ingestar_archivos"):
+                st.caption("Tu rol no permite subir archivos.")
+                uploaded_files = None
+            else:
+                st.markdown('<div class="sidebar-format-tags" style="margin-bottom:8px;"><span class="sidebar-format-tag">[ZIP]</span><span class="sidebar-format-tag">[PDF]</span><span class="sidebar-format-tag">[DOCX]</span><span class="sidebar-format-tag">[XLSX]</span><span class="sidebar-format-tag">[DIAGRAMAS]</span><span class="sidebar-format-tag">[MD]</span></div>', unsafe_allow_html=True)
+                uploaded_files = st.file_uploader(
+                    "Arrastra archivos o un paquete .zip:",
+                    accept_multiple_files=True,
+                    label_visibility="collapsed",
+                    key=f"uploader_files_{st.session_state.uploader_key_ver}"
+                )
             if uploaded_files:
                 st.markdown(f"""
                 <div style="background:var(--bg-surface);border:1px solid var(--border-medium);border-radius:6px;padding:8px 10px;margin:8px 0 6px 0;font-size:0.8rem;">
