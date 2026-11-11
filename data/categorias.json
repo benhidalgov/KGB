@@ -1,6 +1,17 @@
 {
   "categorias": [
-    "Prueba"
+    "Almacenamiento y SAN",
+    "Arquitectura y Sistemas",
+    "Bases de Datos y Cache",
+    "Continuidad y DRP",
+    "Infraestructura General",
+    "Middleware y Apis",
+    "Monitoreo y Alertas",
+    "Procedimientos y Release",
+    "Prueba",
+    "Redes y Conectividad",
+    "Seguridad y Accesos",
+    "Servidores y Datacenter"
   ],
   "documentos": {
     "unicard_procedimiento_de_conservacion_eliminacion_y_comunicacion_de_informacion_2025.pdf": [
@@ -25,7 +36,97 @@
       "Prueba"
     ],
     "formulario_validacion_centro_practica_benjamin_hidalgo_1.pdf": [
-      "Prueba"
+      "Seguridad y Accesos"
+    ],
+    "1.1_APT122_AutoevaluacionCompetenciasFase1_Benjamin_Hidalgo.docx": [
+      "Infraestructura General"
+    ],
+    "1.1_APT122_AutoevaluacionCompetenciasFase1_Benjamin_Hidalgo.md": [
+      "Infraestructura General"
+    ],
+    "1.2_APT122_DiarioReflexionFase1_Benjamin_Hidalgo.docx": [
+      "Seguridad y Accesos"
+    ],
+    "1.2_APT122_DiarioReflexionFase1_Benjamin_Hidalgo.md": [
+      "Seguridad y Accesos"
+    ],
+    "CMDB UNICARD v 1.1.md": [
+      "Arquitectura y Sistemas"
+    ],
+    "CMDB UNICARD v 1.1.xlsx": [
+      "Arquitectura y Sistemas"
+    ],
+    "CMDB UNICARD v 1.7.xlsx": [
+      "Arquitectura y Sistemas"
+    ],
+    "DIAGRAMA__Img stock 1.png.md": [
+      "Arquitectura y Sistemas"
+    ],
+    "Flujo_ConsultaSaldoEnLinea-API_VBeta-PC-MarceloC_01.docx": [
+      "Middleware y Apis"
+    ],
+    "Plan de Parchado y Antivirus politica AV.xlsx": [
+      "Seguridad y Accesos"
+    ],
+    "accesos_formularios_formulario_acceso_plataformas.md": [
+      "Seguridad y Accesos"
+    ],
+    "accesos_formularios_unicard_administracion-usuarios_20181218.md": [
+      "Seguridad y Accesos"
+    ],
+    "almacenamiento_san_purestorage.md": [
+      "Almacenamiento y SAN"
+    ],
+    "analisis_04-12-2019_detalle_de_log.md": [
+      "Monitoreo y Alertas"
+    ],
+    "analisis_04-12-2019_log_con_errores.md": [
+      "Monitoreo y Alertas"
+    ],
+    "analisis_04-12-2019_log_error_leer.md": [
+      "Monitoreo y Alertas"
+    ],
+    "booking_engine_arquitectura_servicios.md": [
+      "Procedimientos y Release"
+    ],
+    "datacenter_chasis_blade_hpe.md": [
+      "Servidores y Datacenter"
+    ],
+    "diagrama_topologia_actualizada.md": [
+      "Arquitectura y Sistemas"
+    ],
+    "ficha_tecnica_BALANCER001.md": [
+      "Almacenamiento y SAN"
+    ],
+    "flujo_orquestadormensajeria-api_vbeta-pc-marceloc_01.docx": [
+      "Middleware y Apis"
+    ],
+    "incident_management_postmortem_p1.md": [
+      "Monitoreo y Alertas"
+    ],
+    "manual_contingencia_wso2.md": [
+      "Middleware y Apis"
+    ],
+    "matriz_alertamiento_nagios_newrelic.md": [
+      "Monitoreo y Alertas"
+    ],
+    "politicas_backup_veeam.md": [
+      "Continuidad y DRP"
+    ],
+    "politicas_seguridad_auditoria_devops.md": [
+      "Seguridad y Accesos"
+    ],
+    "procedimiento_rollback_booking.md": [
+      "Continuidad y DRP"
+    ],
+    "redis_cluster_cache_failover.md": [
+      "Bases de Datos y Cache"
+    ],
+    "vmware_vcloud_redes_nsx.md": [
+      "Redes y Conectividad"
+    ],
+    "wso2_tuning_optimizacion_threads.md": [
+      "Middleware y Apis"
     ]
   }
 }
