@@ -20,7 +20,9 @@ _DUCKDB_LAST_MTIME = -1.0
 _DUCKDB_LOCK = threading.Lock()
 _DUCKDB_LAST_LOAD_TS = 0.0
 _DUCKDB_RELOAD_INTERVAL = 60.0  # Refresco periódico: reintenta PostgreSQL aunque la última carga fuera del CSV
-_DOC_STORE_NORM_CACHE = {}
+# ponytail: dict a mano porque lru_cache no admite escritura condicional (un fallo
+# 429/403 de la API no debe cachearse y no hay forma de pedirlo a lru_cache);
+# si algún día se cachea el resultado crudo, esta caché pasa a lru_cache.
 _QUERY_RESPONSE_CACHE = {}
 _MAX_CACHE_ENTRIES = 128
 
@@ -29,9 +31,9 @@ logger = logging.getLogger("infra_copilot.motor")
 
 def limpiar_cache_consultas():
     """Invalida todas las caches en memoria del motor."""
-    global _QUERY_RESPONSE_CACHE, _DOC_STORE_NORM_CACHE, _DUCKDB_LAST_MTIME
+    global _DUCKDB_LAST_MTIME
     _QUERY_RESPONSE_CACHE.clear()
-    _DOC_STORE_NORM_CACHE.clear()
+    _obtener_texto_normalizado.cache_clear()
     _DUCKDB_LAST_MTIME = -1.0
 
 
@@ -126,15 +128,12 @@ def _clave_rol() -> str:
         return "-"
 
 
+@lru_cache(maxsize=128)
 def _obtener_texto_normalizado(doc_name: str, content: str) -> tuple[str, str]:
-    # Hash, no longitud: una edición con igual tamaño debe invalidar la caché.
-    c_key = hashlib.sha256(content.encode("utf-8")).hexdigest()
-    cached = _DOC_STORE_NORM_CACHE.get(doc_name)
-    if cached and cached[0] == c_key:
-        return cached[1], cached[2]
-    name_norm, content_norm = normalizar_texto(doc_name), normalizar_texto(content)
-    _DOC_STORE_NORM_CACHE[doc_name] = (c_key, name_norm, content_norm)
-    return name_norm, content_norm
+    # Clave por (nombre, contenido): una edición con igual longitud invalida sola,
+    # sin sha256 manual por llamada. Techo: retiene versiones previas del texto
+    # normalizado hasta que la caché expulsa la menos usada (maxsize=128).
+    return normalizar_texto(doc_name), normalizar_texto(content)
 
 
 def _es_sql_solo_lectura(query_sql: str) -> bool:

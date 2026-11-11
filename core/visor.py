@@ -1,4 +1,5 @@
 import base64
+import mimetypes
 import os
 import re
 import html
@@ -12,15 +13,23 @@ from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes, no
 from core.auth import tiene_permiso
 from core.configuracion import DOCS_DIR
 
-MIME_MAP = {
-    ".pdf": "application/pdf",
-    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ".xls": "application/vnd.ms-excel",
-    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-    ".svg": "image/svg+xml", ".webp": "image/webp", ".txt": "text/plain", ".csv": "text/csv"
-}
+# mimetypes resuelve el MIME en cada plataforma; estos cinco no son fiables sin
+# ayuda: OOXML no está en la tabla de stdlib (depende del SO), .webp sólo está
+# en la lista no-estándar de stdlib y en Windows con Office el registro del
+# sistema pisa .csv con el tipo de Excel. add_type los fija para todos los SO.
+for _ext_mime in (
+    (".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+    (".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    (".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+    (".webp", "image/webp"),
+    (".csv", "text/csv"),
+):
+    mimetypes.add_type(_ext_mime[1], _ext_mime[0])
+
+
+def mime_de_extension(ext: str, defecto: str = "application/octet-stream") -> str:
+    """MIME estándar del archivo; lo que stdlib no conozca cae en `defecto`."""
+    return mimetypes.guess_type(f"archivo{ext}")[0] or defecto
 
 # Formatos raster que Pillow puede abrir. Streamlit delega en Pillow para
 # incrustar la imagen, asi que la extension no basta: el archivo debe ser una
@@ -271,7 +280,7 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
     st.markdown("---")
     with open(ruta_original, "rb") as f_img:
         bytes_img = f_img.read()
-    mime_type = MIME_MAP.get(ext, "image/png")
+    mime_type = mime_de_extension(ext, "image/png")
     st.download_button(label=f"Descargar Imagen Original ({fname})", data=bytes_img, file_name=fname, mime=mime_type, width="stretch", key=f"dl_btn_diag_direct_{fname}_{key_suffix}")
 
     with st.expander("Ver Texto Interno (Markdown)", expanded=False):
@@ -358,7 +367,7 @@ def renderizar_original_adaptativo(ruta_original: str, doc_name: str, md_content
 
     with open(ruta_original, "rb") as f:
         bytes_orig = f.read()
-    st.download_button(label=f"Descargar Archivo ({fname})", data=bytes_orig, file_name=fname, mime=MIME_MAP.get(ext, "application/octet-stream"), width="stretch", key=f"dl_btn_orig_{fname}_{key_suffix}")
+    st.download_button(label=f"Descargar Archivo ({fname})", data=bytes_orig, file_name=fname, mime=mime_de_extension(ext), width="stretch", key=f"dl_btn_orig_{fname}_{key_suffix}")
 
 
 def _render_md_tabs(md_content: str, doc_name: str, ruta_original: str | None):
@@ -623,7 +632,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
                     label=f"Descargar Fuente ({ext_orig.upper().replace('.', '')})",
                     data=f_dl_zen.read(),
                     file_name=os.path.basename(ruta_original),
-                    mime=MIME_MAP.get(ext_orig, "application/octet-stream"),
+                    mime=mime_de_extension(ext_orig),
                     width="stretch",
                     key=f"zen_dl_btn_{doc_name}"
                 )

@@ -968,6 +968,74 @@ def check_ingesta_zip_crea_categoria():
             f"las entradas del ZIP deben quedar clasificadas: {docs_cat}"
 
 
+def check_fase3_stdlib():
+    """Fase 3 de la auditoría (stdlib): escritura atómica única, MIME determinista
+    y caches declarativas (lru_cache en motor, st.cache_data en categorías)."""
+    import core.configuracion as conf
+    import core.tags as tg
+    import core.visor as vis
+
+    # (a) Escritura atómica: texto y bytes, crea directorio, sin .tmp huérfanos
+    # y con un .tmp distinto por escritura (dos hilos no se pisan).
+    with tempfile.TemporaryDirectory() as td:
+        ruta = os.path.join(td, "sub", "estado.json")
+        conf.escribir_atomico(ruta, '{"a": 1}')
+        with open(ruta, encoding="utf-8") as f:
+            assert f.read() == '{"a": 1}'
+        conf.escribir_atomico(ruta, b"\x00bin")
+        with open(ruta, "rb") as f:
+            assert f.read() == b"\x00bin"
+        assert os.listdir(os.path.dirname(ruta)) == ["estado.json"], "no deben quedar .tmp"
+
+        vistos = []
+        reemplazo_real = os.replace
+
+        def _espia(a, b):
+            vistos.append(a)
+            reemplazo_real(a, b)
+
+        with mock.patch.object(conf.os, "replace", _espia):
+            conf.escribir_atomico(ruta, "otro")
+            conf.escribir_atomico(ruta, "otro2")
+        assert len(vistos) == 2 and vistos[0] != vistos[1], \
+            "cada escritura debe usar su propio .tmp"
+
+    # (b) MIME estándar en cualquier plataforma: OOXML y .webp fijados, .csv a
+    # salvo del registro de Office y tipos extra (gif) gratis del stdlib.
+    assert vis.mime_de_extension(".csv") == "text/csv"
+    assert vis.mime_de_extension(".webp") == "image/webp"
+    assert vis.mime_de_extension(".docx") == \
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    assert vis.mime_de_extension(".gif") == "image/gif"
+    assert vis.mime_de_extension(".pdf") == "application/pdf"
+    assert vis.mime_de_extension(".xyz") == "application/octet-stream"
+
+    # (c) Normalización cacheada con lru_cache: golpe al repetir, recálculo al
+    # cambiar el texto y limpieza vía limpiar_cache_consultas.
+    motor._obtener_texto_normalizado.cache_clear()
+    a1 = motor._obtener_texto_normalizado("doc.md", "Contenido X")
+    motor._obtener_texto_normalizado("doc.md", "Contenido X")
+    assert motor._obtener_texto_normalizado.cache_info().hits >= 1, \
+        "la repetición del mismo contenido debe dar golpe de caché"
+    a2 = motor._obtener_texto_normalizado("doc.md", "Contenido Y")
+    assert a1 != a2, "un texto distinto debe recalcular"
+    motor.limpiar_cache_consultas()
+    assert motor._obtener_texto_normalizado.cache_info().currsize == 0
+
+    # (d) Catálogo con st.cache_data: copia por llamada (mutar no contamina a
+    # otros lectores) e invalidación al guardar (mtime distinto).
+    with tempfile.TemporaryDirectory() as td:
+        ruta_c = os.path.join(td, "categorias.json")
+        with mock.patch.object(tg, "CATEGORIAS_PATH", ruta_c):
+            d1 = tg.cargar_datos_categorias()
+            d1["categorias"].append("Toque")
+            assert tg.cargar_datos_categorias()["categorias"] == [], \
+                "la copia cacheada no debe contaminarse por la mutación de otro"
+            assert tg.guardar_datos_categorias({"categorias": ["Real"], "documentos": {}})
+            assert tg.cargar_datos_categorias()["categorias"] == ["Real"], \
+                "guardar debe invalidar la caché (mtime cambia)"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -993,4 +1061,5 @@ if __name__ == "__main__":
     check_ronda_pares_sidebar()
     check_ronda_pares_bajas()
     check_ingesta_zip_crea_categoria()
+    check_fase3_stdlib()
     print("[OK] check_seams")

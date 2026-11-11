@@ -11,7 +11,7 @@ from core.auditoria import registrar_evento_auditoria
 from core.manual import renderizar_manual_lanzamiento
 from core.db import es_postgres_disponible, obtener_usuarios_pg, actualizar_ultimo_login_pg
 
-from core.configuracion import USERS_PATH as AUTH_USERS_PATH, ES_PRODUCCION
+from core.configuracion import USERS_PATH as AUTH_USERS_PATH, ES_PRODUCCION, escribir_atomico
 DEFAULT_SALT = "infra_console_security_salt_2026"
 _PBKDF2_ITERATIONS = 100_000
 
@@ -145,9 +145,7 @@ def inicializar_almacen_usuarios() -> Dict[str, Any]:
     }
 
     try:
-        os.makedirs(os.path.dirname(AUTH_USERS_PATH), exist_ok=True)
-        with open(AUTH_USERS_PATH, "w", encoding="utf-8") as f:
-            json.dump(usuarios_base, f, indent=2, ensure_ascii=False)
+        escribir_atomico(AUTH_USERS_PATH, json.dumps(usuarios_base, indent=2, ensure_ascii=False))
     except Exception:
         pass
     return usuarios_base

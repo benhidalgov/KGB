@@ -1,4 +1,5 @@
 import os
+import uuid
 
 APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -56,4 +57,20 @@ ESTILOS_CSS_PATH = os.path.join(APP_DIR, "core", "estilos.css")
 # Asegurar la existencia de directorios base
 for directory in [DATA_DIR, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR, HISTORY_DIR]:
     os.makedirs(directory, exist_ok=True)
+
+
+def escribir_atomico(ruta: str, contenido: str | bytes) -> None:
+    """Escritura atómica única del proyecto: crea el directorio, vuelca el
+    contenido a un .tmp con nombre aleatorio y lo renombra con os.replace.
+
+    Un crash a mitad de escritura no corrompe el destino y dos sesiones o hilos
+    concurrentes no pisan el .tmp el uno al otro (antes cada módulo repetía este
+    patrón con nombres de tmp compartidos, y dos escritores se pisaban).
+    """
+    es_bytes = isinstance(contenido, bytes)
+    tmp = f"{ruta}.{uuid.uuid4().hex[:8]}.tmp"
+    os.makedirs(os.path.dirname(ruta), exist_ok=True)
+    with open(tmp, "wb" if es_bytes else "w", encoding=None if es_bytes else "utf-8") as f:
+        f.write(contenido)
+    os.replace(tmp, ruta)
 

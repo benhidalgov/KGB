@@ -4,7 +4,7 @@ Plantillas oficiales de documentacion tecnica, generadores de Runbooks y gestion
 import os
 import json
 
-from core.configuracion import PLANTILLAS_CUSTOM_PATH
+from core.configuracion import PLANTILLAS_CUSTOM_PATH, escribir_atomico
 
 PLANTILLAS_BASE_RESERVADAS = [
     "Procedimiento de Rollback de Emergencia",
@@ -34,12 +34,10 @@ def cargar_plantillas_personalizadas() -> dict:
 
 def guardar_plantilla_personalizada(nombre: str, descripcion: str, campos: list) -> bool:
     """Guarda una nueva plantilla personalizada en el catalogo local."""
-    os.makedirs(os.path.dirname(PLANTILLAS_CUSTOM_PATH), exist_ok=True)
     plantillas = cargar_plantillas_personalizadas()
     plantillas[nombre] = {"descripcion": descripcion, "campos": campos}
     try:
-        with open(PLANTILLAS_CUSTOM_PATH, "w", encoding="utf-8") as f:
-            json.dump(plantillas, f, indent=2, ensure_ascii=False)
+        escribir_atomico(PLANTILLAS_CUSTOM_PATH, json.dumps(plantillas, indent=2, ensure_ascii=False))
         return True
     except Exception:
         return False

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 from excel_cleaner import procesar_excel_limpio
-from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, ES_PRODUCCION, MAX_AUDIT_LOG_BYTES
+from core.configuracion import HISTORY_DIR, AUDIT_LOG_PATH, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, ES_PRODUCCION, MAX_AUDIT_LOG_BYTES, escribir_atomico
 from core.db import es_postgres_disponible, insertar_evento_auditoria_pg, obtener_eventos_auditoria_pg
 
 logger = logging.getLogger("infra_copilot.auditoria")
@@ -66,12 +66,7 @@ def _cargar_meta_raw(doc_name: str) -> list:
 
 
 def _guardar_meta(doc_name: str, data: list):
-    p = _meta_path(doc_name)
-    os.makedirs(os.path.dirname(p), exist_ok=True)
-    tmp = f"{p}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    os.replace(tmp, p)
+    escribir_atomico(_meta_path(doc_name), json.dumps(data, indent=2, ensure_ascii=False))
 
 
 @functools.lru_cache(maxsize=512)
@@ -186,8 +181,7 @@ def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: st
     if not os.path.exists(os.path.join(doc_hist_dir, "metadata.json")):
         os.makedirs(doc_hist_dir, exist_ok=True)
         v1_name = "v1.md"
-        with open(os.path.join(doc_hist_dir, v1_name), "w", encoding="utf-8") as f:
-            f.write(contenido_actual)
+        escribir_atomico(os.path.join(doc_hist_dir, v1_name), contenido_actual)
 
         excel_snap = None
         orig_p = os.path.join(DOCS_DIR, doc_name)
@@ -224,8 +218,7 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
 
     if not historial:
         contenido_prev = doc_store.get(doc_name, nuevo_contenido)
-        with open(os.path.join(doc_hist_dir, "v1.md"), "w", encoding="utf-8") as f:
-            f.write(contenido_prev)
+        escribir_atomico(os.path.join(doc_hist_dir, "v1.md"), contenido_prev)
         historial = [{
             "version": 1,
             "timestamp": _ahora_str(),
@@ -239,8 +232,7 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
     version_ant = len(historial)
     nueva_v = version_ant + 1
     snap_name = f"v{nueva_v}.md"
-    with open(os.path.join(doc_hist_dir, snap_name), "w", encoding="utf-8") as f:
-        f.write(nuevo_contenido)
+    escribir_atomico(os.path.join(doc_hist_dir, snap_name), nuevo_contenido)
 
     historial.append({
         "version": nueva_v,
@@ -261,8 +253,7 @@ def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comen
         # El contenido extraído vive en doc_store y en el snapshot del historial.
         pass
     else:
-        with open(os.path.join(DOCS_DIR, doc_name), "w", encoding="utf-8") as f:
-            f.write(nuevo_contenido)
+        escribir_atomico(os.path.join(DOCS_DIR, doc_name), nuevo_contenido)
 
     accion = "ROLLBACK" if "rollback" in (comentario or "").lower() else "EDICION"
     registrar_evento_auditoria(doc_name=doc_name, accion=accion, version_ant=version_ant, version_nueva=nueva_v, autor=autor, motivo=comentario)
@@ -303,8 +294,7 @@ def guardar_nueva_version_excel(doc_name: str, sheet_name: str, df_nuevo: pd.Dat
     shutil.copy2(excel_path, os.path.join(doc_hist_dir, snap_excel))
     nuevo_md = procesar_excel_limpio(excel_path)
     snap_md = f"v{nueva_v}.md"
-    with open(os.path.join(doc_hist_dir, snap_md), "w", encoding="utf-8") as f:
-        f.write(nuevo_md)
+    escribir_atomico(os.path.join(doc_hist_dir, snap_md), nuevo_md)
 
     doc_store[doc_name] = nuevo_md
     historial.append({

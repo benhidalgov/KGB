@@ -279,7 +279,10 @@ def check_tags_cuarentena_no_destruye_backup():
                 assert f.read() == "backup-previo", "el .corrupto no debe pisarse jamás"
             assert os.path.exists(cat_path), "el archivo corrupto nuevo no debe eliminarse"
 
-            # Fallo de lectura transitorio (OSError simulado): no renombra nada
+            # Fallo de lectura transitorio (OSError simulado): no renombra nada.
+            # Se limpia la caché por mtime: sin esto el golpe devolvería la copia
+            # cacheada y el open parcheado jamás se ejercitaría.
+            tags._cargar_datos_categorias_cached.clear()
             with mock.patch("builtins.open", side_effect=OSError("bloqueado")):
                 assert tags.cargar_datos_categorias() == {"categorias": [], "documentos": {}}
             with open(cat_path + ".corrupto", "r", encoding="utf-8") as f:

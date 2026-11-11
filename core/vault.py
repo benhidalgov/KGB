@@ -9,7 +9,7 @@ import hashlib
 import threading
 from typing import Dict, List
 from cryptography.fernet import Fernet
-from core.configuracion import VAULT_FILE_PATH, VAULT_KEY_PATH, ES_PRODUCCION
+from core.configuracion import VAULT_FILE_PATH, VAULT_KEY_PATH, ES_PRODUCCION, escribir_atomico
 from core.auditoria import registrar_evento_auditoria
 
 # Serializa el ciclo leer-modificar-escribir de la bóveda entre sesiones/threads
@@ -110,13 +110,7 @@ def _guardar_todos_los_secretos_boveda(secretos: Dict[str, str]) -> bool:
     try:
         fernet = Fernet(_claves_candidatas()[0])
         cifrado = fernet.encrypt(json.dumps(secretos, ensure_ascii=False).encode("utf-8"))
-        os.makedirs(os.path.dirname(VAULT_FILE_PATH), exist_ok=True)
-        # Escritura atómica: un crash a mitad de escritura no corrompe la bóveda.
-        # Nombre único por proceso: dos sesiones no pisan el .tmp la una a la otra.
-        tmp_path = f"{VAULT_FILE_PATH}.{os.getpid()}.tmp"
-        with open(tmp_path, "wb") as f:
-            f.write(cifrado)
-        os.replace(tmp_path, VAULT_FILE_PATH)
+        escribir_atomico(VAULT_FILE_PATH, cifrado)
         return True
     except Exception:
         return False

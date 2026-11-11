@@ -8,7 +8,9 @@ import re
 import logging
 import threading
 
-from core.configuracion import CATEGORIAS_PATH
+import streamlit as st
+
+from core.configuracion import CATEGORIAS_PATH, escribir_atomico
 
 logger = logging.getLogger("infra_copilot.tags")
 
@@ -43,11 +45,13 @@ def _limpiar_tags(tags: list[str]) -> list[str]:
     return limpios
 
 
-def cargar_datos_categorias() -> dict:
-    """Carga el catálogo de categorías y mapeo de documentos desde data/categorias.json."""
-    if os.path.exists(CATEGORIAS_PATH):
+@st.cache_data(show_spinner=False)
+def _cargar_datos_categorias_cached(ruta: str, mtime: float) -> dict:
+    """Caché del catálogo por ruta+mtime. cache_data devuelve una copia en cada
+    llamada: mutar el dict devuelto no contamina a los demás lectores."""
+    if os.path.exists(ruta):
         try:
-            with open(CATEGORIAS_PATH, "r", encoding="utf-8") as f:
+            with open(ruta, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, dict):
                 raise ValueError("estructura raíz no válida")
@@ -62,10 +66,10 @@ def cargar_datos_categorias() -> dict:
             # Preservar el archivo corrupto para recuperarlo a mano, sin pisar un
             # .corrupto anterior (sería el único backup recuperable).
             logger.warning("[TAGS] categorías.json ilegible; se preserva como .corrupto y se arranca vacío.")
-            destino = CATEGORIAS_PATH + ".corrupto"
+            destino = ruta + ".corrupto"
             try:
                 if not os.path.exists(destino):
-                    os.replace(CATEGORIAS_PATH, destino)
+                    os.replace(ruta, destino)
             except OSError:
                 pass
         except OSError:
@@ -75,14 +79,16 @@ def cargar_datos_categorias() -> dict:
     return {"categorias": [], "documentos": {}}
 
 
+def cargar_datos_categorias() -> dict:
+    """Carga el catálogo de categorías y mapeo de documentos desde data/categorias.json."""
+    mtime = os.path.getmtime(CATEGORIAS_PATH) if os.path.exists(CATEGORIAS_PATH) else 0.0
+    return _cargar_datos_categorias_cached(CATEGORIAS_PATH, mtime)
+
+
 def guardar_datos_categorias(data: dict) -> bool:
     """Guarda atómicamente el catálogo de categorías y mapeo de documentos."""
     try:
-        os.makedirs(os.path.dirname(CATEGORIAS_PATH), exist_ok=True)
-        tmp_path = f"{CATEGORIAS_PATH}.tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        os.replace(tmp_path, CATEGORIAS_PATH)
+        escribir_atomico(CATEGORIAS_PATH, json.dumps(data, indent=2, ensure_ascii=False))
         return True
     except Exception:
         return False
