@@ -7,6 +7,7 @@ import os
 import shutil
 import time
 import datetime
+import html
 import pandas as pd
 import streamlit as st
 
@@ -199,7 +200,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
             f_carga = historial[0]["timestamp"].split()[0] if (historial and " " in historial[0]["timestamp"]) else "N/A"
             ruta_orig = obtener_ruta_original(doc_sel, doc_cont)
             tags_doc = obtener_tags_documento(doc_sel)
-            tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.72rem;padding:1px 5px;">[{t}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-warn" style="font-size:0.72rem;padding:1px 5px;">[Sin Categoría]</span>'
+            tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.72rem;padding:1px 5px;">[{html.escape(str(t))}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-warn" style="font-size:0.72rem;padding:1px 5px;">[Sin Categoría]</span>'
             ext_badge = os.path.splitext(doc_sel)[1].upper().replace(".", "") or "MD"
 
             st.markdown(f"""
@@ -209,7 +210,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                     <span class="badge-ok" style="font-size:0.68rem;padding:1px 5px;">v{u_ver}</span>
                     {tags_badges}
                     <span style="color:var(--border-strong);">|</span>
-                    <span style="color:var(--text-secondary);">Editor: <b style="color:var(--text-primary);">{u_edit}</b></span>
+                    <span style="color:var(--text-secondary);">Editor: <b style="color:var(--text-primary);">{html.escape(str(u_edit))}</b></span>
                     <span style="color:var(--border-strong);">|</span>
                     <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.74rem;">{u_time}</span>
                 </div>

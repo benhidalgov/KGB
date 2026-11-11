@@ -620,6 +620,54 @@ def check_arquitectura_documentacion():
     assert falso.query_params == {}
 
 
+def check_plantillas_permiso_y_escapes():
+    """Ronda de agentes pares: Guardar Documento exige puede_editar_docs (rol
+    Auditor no escribe nada) y los datos de usuario interpolados en HTML van escapados."""
+    import inspect
+    import core.ui_plantillas as ui_pl
+    import core.ui_documentos as ui_doc
+    import core.visor as vis
+    import core.ui_sidebar as ui_sb
+
+    with tempfile.TemporaryDirectory() as td:
+        docs = os.path.join(td, "docs")
+        hist = os.path.join(td, "history")
+        os.makedirs(docs)
+        os.makedirs(hist)
+        at = _app_test(
+            "import time\n"
+            "import streamlit as st\n"
+            "import core.ui_plantillas as pl\n"
+            "import core.auditoria as aud\n"
+            "import core.tags as tg\n"
+            f"pl.DOCS_DIR = {docs!r}\n"
+            f"aud.HISTORY_DIR = {hist!r}\n"
+            f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
+            f"aud.DOCS_DIR = {docs!r}\n"
+            f"tg.CATEGORIAS_PATH = {os.path.join(td, 'categorias.json')!r}\n"
+            "st.session_state['usuario_actual'] = {'username': 'aud', 'rol': 'Auditor', "
+            "'nombre': 'Auditor', 'activo': True}\n"
+            "st.session_state['auth_activa'] = True\n"
+            "st.session_state['auth_ultima_actividad'] = time.time()\n"
+            "st.session_state['auth_chequeo'] = time.time()\n"
+            "pl.renderizar_pestana_plantillas({})\n"
+        )
+        at.run()
+        assert not at.exception, f"el render de plantillas falló: {at.exception}"
+        at.text_input(key="input_cat_proc_nueva").set_value("Categoria Pares")
+        at.button(key="btn_guardar_doc_plantilla_final").click().run()
+        assert not at.exception, f"el guardado falló con excepción: {at.exception}"
+        assert os.listdir(docs) == [], f"el rol Auditor creó documentos: {os.listdir(docs)}"
+        assert any("no permite editar documentos" in e.value for e in at.error), \
+            "debe mostrar el error de permiso en lugar de guardar"
+
+    for mod, marca in ((ui_doc, "html.escape(str(u_edit)"),
+                       (ui_doc, "html.escape(str(t)"),
+                       (vis, "html.escape(str(ultimo_editor)"),
+                       (ui_sb, "html.escape(str(s['clave'])")):
+        assert marca in inspect.getsource(mod), f"falta escape de usuario en {mod.__name__}: {marca}"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -640,4 +688,5 @@ if __name__ == "__main__":
     check_arquitectura_documentacion()
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
+    check_plantillas_permiso_y_escapes()
     print("[OK] check_seams")

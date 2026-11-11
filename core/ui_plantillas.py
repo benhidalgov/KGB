@@ -21,6 +21,7 @@ from core.auditoria import inicializar_version_inicial_si_no_existe, guardar_nue
 from core.motor import limpiar_cache_consultas
 from core.procesador import normalizar_nombre_archivo
 from core.configuracion import DOCS_DIR
+from core.auth import tiene_permiso
 
 
 def renderizar_pestana_plantillas(doc_store: dict):
@@ -102,7 +103,9 @@ def renderizar_pestana_plantillas(doc_store: dict):
         st.divider()
         if st.button("Guardar Documento", type="primary", width="stretch", key="btn_guardar_doc_plantilla_final"):
             cat_final_rb = cat_rb_nueva.strip() if cat_rb_nueva.strip() else (cat_rb_exist if cat_rb_exist != "(Crear Nueva)" else "")
-            if not cat_final_rb:
+            if not tiene_permiso("puede_editar_docs"):
+                st.error("Tu rol no permite editar documentos.")
+            elif not cat_final_rb:
                 st.warning("Elige una categoría o escribe una nueva.")
             else:
                 # Nombre libre del usuario: se normaliza para evitar rutas inválidas

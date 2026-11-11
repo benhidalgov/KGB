@@ -218,7 +218,7 @@ def renderizar_diagrama_limpio(ruta_original: str, doc_name: str, md_content: st
         <div><b>Formato:</b> <span class="badge-ok">{ext.upper().replace('.', '')}</span></div>
         <div><b>Tamaño:</b> <code>{size_kb:.1f} KB</code></div>
         <div><b>Versión:</b> <span class="badge-ok">v{ultima_version}</span></div>
-        <div><b>Último Editor:</b> <span style="color: var(--text-secondary);">{ultimo_editor}</span></div>
+        <div><b>Último Editor:</b> <span style="color: var(--text-secondary);">{html.escape(str(ultimo_editor))}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
