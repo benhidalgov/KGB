@@ -607,7 +607,9 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
                 for it in toc_items:
                     indent = (it['nivel'] - 1) * 10
                     badge_h = f"<span class='badge-tag' style='font-size:0.65rem;margin-right:4px;'>H{it['nivel']}</span>"
-                    toc_html_list.append(f"<div class='zen-toc-item' style='margin-left:{indent}px;'>{badge_h} {it['titulo']}</div>")
+                    # El título viene del Markdown crudo del documento: sin escapar,
+                    # un encabezado subido inyecta HTML en el índice de todos los roles.
+                    toc_html_list.append(f"<div class='zen-toc-item' style='margin-left:{indent}px;'>{badge_h} {html.escape(it['titulo'])}</div>")
                 st.markdown(f"<div class='zen-toc-card'>{''.join(toc_html_list)}</div>", unsafe_allow_html=True)
         else:
             st.info("Este documento no tiene secciones.")
@@ -619,7 +621,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
             <div style="display:flex;flex-direction:column;gap:4px;color:var(--text-secondary);">
                 <div><b>Palabras:</b> {palabras:,}</div>
                 <div><b>Lectura:</b> ~{minutos_lectura} min</div>
-                <div><b>Editor:</b> {u_edit}</div>
+                <div><b>Editor:</b> {html.escape(str(u_edit))}</div>
                 <div><b>Actualizado:</b> {u_time}</div>
             </div>
         </div>

@@ -47,8 +47,8 @@ def check_sql_sin_acceso_externo():
 
 
 def check_xss_escapado():
-    """El HTML no confiable (documentos, captions, inventario y salida del LLM) se
-    escapa antes de renderizarse; el markdown legítimo sigue intacto."""
+    """El HTML no confiable (documentos, captions, inventario, salida del LLM y el
+    Modo Lectura) se escapa antes de renderizarse; el markdown legítimo sigue intacto."""
     payload = '<img src=x onerror="alert(1)"><script>alert(2)</script>'
 
     prep = procesador.preparar_markdown_con_imagenes(
@@ -80,6 +80,19 @@ def check_xss_escapado():
     )
     assert "<img src=x" not in local.lower() and "<script" not in local.lower()
     assert "&lt;img" in local
+
+    # Modo Lectura (Zen): el índice toca los encabezados del Markdown crudo y el
+    # campo Editor trae el autor de la historia; ambos deben escaparse en el sink.
+    md_veneno = f"# {payload}\n\nTexto tecnico.\n"
+    with mock.patch.object(visor.st, "markdown") as mk_md:
+        visor.renderizar_zen_studio("doc_veneno.md", md_veneno, None, 3, payload, "2026-01-01 00:00:00")
+    html_zen = "\n".join(
+        str(c.args[0]) for c in mk_md.call_args_list
+        if c.args and isinstance(c.args[0], str)
+    )
+    assert "zen-toc-card" in html_zen, "el indice de Zen debe renderizarse"
+    assert "alert(1)" in html_zen and "&lt;img" in html_zen, "el payload debe aparecer escapado"
+    assert "<img src=x" not in html_zen.lower(), "Zen inyecto el payload crudo al DOM"
 
     # Sin coincidencias se ejecuta la rama que ecoa el término buscado.
     vacio = motor.generar_respuesta_asistente_local(
