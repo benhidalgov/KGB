@@ -17,11 +17,12 @@
 
 #### 1. ¿Qué hace este componente internamente?
         * **Autenticación Perimetral (`core/auth.py`):** Bloquea la carga del DOM, la CMDB y los documentos a usuarios no autenticados. Valida credenciales contra `data/users.json` aplicando **PBKDF2-HMAC-SHA256** con salt estático y 100,000 iteraciones de hash.
-        * **Matriz de Permisos RBAC:**
-          * **`Administrador`:** Control total. Puede ver y modificar la Bóveda `[VAULT]`, subir archivos ZIP, editar documentos y ejecutar *Rollbacks*.
-          * **`Operador`:** Técnico de operaciones. Puede realizar búsquedas, dialogar con el Asistente, usar el Visor, cargar archivos y editar (sin permisos de Rollback destructivo ni acceso a secretos).
-          * **`Auditor`:** Cumplimiento normativo. Modo de solo lectura (`read-only`) para verificar inventario, documentos y la bitácora `data/audit_log.json`.
-        * **Bóveda de Secretos (`core/vault.py`):** Custodia claves sensibles (`GEMINI_API_KEY`, etc.) mediante cifrado simétrico **Fernet (AES-256-CBC)** en `data/.vault.enc`. Utiliza una jerarquía en cascada: Variables de Entorno del Sistema Operativo -> Secrets de Streamlit Cloud -> Bóveda Local Cifrada.
+        * **Bloqueo por Intentos Fallidos:** 5 intentos fallidos dentro de la ventana de bloqueo impiden el acceso a la combinación **usuario + origen (IP)**, de modo que quien fuerza desde una IP no deja fuera al usuario legítimo que entra desde otra. El login distingue los dos casos: dice **`Cuenta bloqueada por intentos fallidos...`** cuando el candado está activo y **`Usuario o contraseña incorrectos.`** cuando sólo fallaron las credenciales.
+        * **Matriz de Permisos RBAC:** cada pantalla evalúa sus permisos (`puede_ver_vault`, `puede_editar_vault`, `puede_ingestar_archivos`, `puede_editar_docs`, `puede_rollback`, `puede_ejecutar_sql`, `puede_ver_auditoria`) y los controles sin permiso **no se renderizan**; donde el aviso informativo corresponde (editor, ingesta, bóveda) se muestra un mensaje que explica qué permiso falta.
+          * **`Administrador`:** Control total. Puede ver y modificar la Bóveda `[VAULT]`, subir archivos ZIP, editar documentos, ejecutar *Rollbacks* y consultar el Registro de Actividad.
+          * **`Operador`:** Técnico de operaciones. Puede realizar búsquedas, dialogar con el Asistente, usar el Visor, cargar archivos y editar documentos (sin bóveda, sin *Rollback* y sin Registro de Actividad).
+          * **`Auditor`:** Cumplimiento normativo. Consulta inventario, documentos, historial y bitácora `data/audit_log.json`, pero no ingesta, ni edición, ni *Rollback*.
+        * **Bóveda de Secretos (`core/vault.py`):** Custodia claves sensibles (`GEMINI_API_KEY`, etc.) mediante cifrado simétrico **Fernet (AES-256-CBC)** en `data/.vault.enc`. Utiliza una jerarquía en cascada: Variables de Entorno del Sistema Operativo -> Secrets de Streamlit Cloud -> Bóveda Local Cifrada. Las claves y sus vistas previas se escapan con `html.escape` antes de inyectarse en el HTML del panel.
 
         ---
 
@@ -29,13 +30,14 @@
         1. **Iniciar Sesión:**
            * Ingrese su usuario (`admin`, `operador` o `auditor`) y la contraseña correspondiente en el formulario de acceso.
            * El sistema genera la sesión en `st.session_state` y registra un evento `LOGIN_EXITOSO` en `data/audit_log.json`.
+           * Si la cuenta quedó bloqueada por intentos fallidos, el formulario lo indica con **`Cuenta bloqueada por intentos fallidos. Espera unos minutos y vuelve a intentar.`**; esperar la ventana de bloqueo y reintentar.
         2. **Verificar su Perfil:**
            * En el panel lateral izquierdo, observe la tarjeta superior **`Sesión Activa`**, que muestra su nombre, rol y nombre de usuario.
         3. **Configurar o Modificar Claves en la Bóveda (Solo Administrador):**
            * En el panel lateral, despliegue la sección **`Bóveda de Credenciales [VAULT]`**.
            * En el desplegable, seleccione la clave a configurar (por ejemplo, `GEMINI_API_KEY`).
-           * Escriba el valor de la clave en el campo de texto y presione **`Guardar`**.
-           * El sistema cifra el valor en memoria y lo guarda en `data/.vault.enc` registrando la auditoría.
+           * Escriba el valor de la clave en el campo de texto y presione **`Guardar`**. El nombre y el valor son obligatorios: en blanco se rechaza con `Escribe un nombre y un valor.`
+           * El sistema cifra el valor en memoria y lo guarda en `data/.vault.enc` registrando la auditoría. Sin `puede_editar_vault` (Operador o Auditor) los botones responden **`Tu rol no permite administrar credenciales.`**
            * Para borrar una clave, selecciónela y presione **`Revocar`**.
         4. **Cerrar Sesión:**
            * Haga clic en el botón **`Salir`** en la barra lateral. La sesión se purga y el evento `LOGOUT` queda registrado.
@@ -184,6 +186,7 @@
             * **Excel (`.xlsx`, `.xls`):** Cuadrícula interactiva con selector dinámico de hojas de cálculo (`openpyxl`).
             * **Diagramas (`.png`, `.jpg`, `.svg`):** Visor de imagen en alta resolución con pie de imagen (*Caption*) indexable.
             * **Word / PPTX (`.docx`, `.pptx`):** Ficha técnica descriptiva con botón de descarga del binario original.
+        * **Ficha y Bitácora por Documento:** La cabecera de la ficha (categorías, último editor, fecha) escapa sus valores con `html.escape` antes de inyectarlos en el HTML. Debajo del *Diff* aparece el expander **`Registro de Actividad`**, reservado a los roles con permiso `puede_ver_auditoria` (Administrador y Auditor): el Operador simplemente no lo ve.
 
         ---
 
@@ -197,6 +200,7 @@
         4. En libros Excel: Utilice el selector `Seleccionar Hoja de Trabajo`w
          para alternar entre hojas del libro de cálculo.
         5. Botón de Descarga: Al pie de la columna izquierda o derecha, pulse **`Descargar Versión Activa v{N}`** para obtener una copia local en `.md`, `.xlsx` o `.pdf`.
+        6. **Registro de Actividad (Administrador y Auditor):** dentro del documento, despliegue **`Registro de Actividad`** para ver la bitácora con timestamp, documento, acción, versiones, editor y motivo, con la casilla **`Filtrar solo este documento`** activada por defecto.
 
 ---
 
@@ -254,23 +258,25 @@
         * **Inmutabilidad Documental (`core/auditoria.py`):** Los documentos nunca se sobreescriben a ciegas. Cualquier modificación genera una versión nueva incremental (`v1`, `v2`, `v3`...) almacenando un snapshot exacto en `data/history/{doc_name}/` junto con su firma criptográfica **SHA-256**.
         * **Campos Obligatorios de Auditoría:** El sistema rechaza cualquier guardado que no incluya el **Editor Responsable** y el **Motivo del Cambio**.
         * **Comparador de Diferencias (*Diff* Visual):** Compara dos versiones mediante `difflib.unified_diff`, generando una vista visual con resaltado verde para líneas añadidas y ciruela para líneas eliminadas (con límite de 400 líneas para salvaguardar el navegador).
-        * **Operación de Rollback:** Restaura un snapshot histórico anterior, crea una versión nueva que registra la reversión y almacena el evento en `data/audit_log.json`.
+        * **Operación de Rollback:** Restaura un snapshot histórico anterior, crea una versión nueva que registra la reversión y almacena el evento en `data/audit_log.json`. El bloque **`Volver a la Versión v{N}`** sólo se renderiza con el permiso `puede_rollback` (Administrador); si un rol sin permiso llegara a forzar el clic, responde **`Tu rol no permite ejecutar rollbacks.`**
+        * **Permisos de Edición:** Sin `puede_editar_docs` la subpestaña **`Editar Documento`** muestra **`Tu rol no permite editar documentos.`** y no renderiza ni el área de texto ni el botón de guardar. La inicialización automática de la versión `v1` sólo escribe para quien tiene ese permiso: para el Auditor el historial queda en solo lectura al consultar un documento por primera vez.
+        * **Datos de Usuario Seguros:** el editor, los autores y las categorías se escapan con `html.escape` antes de inyectarse en el HTML de la ficha y los resultados.
 
         ---
 
         #### 2. ¿Cómo se utiliza paso a paso?
-        1. **Editar un Documento de Texto / Markdown:**
+        1. **Editar un Documento de Texto / Markdown:** (Requiere permiso de edición: Administrador u Operador; el Auditor ve el aviso de permiso en lugar del editor.)
            * Vaya a `Documentación Técnica` -> subpestaña **`Editar Documento`**.
            * Modifique el texto en el área de edición.
            * Ingrese su nombre en **Editor (*)** y la justificación técnica en **Motivo (*)**.
-           * Presione **`Guardar y Publicar Versión v{N+1}`**.
+           * Presione **`Guardar Versión v{N+1}`**.
         2. **Editar una Hoja de Cálculo Excel:**
            * Seleccione la hoja en el desplegable.
            * Modifique celdas o agregue filas directamente en la tabla interactiva `st.data_editor`.
-           * Ingrese Editor y Motivo y presione **`Guardar y Publicar Versión v{N+1}`**.
+           * Ingrese Editor y Motivo y presione **`Guardar Versión v{N+1}`**.
         3. **Consultar el Historial de Revisiones:**
            * Abra la subpestaña **`Historial de Versiones`** para ver la tabla de auditoría con versión, fecha/hora, editor, motivo y firma SHA-256.
-        4. **Ejecutar un Rollback (Reversión):**
+        4. **Ejecutar un Rollback (Reversión):** (Sólo Administrador; los demás roles no ven este bloque.)
            * En el selector de versiones, elija la versión histórica a restaurar (ej: `v1`).
            * Revise el comparador *Diff* para comprobar qué líneas cambiaron.
            * Ingrese el nombre del técnico y el motivo de la reversión en los campos inferiores.
@@ -297,6 +303,8 @@
           * Normaliza nombres de archivo (remoción de tildes y caracteres incompatibles).
           * Extrae texto estructurado mediante MarkItDown sin inyectar Base64 masivo en el DOM (`keep_data_uris=False`).
           * Guarda el binario en `data/originals/`, genera la versión Markdown en `data/docs/` y crea el snapshot inicial `v1`.
+        * **Categoría Automática desde el ZIP:** el nombre del paquete comprimido (sin `.zip`, en su forma original) se usa como categoría de sus entradas; si no existe, la crea y la estandariza (p. ej. `Carpeta_prueba.zip` -> `Carpeta Prueba`, conservando siglas como `SAN` o `API`). Se suma a la categoría elegida en el formulario, si la hubo.
+        * **Filtro de Extensiones en el Servidor:** sólo se aceptan `.pdf`, `.docx`, `.xlsx`, `.csv`, `.txt`, `.md`, `.pptx`, `.png`, `.jpg`, `.jpeg`, `.svg`, `.webp` y `.zip`; el resto se omite con el aviso **`Se omitió '...': extensión no soportada.`** Sin permiso `puede_ingestar_archivos` (Auditor) el cargador no se renderiza y el panel sólo muestra **`Tu rol no permite subir archivos.`**
         * **Generador de Runbooks (`core/plantillas.py`):**
           * Asistente estructurado para redacción formal de 8 tipos de procedimientos operativos estándar (SOPs).
           * Soporte para crear nuevos tipos de procedimientos guardados en `data/plantillas_custom.json`.
@@ -306,8 +314,9 @@
         #### 2. ¿Cómo se utiliza paso a paso?
         1. **Ingestar Archivos o Lotes ZIP (Panel Lateral):**
            * En el panel lateral, arrastre un archivo suelto (`.pdf`, `.docx`, `.xlsx`, `.md`, `.png`) o un archivo comprimido **`.zip`** al cargador.
-           * El motor procesa todos los archivos del paquete y muestra notificaciones toast con el recuento de archivos indexados.
-        2. **Crear un Runbook o Procedimiento Operativo:**
+           * **Categoría:** con archivos sueltos es obligatorio elegir una categoría existente o escribir una nueva antes de confirmar. Un lote **sólo de ZIP** no lo exige: cada paquete aporta su propia categoría, derivada del nombre del ZIP.
+           * El motor procesa todos los archivos del paquete y muestra notificaciones toast con el recuento de archivos indexados y las categorías usadas.
+        2. **Crear un Runbook o Procedimiento Operativo:** (Requiere permiso de edición: los botones **`[+ Usar]`** y **`Guardar Documento`** responden **`Tu rol no permite editar documentos.`** sin `puede_editar_docs`.)
            * Vaya a la pestaña **`Plantillas y Runbooks`**.
            * Seleccione el tipo de procedimiento:
              * *Rollback de Emergencia*
@@ -321,5 +330,5 @@
              * *`[+ Crear Nuevo Tipo de Procedimiento...]`*
            * Complete los campos guiados: Nombre del servicio, responsable, criticidad, ventana de mantenimiento, pasos secuenciales y comandos de terminal.
            * Revise la vista previa generada en tiempo real en la columna derecha.
-           * Presione **`Guardar y Publicar en Base de Conocimiento`**. El runbook queda guardado en `data/docs/` como `v1` y disponible para búsquedas.
+           * Presione **`Guardar Documento`**. El runbook queda guardado en `data/docs/` como `v1` y disponible para búsquedas.
         3. **Sincronización:** Si agrega documentos directamente en el servidor o terminal, pulse el botón **`Recargar Documentos`** en el panel lateral para refrescar la memoria caché.
