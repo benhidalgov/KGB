@@ -683,10 +683,14 @@ def check_arquitectura_documentacion():
     # Un documento con la misma tag pero débil (una sola mención, score 2)
     # es basura tag-driven: el corte debe excluirlo, no inflar la lista.
     doc_store["diario_personal.md"] = "apuntes de monitoreo del dia personal"
+    # La cartera personal (APT122 / prácticas) menciona el servicio de
+    # sobra: sin el filtro por nombre entraría por mención base.
+    doc_store["1.2_APT122_DiarioReflexionFase1.md"] = "servicio-falso " * 10
+    doc_store["formulario_centro_practica_benjamin.md"] = "servicio-falso " * 10
     with mock.patch.object(ua, "_categoria_de_servicio", lambda n: "monitoreo"):
         falso = correr({"arq_rel": "servicio-falso"})
     assert falso.session_state["arq_docs_relacionados"]["docs"] == ["guia_monitoreo.md"], \
-        "la categoría debe rescatar al documento fuerte y excluir al débil"
+        "la categoría debe rescatar al documento fuerte y excluir al débil y a la cartera personal"
 
     # Sin parámetro no se toca nada: el resto de la consola no debe enterarse.
     falso = correr({})
@@ -1148,6 +1152,111 @@ def check_cache_disco_documentos():
             assert not os.listdir(cache_dir), "limpiar debe vaciar el disco"
 
 
+def check_ejecucion_paralela():
+    """Sesiones Streamlit en paralelo = hilos en un mismo proceso: la carga con
+    caché en disco, la búsqueda sobre el doc_store compartido y el filtro del
+    diagrama deben ser consistentes bajo concurrencia."""
+    import threading
+    import core.procesador as proc
+    from core.motor import buscar_en_documentos
+    from core import ui_arquitectura as ua
+
+    with tempfile.TemporaryDirectory() as td:
+        ruta = os.path.join(td, "paralelo.md")
+        contenido = "# Paralelo\n" + ("texto de relleno para ensanchar la escritura\n" * 100)
+        with open(ruta, "w", encoding="utf-8") as f:
+            f.write(contenido)
+        cache = os.path.join(td, "cache")
+        fallos, leidos = [], []
+
+        def cargar(barera):
+            try:
+                barera.wait()
+                leidos.append(proc.cargar_documento_individual(ruta))
+            except Exception as e:  # pragma: no cover - el fallo es el mensaje
+                fallos.append(repr(e))
+
+        with mock.patch.object(proc, "DOCS_CACHE_DIR", cache):
+            for ronda in range(3):
+                os.makedirs(os.path.join(cache, str(ronda)))
+                # Memoria y disco limpios: los 8 hilos compiten por la misma entrada.
+                proc._cargar_documento_individual_cached.clear()
+                cache_ronda = os.path.join(cache, str(ronda))
+                proc.DOCS_CACHE_DIR = cache_ronda
+                barera = threading.Barrier(8)
+                hilos = [threading.Thread(target=cargar, args=(barera,))
+                         for _ in range(8)]
+                for h in hilos:
+                    h.start()
+                for h in hilos:
+                    h.join()
+                assert not fallos, f"hilos de carga con errores: {fallos}"
+                assert len(leidos) == 8 * (ronda + 1), "todos los hilos deben leer"
+                assert all(c == contenido for c in leidos), \
+                    "un hilo leyó contenido distinto (escrituras cruzadas)"
+                entradas = os.listdir(cache_ronda)
+                assert len(entradas) == 1, f"una sola entrada por archivo: {entradas}"
+                assert not any(e.endswith(".tmp") for e in entradas), \
+                    f".tmp huérfanos de la carrera: {entradas}"
+                # El disco debe servir la copia completa tras limpiar la memoria.
+                proc._cargar_documento_individual_cached.clear()
+                assert proc.cargar_documento_individual(ruta) == contenido, \
+                    "la entrada del disco quedó incompleta"
+            proc.limpiar_cache_documentos()
+
+        # Búsqueda mientras otro hilo ingesta y retira documentos del almacén
+        # compartido: no debe reventar por el tamaño del dict cambiando.
+        doc_store = {f"doc{i}.md": f"contenido nagios de prueba {i}" for i in range(60)}
+        fallos_b, duplicados = [], []
+
+        def buscar():
+            try:
+                for _ in range(30):
+                    nombres = [n for n, _, _ in buscar_en_documentos("nagios", doc_store)]
+                    if len(nombres) != len(set(nombres)):
+                        duplicados.append(nombres)
+            except Exception as e:
+                fallos_b.append(repr(e))
+
+        hilos = [threading.Thread(target=buscar) for _ in range(4)]
+        for h in hilos:
+            h.start()
+        for i in range(60, 120):
+            doc_store[f"doc{i}.md"] = "contenido nagios recien ingerido"
+        for i in range(0, 60, 2):
+            del doc_store[f"doc{i}.md"]
+        for h in hilos:
+            h.join()
+        assert not fallos_b, f"búsqueda concurrente falló: {fallos_b}"
+        assert not duplicados, "resultados duplicados durante la mutación"
+        finales = [n for n, _, _ in buscar_en_documentos("nagios", doc_store)]
+        assert len(finales) == 90 and len(set(finales)) == 90, \
+            f"tras la mutación el resultado debe ser coherente: {len(finales)}"
+
+        # El filtro del diagrama da la misma lista en todos los hilos.
+        fallos_f, listas = [], []
+
+        def filtrar():
+            try:
+                for _ in range(20):
+                    listas.append([n for n, _, _ in
+                                   ua._buscar_documentos("servicio-paralelo", doc_store)])
+            except Exception as e:
+                fallos_f.append(repr(e))
+
+        with mock.patch.object(ua, "_categoria_de_servicio", lambda n: "nagios"):
+            esperado = [n for n, _, _ in
+                        ua._buscar_documentos("servicio-paralelo", doc_store)]
+            hilos = [threading.Thread(target=filtrar) for _ in range(4)]
+            for h in hilos:
+                h.start()
+            for h in hilos:
+                h.join()
+        assert not fallos_f, f"filtro concurrente falló: {fallos_f}"
+        assert all(l == esperado for l in listas), \
+            "el filtro del diagrama debe ser estable entre hilos"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -1176,4 +1285,5 @@ if __name__ == "__main__":
     check_ingesta_zip_crea_categoria()
     check_fase3_stdlib()
     check_cache_disco_documentos()
+    check_ejecucion_paralela()
     print("[OK] check_seams")

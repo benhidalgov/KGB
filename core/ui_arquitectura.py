@@ -5,6 +5,7 @@ El HTML vive en `assets/arquitectura/arquitectura.html` (versionado, fuera de
 `%%TEMA%%`. Si el archivo se actualiza, basta con commitearlo: se recarga por mtime.
 """
 import os
+import re
 import streamlit as st
 
 from core.configuracion import ARQ_HTML_PATH
@@ -20,6 +21,24 @@ _UMBRAL_ALTA = 20
 # sólo entra el que menciona el propio servicio (query base) o el que alcanza
 # coincidencia fuerte con la categoría (nombre +20 o varios hits de contenido).
 _UMBRAL_RELACION = 40
+
+# Documentos de cartera personal (autoevaluación APT122, formularios de
+# prácticas): aparecen en cualquier búsqueda porque mencionan palabras comunes
+# ("correo", "control", "gestión"), pero nunca son documentación de un
+# servicio del diagrama. Sigue siendo buscable en la pestaña de consulta.
+_DOCS_PERSONALES = re.compile(r"apt122|centro_practica", re.I)
+
+
+def _consulta_sin_ruido(texto: str) -> str:
+    """Consulta sin tokens de 1-2 caracteres.
+
+    El motor suma 2 pts por ocurrencia de cada token y acepta tokens desde 2
+    caracteres: la "de" de categorías como "Base de datos" o de servicios como
+    "Tablets de autoservicio" aparece en casi cualquier documento y reventaba
+    el corte de relevancia (diarios personales con score 180 en SQL Server).
+    """
+    from core.motor import normalizar_texto
+    return " ".join(t for t in normalizar_texto(texto).split() if len(t) >= 3)
 
 
 def _categoria_de_servicio(nombre: str) -> str:
@@ -45,20 +64,24 @@ def _buscar_documentos(servicio: str, doc_store: dict) -> list:
 
     Relevancia: sólo entra el documento que menciona el propio servicio (está
     en la query base) o el que alcanza _UMBRAL_RELACION solo con la categoría;
-    sin ese corte, la tag genérica inflaba el score de documentos ajenos.
+    sin ese corte, la tag genérica inflaba el score de documentos ajenos. Las
+    dos consultas pasan por _consulta_sin_ruido (ver ahí el porqué).
     """
     from core.motor import buscar_en_documentos
 
-    base = buscar_en_documentos(servicio, doc_store)
+    consulta = _consulta_sin_ruido(servicio)
+    base = buscar_en_documentos(consulta, doc_store)
     menciona = {n for n, _, _ in base}
     fusion = {n: (c, s) for n, c, s in base}
     categoria = _categoria_de_servicio(servicio)
     if categoria:
-        for n, c, s in buscar_en_documentos(servicio + " " + categoria, doc_store):
+        for n, c, s in buscar_en_documentos(
+                consulta + " " + _consulta_sin_ruido(categoria), doc_store):
             if s > fusion.get(n, ("", -1))[1]:
                 fusion[n] = (c, s)
     relevantes = [(n, c, s) for n, (c, s) in fusion.items()
-                  if n in menciona or s >= _UMBRAL_RELACION]
+                  if not _DOCS_PERSONALES.search(n)
+                  and (n in menciona or s >= _UMBRAL_RELACION)]
     return sorted(relevantes, key=lambda x: x[2], reverse=True)
 
 
