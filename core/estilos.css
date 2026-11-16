@@ -40,7 +40,7 @@
 
     /* Entradas de Formulario */
     --input-bg: #FFFFFF;
-    --input-border: #D5D5CE;
+    --input-border: #8E8E85; /* 3.3:1 sobre blanco: borde que identifica el control (WCAG 1.4.11) */
     --input-text: #18181B;
 
     /* Acentos Pastel Suaves */
@@ -80,7 +80,6 @@
 h1, h2, h3, .main-title, .editorial-heading {
     font-family: var(--font-serif) !important;
     font-weight: 500 !important;
-    letter-spacing: -0.02em !important;
     color: var(--text-primary) !important;
     line-height: 1.2 !important;
 }
@@ -194,7 +193,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlo
     font-weight: 500;
     color: var(--text-primary);
     margin-bottom: 6px;
-    letter-spacing: -0.02em;
 }
 
 .empty-state-subtitle {
@@ -332,7 +330,7 @@ span[data-baseweb="tag"] svg {
 .stTextArea textarea:focus,
 .stTextArea > div > div > textarea:focus,
 div[data-baseweb="select"]:focus-within > div {
-    border-color: var(--border-strong) !important;
+    border-color: var(--text-primary) !important;
     box-shadow: none !important;
 }
 
@@ -510,7 +508,7 @@ button[kind="secondaryFormSubmit"] *,
     padding: 8px 12px !important;
     margin-bottom: 2px !important;
     cursor: pointer !important;
-    transition: all 0.15s ease !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
     font-size: 0.84rem !important;
     font-weight: 500 !important;
     color: var(--text-secondary) !important;
@@ -649,7 +647,7 @@ button[kind="secondaryFormSubmit"] *,
     color: var(--text-secondary) !important;
     box-shadow: none !important;
     line-height: 1 !important;
-    transition: all 0.15s ease !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease !important;
 }
 
 [data-testid="stSidebar"] .st-key-btn_logout_sidebar button:hover,
@@ -699,7 +697,7 @@ div[data-testid="stTabs"] button[data-baseweb="tab"] {
     padding: 6px 14px !important;
     margin: 0 !important;
     cursor: pointer !important;
-    transition: all 0.15s ease !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
     font-size: 0.82rem !important;
     font-weight: 500 !important;
     color: var(--text-secondary) !important;
@@ -746,7 +744,7 @@ div[data-testid="stPills"] button {
     background-color: var(--bg-surface) !important;
     border: 1px solid var(--border-subtle) !important;
     color: var(--text-secondary) !important;
-    transition: all 0.15s ease !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
     box-shadow: none !important;
 }
 
@@ -951,8 +949,7 @@ div[data-testid="stDataEditor"] {
     padding: 5px 10px;
     font-size: 0.82rem;
     border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    /* Sin cursor ni hover: la lista es un resumen visual, el salto es el selectbox. */
 }
 
 /* 15. Seguridad: Ocultamiento del visor de contrasenas nativo */
@@ -1055,4 +1052,22 @@ div[data-testid="stToast"] {
 }
 div[data-testid="stToast"] * {
     color: var(--text-primary) !important;
+}
+
+/* 18. Accesibilidad: foco visible, movimiento reducido y scrollbar estandar */
+:where(button, a, input, textarea, select, summary, [role="tab"], [tabindex]):focus-visible {
+    outline: 2px solid var(--text-primary) !important;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-medium) transparent;
 }

@@ -581,10 +581,6 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     .zen-toc-item {{
         color: {p_lec['fg_subtle']} !important;
     }}
-    .zen-toc-item:hover {{
-        background-color: {p_lec['bg']} !important;
-        color: {p_lec['fg']} !important;
-    }}
     </style>
     """.strip()
     st.markdown(css_zen, unsafe_allow_html=True)
