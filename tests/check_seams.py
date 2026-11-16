@@ -398,6 +398,74 @@ def check_ui_filtro_categoria_sin_reset():
             "cambiar el recuento no debe resetear el filtro a la primera opción"
 
 
+def check_filtro_relacionados_ui():
+    """El filtro que llega del diagrama en la pestaña Documentación: caption con
+    el recuento, visor restringido a los relacionados, 'Quitar filtro' que
+    restaura el listado completo y aviso (no lista silenciosa) sin coincidencias."""
+    script_base = (
+        "import os\n"
+        "_TD = __TD__\n"
+        "import core.tags as tags\n"
+        "tags.CATEGORIAS_PATH = os.path.join(_TD, 'categorias.json')\n"
+        "import core.auditoria as aud\n"
+        "aud.HISTORY_DIR = os.path.join(_TD, 'history')\n"
+        "aud.DOCS_DIR = os.path.join(_TD, 'docs')\n"
+        "aud.AUDIT_LOG_PATH = os.path.join(_TD, 'audit_log.json')\n"
+        "aud._obtener_historial_versiones_cached.cache_clear()\n"
+        "import streamlit as st\n"
+        "st.session_state.setdefault('historial_busquedas', [])\n"
+        "from core.ui_documentos import renderizar_pestana_documentacion\n"
+        "renderizar_pestana_documentacion("
+        "{'rel_a.md': 'contenido a', 'rel_b.md': 'contenido b', 'ajeno.md': 'contenido c'})\n"
+    )
+
+    with tempfile.TemporaryDirectory() as td:
+        os.makedirs(os.path.join(td, "history"))
+        os.makedirs(os.path.join(td, "docs"))
+        at = _app_test(script_base.replace("__TD__", repr(td)))
+        # Fuera del script: el botón limpia la clave y un setdefault en el cuerpo
+        # la volvería a sembrar en el rerun.
+        at.session_state["arq_docs_relacionados"] = {
+            "etiqueta": "Chatbot WhatsApp (Chattigo)",
+            "docs": ["rel_a.md", "rel_b.md"],
+        }
+        at.run()
+        assert not at.exception, f"el render con filtro debe completarse: {at.exception}"
+
+        caps = [c.value for c in at.caption]
+        esperado = "Documentación relacionada con «Chatbot WhatsApp (Chattigo)» · 2 documento(s)"
+        assert any(esperado in c for c in caps), f"caption del filtro ausente: {caps}"
+
+        # El selectbox expone las opciones con format_func (normalizar_titulo_display).
+        from core.procesador import normalizar_titulo_display as _fmt
+        rel_fmt = [_fmt("rel_a.md"), _fmt("rel_b.md")]
+        sel = at.selectbox(key="tab4_doc_selector")
+        assert sel.options == rel_fmt, \
+            f"el visor sólo debe mostrar los relacionados: {sel.options}"
+
+        at.button(key="arq_quitar_relacionados").click().run()
+        assert not at.exception, at.exception
+        assert "arq_docs_relacionados" not in at.session_state, \
+            "el botón debe limpiar el filtro de la sesión"
+        completos = [_fmt("ajeno.md"), _fmt("rel_a.md"), _fmt("rel_b.md")]
+        assert at.selectbox(key="tab4_doc_selector").options == completos, \
+            "sin filtro debe volver el listado completo"
+
+    # Sin coincidencias: aviso visible y sin selector con lista vacía.
+    with tempfile.TemporaryDirectory() as td2:
+        os.makedirs(os.path.join(td2, "history"))
+        os.makedirs(os.path.join(td2, "docs"))
+        at2 = _app_test(script_base.replace("__TD__", repr(td2)))
+        at2.session_state["arq_docs_relacionados"] = {"etiqueta": "Inexistente", "docs": []}
+        at2.run()
+        assert not at2.exception, f"el render sin coincidencias debe completarse: {at2.exception}"
+        warns = [w.value for w in at2.warning]
+        assert any("Sin documentos relacionados con «Inexistente»" in w for w in warns), \
+            f"falta el aviso de sin coincidencias: {warns}"
+        assert not any(s.key == "tab4_doc_selector" for s in at2.selectbox), \
+            "sin relacionados no debe haber selector de documento"
+
+
 def check_preflight_produccion():
     """En produccion el arranque exige claves maestras, boveda y PostgreSQL."""
     from core.preflight import VARIABLES_OBLIGATORIAS, problemas_de_entorno
@@ -605,6 +673,8 @@ def check_arquitectura_documentacion():
     assert falso.session_state["arq_docs_relacionados"]["docs"] == ["matriz_alertamiento.md"]
     assert falso.session_state["tab4_cat_selector"] == "Todas"
     assert falso.session_state["tab4_type_selector"] == "Todos"
+    assert falso.session_state["tab4_date_range_selector"] == (), \
+        "el rango de fechas también debe volver a neutro al llegar el filtro"
 
     # La categoría del modelo actúa como tag: un doc sin el nombre del
     # servicio entra por la categoría y se fusiona por score máximo.
@@ -1094,6 +1164,7 @@ if __name__ == "__main__":
     check_arquitectura_documentacion()
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
+    check_filtro_relacionados_ui()
     check_plantillas_permiso_y_escapes()
     check_ronda_pares_escrituras()
     check_ronda_pares_sidebar()

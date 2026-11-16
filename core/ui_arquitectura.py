@@ -86,6 +86,9 @@ def procesar_parametros_arquitectura(doc_store: dict) -> None:
     st.session_state["nav_seccion_activa"] = "Documentación Técnica"
     st.session_state["tab4_cat_selector"] = "Todas"
     st.session_state["tab4_type_selector"] = "Todos"
+    # El rango de fechas también: con un rango viejo activo, el caption prometía
+    # los relacionados y la lista salía vacía.
+    st.session_state["tab4_date_range_selector"] = ()
 
 
 def cargar_html_arquitectura(tema: str = "Claro") -> str:
