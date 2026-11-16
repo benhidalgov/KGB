@@ -27,6 +27,7 @@ DATA_DIR = os.path.join(APP_DIR, "data")
 CSV_PATH = os.path.join(DATA_DIR, "mantenimientos.csv")
 DOCS_DIR = os.path.join(DATA_DIR, "docs")
 ASSETS_DIR = os.path.join(DATA_DIR, "docs", "assets")
+DOCS_CACHE_DIR = os.path.join(DATA_DIR, "docs_cache")
 ORIGINALS_DIR = os.path.join(DATA_DIR, "originals")
 INBOX_DIR = os.path.join(DATA_DIR, "inbox")
 HISTORY_DIR = os.path.join(DATA_DIR, "history")
@@ -55,7 +56,7 @@ MAX_AUDIT_LOG_BYTES = 50 * 1024 * 1024
 ESTILOS_CSS_PATH = os.path.join(APP_DIR, "core", "estilos.css")
 
 # Asegurar la existencia de directorios base
-for directory in [DATA_DIR, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR, HISTORY_DIR]:
+for directory in [DATA_DIR, DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR, HISTORY_DIR, DOCS_CACHE_DIR]:
     os.makedirs(directory, exist_ok=True)
 
 

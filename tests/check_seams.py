@@ -939,6 +939,7 @@ def check_ingesta_zip_crea_categoria():
             f"proc.ASSETS_DIR = {dirs['assets']!r}\n"
             f"proc.ORIGINALS_DIR = {dirs['orig']!r}\n"
             f"proc.INBOX_DIR = {dirs['inbox']!r}\n"
+            f"proc.DOCS_CACHE_DIR = {os.path.join(td, 'docs_cache')!r}\n"
             f"aud.HISTORY_DIR = {os.path.join(td, 'history')!r}\n"
             f"aud.DOCS_DIR = {dirs['docs']!r}\n"
             f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
@@ -1036,6 +1037,43 @@ def check_fase3_stdlib():
                 "guardar debe invalidar la caché (mtime cambia)"
 
 
+def check_cache_disco_documentos():
+    """La conversión de documentos se persiste en data/docs_cache/ (texto, clave
+    ruta+mtime): tras un reinicio el contenido sale del disco sin reparsear y
+    una edición invalida la entrada."""
+    import core.procesador as proc
+
+    with tempfile.TemporaryDirectory() as td:
+        ruta_doc = os.path.join(td, "nota_perf.md")
+        with open(ruta_doc, "w", encoding="utf-8") as f:
+            f.write("# Contenido X\n")
+        cache_dir = os.path.join(td, "cache")
+
+        with mock.patch.object(proc, "DOCS_CACHE_DIR", cache_dir):
+            c1 = proc.cargar_documento_individual(ruta_doc)
+            assert c1 == "# Contenido X\n", c1
+            assert os.listdir(cache_dir), "la primera carga debe persistir en disco"
+
+            # Reinicio simulado: sin memoria, el parser no debe volver a correr.
+            proc._cargar_documento_individual_cached.clear()
+            with mock.patch.object(proc, "_cargar_documento_individual_cached",
+                                    side_effect=AssertionError("no debe reparsear")):
+                c2 = proc.cargar_documento_individual(ruta_doc)
+            assert c2 == c1, "el disco debe servir la copia cacheada"
+
+            # Edición del archivo: mtime distinto invalida la entrada.
+            with open(ruta_doc, "w", encoding="utf-8") as f:
+                f.write("# Contenido Y\n")
+            nuevo = os.path.getmtime(ruta_doc) + 5
+            os.utime(ruta_doc, (nuevo, nuevo))
+            c3 = proc.cargar_documento_individual(ruta_doc)
+            assert c3 == "# Contenido Y\n", f"una edición debe reparsear: {c3[:60]}"
+
+            # Limpiar la caché borra también el disco.
+            proc.limpiar_cache_documentos()
+            assert not os.listdir(cache_dir), "limpiar debe vaciar el disco"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -1062,4 +1100,5 @@ if __name__ == "__main__":
     check_ronda_pares_bajas()
     check_ingesta_zip_crea_categoria()
     check_fase3_stdlib()
+    check_cache_disco_documentos()
     print("[OK] check_seams")

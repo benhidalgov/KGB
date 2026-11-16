@@ -9,7 +9,7 @@ import base64
 from datetime import datetime
 import streamlit as st
 from excel_cleaner import procesar_excel_limpio
-from core.configuracion import DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR
+from core.configuracion import DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR, DOCS_CACHE_DIR
 from core.tags import asignar_tags_documento
 from core.auditoria import guardar_nueva_version, inicializar_version_inicial_si_no_existe
 
@@ -241,6 +241,18 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
 # cache_resource comparte el mismo objeto entre sesiones: los documentos
 # (strings inmutables) dejan de duplicarse por usuario; cada sesión conserva
 # solo el índice del doc_store.
+_md_converter = None
+
+
+def _obtener_markitdown():
+    """Instancia única: construir MarkItDown() por archivo cuesta ~85 ms."""
+    global _md_converter
+    if _md_converter is None:
+        from markitdown import MarkItDown
+        _md_converter = MarkItDown()
+    return _md_converter
+
+
 @st.cache_resource(show_spinner=False, max_entries=512)
 def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
     ext = os.path.splitext(filepath)[1].lower()
@@ -264,8 +276,7 @@ def _cargar_documento_individual_cached(filepath: str, mtime: float) -> str:
         return leer_texto_resiliente(filepath)
 
     try:
-        from markitdown import MarkItDown
-        return MarkItDown().convert(filepath, keep_data_uris=False).text_content or ""
+        return _obtener_markitdown().convert(filepath, keep_data_uris=False).text_content or ""
     except Exception:
         if ext in TEXT_EXTENSIONS:
             return leer_texto_resiliente(filepath)
@@ -351,14 +362,55 @@ def leer_entrada_zip_segura(zf, info, limite: int) -> bytes | None:
 
 
 def cargar_documento_individual(filepath: str) -> str:
-    """Convierte un archivo individual al formato Markdown estructurado con cache por mtime."""
+    """Convierte un archivo al Markdown estructurado con cache por mtime.
+
+    Doble cache: memoria (cache_resource, entre sesiones del proceso) y disco
+    (data/docs_cache/, entre reinicios: deploy o run-on-save). La clave es
+    (ruta, mtime), asi una reedicion invalida sola la entrada; solo texto,
+    nunca pickle. Ceiling: un error transitorio de parseo (archivo bloqueado)
+    queda cacheado hasta la proxima edicion del archivo.
+    """
     mtime = os.path.getmtime(filepath) if os.path.exists(filepath) else 0.0
-    return _cargar_documento_individual_cached(filepath, mtime)
+    if os.path.splitext(filepath)[1].lower() in IMAGE_EXTENSIONS:
+        # Sin cache disco: esta rama copia el grafico a assets/ y el salto
+        # dejaria assets/ vacio; ademas es rapida (sha256 de un archivo corto).
+        return _cargar_documento_individual_cached(filepath, mtime)
+
+    ruta_cache = _ruta_cache_disco(filepath)
+    try:
+        with open(ruta_cache, "r", encoding="utf-8", newline="") as f:
+            cabecera, sep, contenido = f.read().partition("\n")
+        if sep and float(cabecera) == mtime:
+            return contenido
+    except (OSError, ValueError):
+        pass
+
+    contenido = _cargar_documento_individual_cached(filepath, mtime)
+    try:
+        os.makedirs(DOCS_CACHE_DIR, exist_ok=True)
+        tmp = ruta_cache + ".tmp"
+        with open(tmp, "w", encoding="utf-8", newline="") as f:
+            f.write(f"{mtime!r}\n{contenido}")
+        os.replace(tmp, ruta_cache)
+    except OSError:
+        pass  # sin disco seguimos con la cache de memoria
+    return contenido
+
+
+def _ruta_cache_disco(filepath: str) -> str:
+    """Una entrada por ruta absoluta: reescribir reemplaza a la anterior (autolimpieza)."""
+    nombre = hashlib.sha1(os.path.abspath(filepath).encode("utf-8")).hexdigest()
+    return os.path.join(DOCS_CACHE_DIR, nombre)
 
 
 def limpiar_cache_documentos():
-    """Limpia la caché en memoria de Streamlit para asegurar la recarga fresca de documentos."""
+    """Limpia la caché de documentos (memoria y disco) para asegurar la recarga fresca."""
     _cargar_documento_individual_cached.clear()
+    for old in glob.glob(os.path.join(DOCS_CACHE_DIR, "*")):
+        try:
+            os.remove(old)
+        except OSError:
+            pass
 
 
 def cargar_documentos_locales(doc_store: dict, force: bool = False) -> dict:

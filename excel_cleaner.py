@@ -82,7 +82,9 @@ def procesar_excel_limpio(filepath: str) -> str:
     Detecta automáticamente si la hoja es una Matriz Tabular o una Ficha Técnica/Formulario.
     """
     try:
-        wb = openpyxl.load_workbook(filepath, data_only=True)
+        # read_only: lee en streaming y con salida identica (verificado contra los
+        # inventarios reales); el modo normal tardaba 2.6x en las mismas hojas.
+        wb = openpyxl.load_workbook(filepath, data_only=True, read_only=True)
     except Exception as e:
         return f"Error al abrir archivo Excel: {str(e)}"
 
@@ -166,4 +168,7 @@ def procesar_excel_limpio(filepath: str) -> str:
                     doc_md.append(md_tabla)
                     doc_md.append("")
 
+    # read_only mantiene el ZIP abierto para streaming: sin close el archivo
+    # queda bloqueado en Windows (y el tempdir de tests no se puede borrar).
+    wb.close()
     return "\n".join(doc_md)
