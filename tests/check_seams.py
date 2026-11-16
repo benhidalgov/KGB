@@ -433,11 +433,16 @@ def check_filtro_relacionados_ui():
         assert not at.exception, f"el render con filtro debe completarse: {at.exception}"
 
         caps = [c.value for c in at.caption]
-        esperado = "Documentación relacionada con «Chatbot WhatsApp (Chattigo)» · 2 documento(s)"
-        assert any(esperado in c for c in caps), f"caption del filtro ausente: {caps}"
+        # El caption es la referencia de qué documentos están relacionados:
+        # recuento + los nombres formateados, en el mismo orden del filtro.
+        from core.procesador import normalizar_titulo_display as _fmt
+        esperado = (
+            "Documentación relacionada con «Chatbot WhatsApp (Chattigo)» · "
+            f"2 documento(s): {_fmt('rel_a.md')}, {_fmt('rel_b.md')}"
+        )
+        assert any(esperado in c for c in caps), f"caption del filtro sin los documentos: {caps}"
 
         # El selectbox expone las opciones con format_func (normalizar_titulo_display).
-        from core.procesador import normalizar_titulo_display as _fmt
         rel_fmt = [_fmt("rel_a.md"), _fmt("rel_b.md")]
         sel = at.selectbox(key="tab4_doc_selector")
         assert sel.options == rel_fmt, \

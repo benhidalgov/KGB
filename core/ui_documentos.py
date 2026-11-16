@@ -146,7 +146,11 @@ def renderizar_pestana_documentacion(doc_store: dict):
             col_rel_txt, col_rel_btn = st.columns([4, 1], vertical_alignment="center")
             with col_rel_txt:
                 if docs_rel:
-                    st.caption(f"Documentación relacionada con «{etiqueta_rel}» · {len(docs_rel)} documento(s)")
+                    nombres_rel = ", ".join(normalizar_titulo_display(d) for d in docs_rel)
+                    st.caption(
+                        f"Documentación relacionada con «{etiqueta_rel}» · "
+                        f"{len(docs_rel)} documento(s): {nombres_rel}"
+                    )
                 else:
                     st.warning(f"Sin documentos relacionados con «{etiqueta_rel}».")
             with col_rel_btn:
