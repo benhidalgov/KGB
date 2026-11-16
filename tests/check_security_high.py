@@ -4,17 +4,13 @@ import tempfile
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import core.auth as auth
 import core.vault as vault
 import core.auditoria as aud
 from core.motor import _es_sql_solo_lectura as _es_consulta_solo_lectura
 
 
-def check_hash():
-    h = auth.generar_hash_password("secreta", salt="fija")
-    assert auth._verificar_hash("secreta", h)
-    assert not auth._verificar_hash("mala", h)
-    print("[OK] hash")
+# check_hash vive en check_auth_versionado: cubre lo mismo (verificar correcto e
+# incorrecto) más determinismo por sal, dependencia de contenido y sal aleatoria.
 
 
 def check_sql_guard():
@@ -61,7 +57,6 @@ def check_vault_no_destruye():
 
 
 if __name__ == "__main__":
-    check_hash()
     check_sql_guard()
     check_vault_no_destruye()
     print("[OK] security_high")

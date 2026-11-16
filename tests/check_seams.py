@@ -329,6 +329,23 @@ def _app_test(cuerpo: str) -> AppTest:
     return AppTest.from_string(script, default_timeout=60)
 
 
+def _parches_aud_tags(td: str) -> str:
+    """Bloque de parches que los AppTest de UI repetían: deja auditoría y tags
+    apuntando a un temporal, limpia la caché de historial y siembra el estado
+    mínimo de sesión."""
+    return (
+        "import streamlit as st\n"
+        "import core.auditoria as aud\n"
+        "import core.tags as tags\n"
+        f"aud.HISTORY_DIR = {os.path.join(td, 'history')!r}\n"
+        f"aud.DOCS_DIR = {os.path.join(td, 'docs')!r}\n"
+        f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
+        f"tags.CATEGORIAS_PATH = {os.path.join(td, 'categorias.json')!r}\n"
+        "aud._obtener_historial_versiones_cached.cache_clear()\n"
+        "st.session_state.setdefault('historial_busquedas', [])\n"
+    )
+
+
 def check_ui_busqueda_limpiable():
     """Especificación (ui_consultas): buscar un término y reenviar la búsqueda
     vacía limpia la búsqueda; la interfaz vuelve al estado vacío inicial."""
@@ -363,19 +380,9 @@ def check_ui_filtro_categoria_sin_reset():
         os.makedirs(os.path.join(td, "history"))
         os.makedirs(os.path.join(td, "docs"))
         at = _app_test(
-            f"import os\n"
-            f"_TD = {td!r}\n"
-            "import core.tags as tags\n"
-            "tags.CATEGORIAS_PATH = os.path.join(_TD, 'categorias.json')\n"
-            "import core.auditoria as aud\n"
-            "aud.HISTORY_DIR = os.path.join(_TD, 'history')\n"
-            "aud.DOCS_DIR = os.path.join(_TD, 'docs')\n"
-            "aud.AUDIT_LOG_PATH = os.path.join(_TD, 'audit_log.json')\n"
-            "aud._obtener_historial_versiones_cached.cache_clear()\n"
-            "import streamlit as st\n"
-            "st.session_state.setdefault('historial_busquedas', [])\n"
-            "from core.ui_documentos import renderizar_pestana_documentacion\n"
-            "renderizar_pestana_documentacion({'a.md': 'contenido uno de prueba', "
+            _parches_aud_tags(td)
+            + "from core.ui_documentos import renderizar_pestana_documentacion\n"
+            + "renderizar_pestana_documentacion({'a.md': 'contenido uno de prueba', "
             "'b.md': 'contenido dos de prueba'})\n"
         )
         at.run()
@@ -402,18 +409,7 @@ def check_filtro_relacionados_ui():
     """El filtro que llega del diagrama en la pestaña Documentación: caption con
     el recuento, visor restringido a los relacionados, 'Quitar filtro' que
     restaura el listado completo y aviso (no lista silenciosa) sin coincidencias."""
-    script_base = (
-        "import os\n"
-        "_TD = __TD__\n"
-        "import core.tags as tags\n"
-        "tags.CATEGORIAS_PATH = os.path.join(_TD, 'categorias.json')\n"
-        "import core.auditoria as aud\n"
-        "aud.HISTORY_DIR = os.path.join(_TD, 'history')\n"
-        "aud.DOCS_DIR = os.path.join(_TD, 'docs')\n"
-        "aud.AUDIT_LOG_PATH = os.path.join(_TD, 'audit_log.json')\n"
-        "aud._obtener_historial_versiones_cached.cache_clear()\n"
-        "import streamlit as st\n"
-        "st.session_state.setdefault('historial_busquedas', [])\n"
+    cuerpo = (
         "from core.ui_documentos import renderizar_pestana_documentacion\n"
         "renderizar_pestana_documentacion("
         "{'rel_a.md': 'contenido a', 'rel_b.md': 'contenido b', 'ajeno.md': 'contenido c'})\n"
@@ -422,7 +418,7 @@ def check_filtro_relacionados_ui():
     with tempfile.TemporaryDirectory() as td:
         os.makedirs(os.path.join(td, "history"))
         os.makedirs(os.path.join(td, "docs"))
-        at = _app_test(script_base.replace("__TD__", repr(td)))
+        at = _app_test(_parches_aud_tags(td) + cuerpo)
         # Fuera del script: el botón limpia la clave y un setdefault en el cuerpo
         # la volvería a sembrar en el rerun.
         at.session_state["arq_docs_relacionados"] = {
@@ -460,7 +456,7 @@ def check_filtro_relacionados_ui():
     with tempfile.TemporaryDirectory() as td2:
         os.makedirs(os.path.join(td2, "history"))
         os.makedirs(os.path.join(td2, "docs"))
-        at2 = _app_test(script_base.replace("__TD__", repr(td2)))
+        at2 = _app_test(_parches_aud_tags(td2) + cuerpo)
         at2.session_state["arq_docs_relacionados"] = {"etiqueta": "Inexistente", "docs": []}
         at2.run()
         assert not at2.exception, f"el render sin coincidencias debe completarse: {at2.exception}"
@@ -718,16 +714,10 @@ def check_plantillas_permiso_y_escapes():
         os.makedirs(docs)
         os.makedirs(hist)
         at = _app_test(
-            "import time\n"
-            "import streamlit as st\n"
+            _parches_aud_tags(td)
+            + "import time\n"
             "import core.ui_plantillas as pl\n"
-            "import core.auditoria as aud\n"
-            "import core.tags as tg\n"
             f"pl.DOCS_DIR = {docs!r}\n"
-            f"aud.HISTORY_DIR = {hist!r}\n"
-            f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
-            f"aud.DOCS_DIR = {docs!r}\n"
-            f"tg.CATEGORIAS_PATH = {os.path.join(td, 'categorias.json')!r}\n"
             "st.session_state['usuario_actual'] = {'username': 'aud', 'rol': 'Auditor', "
             "'nombre': 'Auditor', 'activo': True}\n"
             "st.session_state['auth_activa'] = True\n"
@@ -769,13 +759,8 @@ def check_ronda_pares_escrituras():
     with tempfile.TemporaryDirectory() as td:
         hist_md = os.path.join(td, "history", "consulta_aud.md")
         at = _app_test(
-            "import os\n"
-            "import streamlit as st\n"
-            "import core.auditoria as aud\n"
-            f"aud.HISTORY_DIR = {os.path.join(td, 'history')!r}\n"
-            f"aud.DOCS_DIR = {os.path.join(td, 'docs')!r}\n"
-            f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
-            "aud._obtener_historial_versiones_cached.cache_clear()\n"
+            _parches_aud_tags(td)
+            + "import os\n"
             "h1 = aud.inicializar_version_inicial_si_no_existe('sin_sesion.md', 'hola')\n"
             "assert len(h1) == 1, h1\n"
             + _sesion_app("Auditor") +
@@ -789,18 +774,11 @@ def check_ronda_pares_escrituras():
     with tempfile.TemporaryDirectory() as td2:
         custom = os.path.join(td2, "plantillas_custom.json")
         at = _app_test(
-            "import time\n"
-            "import streamlit as st\n"
-            "import core.ui_plantillas as pl\n"
+            _parches_aud_tags(td2)
+            + "import core.ui_plantillas as pl\n"
             "import core.plantillas as plant\n"
-            "import core.auditoria as aud\n"
-            "import core.tags as tg\n"
             f"pl.DOCS_DIR = {os.path.join(td2, 'docs')!r}\n"
             f"plant.PLANTILLAS_CUSTOM_PATH = {custom!r}\n"
-            f"aud.HISTORY_DIR = {os.path.join(td2, 'history')!r}\n"
-            f"aud.DOCS_DIR = {os.path.join(td2, 'docs')!r}\n"
-            f"aud.AUDIT_LOG_PATH = {os.path.join(td2, 'audit_log.json')!r}\n"
-            f"tg.CATEGORIAS_PATH = {os.path.join(td2, 'categorias.json')!r}\n"
             + _sesion_app("Auditor") +
             "pl.renderizar_pestana_plantillas({})\n"
         )
@@ -827,15 +805,13 @@ def check_ronda_pares_sidebar():
         for d in dirs.values():
             os.makedirs(d)
         at = _app_test(
-            "import streamlit as st\n"
-            "import core.procesador as proc\n"
-            "import core.tags as tg\n"
+            _parches_aud_tags(td)
+            + "import core.procesador as proc\n"
             "import core.ui_sidebar as sb\n"
             f"proc.DOCS_DIR = {dirs['docs']!r}\n"
             f"proc.ASSETS_DIR = {dirs['assets']!r}\n"
             f"proc.ORIGINALS_DIR = {dirs['orig']!r}\n"
             f"proc.INBOX_DIR = {dirs['inbox']!r}\n"
-            f"tg.CATEGORIAS_PATH = {os.path.join(td, 'categorias.json')!r}\n"
             "sb.listar_secretos_disponibles = lambda: []\n"
             + _sesion_app("Administrador") +
             "sb.renderizar_sidebar({'username': 'admin', 'rol': 'Administrador', "
@@ -897,17 +873,8 @@ def check_ronda_pares_bajas():
 
         def _docs_app(rol):
             return _app_test(
-                "import os\n"
-                "import streamlit as st\n"
-                "import core.tags as tags\n"
-                "import core.auditoria as aud\n"
-                f"tags.CATEGORIAS_PATH = {os.path.join(td, 'categorias.json')!r}\n"
-                f"aud.HISTORY_DIR = {os.path.join(td, 'history')!r}\n"
-                f"aud.DOCS_DIR = {docs!r}\n"
-                f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
-                "aud._obtener_historial_versiones_cached.cache_clear()\n"
-                "aud._obtener_todos_los_eventos_auditoria_cached.cache_clear()\n"
-                "st.session_state.setdefault('historial_busquedas', [])\n"
+                _parches_aud_tags(td)
+                + "aud._obtener_todos_los_eventos_auditoria_cached.cache_clear()\n"
                 + _sesion_app(rol) +
                 "from core.ui_documentos import renderizar_pestana_documentacion\n"
                 "renderizar_pestana_documentacion({'a.md': 'contenido de prueba'})\n"
@@ -1013,20 +980,14 @@ def check_ingesta_zip_crea_categoria():
             os.makedirs(d)
         cats_path = os.path.join(td, "categorias.json")
         at = _app_test(
-            "import streamlit as st\n"
-            "import core.procesador as proc\n"
-            "import core.auditoria as aud\n"
-            "import core.tags as tg\n"
+            _parches_aud_tags(td)
+            + "import core.procesador as proc\n"
             "import core.ui_sidebar as sb\n"
             f"proc.DOCS_DIR = {dirs['docs']!r}\n"
             f"proc.ASSETS_DIR = {dirs['assets']!r}\n"
             f"proc.ORIGINALS_DIR = {dirs['orig']!r}\n"
             f"proc.INBOX_DIR = {dirs['inbox']!r}\n"
             f"proc.DOCS_CACHE_DIR = {os.path.join(td, 'docs_cache')!r}\n"
-            f"aud.HISTORY_DIR = {os.path.join(td, 'history')!r}\n"
-            f"aud.DOCS_DIR = {dirs['docs']!r}\n"
-            f"aud.AUDIT_LOG_PATH = {os.path.join(td, 'audit_log.json')!r}\n"
-            f"tg.CATEGORIAS_PATH = {cats_path!r}\n"
             "sb.listar_secretos_disponibles = lambda: []\n"
             + _sesion_app("Administrador") +
             "sb.renderizar_sidebar({'username': 'admin', 'rol': 'Administrador', "
