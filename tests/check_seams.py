@@ -1262,6 +1262,33 @@ def check_ejecucion_paralela():
             "el filtro del diagrama debe ser estable entre hilos"
 
 
+def check_tema_oscuro_completo():
+    """El override de tema Oscuro debe redeclarar TODAS las variables del :root
+    de estilos.css: si falta una, esa propiedad se queda con el valor claro.
+    En Claro no se redeclara nada (la paleta es el propio :root)."""
+    import re
+    from core.estilos import _generar_overrides_tema
+    from core.configuracion import ESTILOS_CSS_PATH
+
+    with open(ESTILOS_CSS_PATH, encoding="utf-8") as f:
+        css = f.read()
+    raiz = re.search(r":root\s*\{(.*?)\n\}", css, re.S)
+    assert raiz, "estilos.css debe definir :root"
+    # --font-* son invariantes al tema: nunca se sobreescriben en Oscuro.
+    vars_css = {v for v in re.findall(r"(--[\w-]+):", raiz.group(1))
+                if not v.startswith("--font")}
+
+    vars_oscuro = set(re.findall(r"(--[\w-]+):", _generar_overrides_tema("Oscuro")))
+    faltan = vars_css - vars_oscuro
+    assert not faltan, f"variables del :root sin override en tema Oscuro: {sorted(faltan)}"
+
+    claro = _generar_overrides_tema("Claro")
+    assert not re.search(r"--[\w-]+:", claro), \
+        "en Claro no debe haber redeclaración de variables: el :root ya las tiene"
+    assert "font-weight: 500" in claro, \
+        "el font-weight de alertas (ausente en estilos.css) debe seguir aplicando"
+
+
 if __name__ == "__main__":
     check_preflight_produccion()
     check_auth_desactivado_no_entra()
@@ -1291,4 +1318,5 @@ if __name__ == "__main__":
     check_fase3_stdlib()
     check_cache_disco_documentos()
     check_ejecucion_paralela()
+    check_tema_oscuro_completo()
     print("[OK] check_seams")
