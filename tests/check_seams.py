@@ -677,12 +677,16 @@ def check_arquitectura_documentacion():
         "el rango de fechas también debe volver a neutro al llegar el filtro"
 
     # La categoría del modelo actúa como tag: un doc sin el nombre del
-    # servicio entra por la categoría y se fusiona por score máximo.
-    doc_store["guia_monitoreo.md"] = "procedimiento de monitoreo de alertas"
+    # servicio entra por la categoría si alcanza el corte de relevancia
+    # (_UMBRAL_RELACION): aquí nombre(+20) + 10 menciones(+20) = 40.
+    doc_store["guia_monitoreo.md"] = ("procedimiento de monitoreo " * 10).strip()
+    # Un documento con la misma tag pero débil (una sola mención, score 2)
+    # es basura tag-driven: el corte debe excluirlo, no inflar la lista.
+    doc_store["diario_personal.md"] = "apuntes de monitoreo del dia personal"
     with mock.patch.object(ua, "_categoria_de_servicio", lambda n: "monitoreo"):
         falso = correr({"arq_rel": "servicio-falso"})
     assert falso.session_state["arq_docs_relacionados"]["docs"] == ["guia_monitoreo.md"], \
-        "la categoría debe rescatar al documento"
+        "la categoría debe rescatar al documento fuerte y excluir al débil"
 
     # Sin parámetro no se toca nada: el resto de la consola no debe enterarse.
     falso = correr({})

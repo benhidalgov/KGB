@@ -14,6 +14,13 @@ _CACHE = {"mtime": 0.0, "html": ""}
 # Umbral "Alta" que ya usa core/motor.py para una coincidencia de documento.
 _UMBRAL_ALTA = 20
 
+# Corte de relevancia para la relación diagrama-documento: la tag genérica de
+# categoría aporta +25 en el motor y metía diarios y formularios personales
+# (p. ej. "WAF (HTTPS / TLS)" traía el diario APT122 con score 31). Con 40,
+# sólo entra el que menciona el propio servicio (query base) o el que alcanza
+# coincidencia fuerte con la categoría (nombre +20 o varios hits de contenido).
+_UMBRAL_RELACION = 40
+
 
 def _categoria_de_servicio(nombre: str) -> str:
     """Categoría del servicio en el modelo (vacío si no está, p. ej. en tests)."""
@@ -32,22 +39,27 @@ def _buscar_documentos(servicio: str, doc_store: dict) -> list:
     """Documentos del servicio, probando también su categoría como boost.
 
     La categoría del modelo ("Monitoreo", "POS / Cajas"…) es la tag que el
-    servicio ya trae: sumarla a la consulta sube de 52 a 64 de 70 servicios
-    con coincidencia fuerte. Se fusiona por score máximo, así la consulta más
-    larga (que pierde el +30 de frase) nunca empeora el resultado.
+    servicio ya trae: sumarla a la consulta sube la cobertura de servicios con
+    coincidencia. Se fusiona por score máximo, así la consulta más larga (que
+    pierde el +30 de frase) nunca empeora el resultado.
+
+    Relevancia: sólo entra el documento que menciona el propio servicio (está
+    en la query base) o el que alcanza _UMBRAL_RELACION solo con la categoría;
+    sin ese corte, la tag genérica inflaba el score de documentos ajenos.
     """
     from core.motor import buscar_en_documentos
 
-    encontrados = buscar_en_documentos(servicio, doc_store)
+    base = buscar_en_documentos(servicio, doc_store)
+    menciona = {n for n, _, _ in base}
+    fusion = {n: (c, s) for n, c, s in base}
     categoria = _categoria_de_servicio(servicio)
-    if not categoria:
-        return encontrados
-    fusion = {n: (c, s) for n, c, s in encontrados}
-    for n, c, s in buscar_en_documentos(servicio + " " + categoria, doc_store):
-        if s > fusion.get(n, ("", -1))[1]:
-            fusion[n] = (c, s)
-    return sorted(((n, c, s) for n, (c, s) in fusion.items()),
-                  key=lambda x: x[2], reverse=True)
+    if categoria:
+        for n, c, s in buscar_en_documentos(servicio + " " + categoria, doc_store):
+            if s > fusion.get(n, ("", -1))[1]:
+                fusion[n] = (c, s)
+    relevantes = [(n, c, s) for n, (c, s) in fusion.items()
+                  if n in menciona or s >= _UMBRAL_RELACION]
+    return sorted(relevantes, key=lambda x: x[2], reverse=True)
 
 
 def procesar_parametros_arquitectura(doc_store: dict) -> None:
