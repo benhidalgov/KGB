@@ -285,11 +285,11 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                     st.caption("Verifique que `VAULT_MASTER_KEY` en el archivo `.env` coincida con la clave original.")
                 else:
                     cfg_cnt = sum(1 for s in sec_list if s["estado"] == "[CONFIGURADO]")
-                    st.markdown(f"<div style='font-size:0.72rem;margin-bottom:8px;opacity:0.8;'>Estado: <b>{cfg_cnt} configurada(s)</b>.</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.72rem;margin-bottom:8px;'>Estado: <b>{cfg_cnt} configurada(s)</b>.</div>", unsafe_allow_html=True)
                     for s in sec_list:
                         badge_s = '<span class="badge-ok" style="font-size:0.62rem;padding:1px 4px;">[Configurado]</span>' if s["estado"] == "[CONFIGURADO]" else '<span class="badge-tag" style="font-size:0.62rem;padding:1px 4px;">[No configurado]</span>'
                         prev_s = f"({html.escape(str(s['vista_previa']))})" if s['vista_previa'] != '-' else ""
-                        st.markdown(f"<div style='font-size:0.72rem;padding:3px 0;display:flex;justify-content:space-between;align-items:center;'><span style='font-family:monospace;font-weight:600;'>{html.escape(str(s['clave']))}</span>{badge_s}</div><div style='font-size:0.64rem;opacity:0.6;margin-bottom:4px;'>Origen: {s['origen']} {prev_s}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-size:0.72rem;padding:3px 0;display:flex;justify-content:space-between;align-items:center;'><span style='font-family:monospace;font-weight:600;'>{html.escape(str(s['clave']))}</span>{badge_s}</div><div style='font-size:0.75rem;margin-bottom:4px;'>Origen: {s['origen']} {prev_s}</div>", unsafe_allow_html=True)
 
                     st.markdown("<b style='font-size:0.75rem;'>Guardar Clave:</b>", unsafe_allow_html=True)
                     sel_k = st.selectbox("Seleccionar Llave:", [s["clave"] for s in sec_list] + ["OTRA_CLAVE_PERSONALIZADA"], key="sb_vault_sel_key", label_visibility="collapsed")

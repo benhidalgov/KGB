@@ -2,11 +2,10 @@
    Protocol: Premium Utilitarian Minimalism & Editorial UI
    Paleta: Calida y Confortable para la Vista (Warm Monochrome & Spot Pastels)
    Compatibilidad: Theme-Safe sincronizado con Streamlit
-   Directrices: Sin emojis, sin sombras pesadas, sin gradientes.
+   Directrices: Sin emojis, sin sombras pesadas, sin gradientes, sin CDN.
+   Las fuentes van por la pila de fallback del sistema (sin @import externo):
+   el despliegue aislado no depende de ningun tercero.
    ========================================================================== */
-
-/* 1. Tipografia Editorial y Utilitaria */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap');
 
 :root {
     /* Fuentes */
@@ -434,7 +433,7 @@ button[kind="secondaryFormSubmit"] *,
     gap: 4px;
     padding: 2px 8px;
     border-radius: 9999px;
-    font-size: 0.70rem;
+    font-size: 0.75rem !important; /* piso de legibilidad (12px): vence a los tamaños inline */
     font-weight: 600;
     line-height: 1.35;
     white-space: nowrap;
@@ -538,7 +537,7 @@ button[kind="secondaryFormSubmit"] *,
 
 .sidebar-format-tag {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     padding: 1px 6px;
     border-radius: 4px;
     background: var(--bg-surface);
@@ -638,7 +637,7 @@ button[kind="secondaryFormSubmit"] *,
     height: 26px !important;
     padding: 2px 10px !important;
     font-family: var(--font-sans) !important;
-    font-size: 0.74rem !important;
+    font-size: 0.75rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.02em !important;
     border-radius: 4px !important;
