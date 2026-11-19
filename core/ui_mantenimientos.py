@@ -59,6 +59,7 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
 
     if df_mantenimientos_cache.empty and not os.path.exists(CSV_PATH):
         st.warning("No se encontró data/mantenimientos.csv.")
+        st.info("Suba un archivo de inventario desde el panel lateral (Subir Archivos) o configure PostgreSQL para cargar los mantenimientos automáticamente.")
 
     total_reg = len(df_filtrado)
     st.markdown(f"<div style='font-size:0.85rem;margin-bottom:8px;font-weight:500;'><span class='badge-info'>{total_reg} registros encontrados</span></div>", unsafe_allow_html=True)

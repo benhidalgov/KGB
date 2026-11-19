@@ -96,6 +96,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
 
     if not doc_store:
         st.warning("No hay documentos todavía.")
+        st.info("Suba archivos desde el panel lateral (Subir Archivos) o cree un documento desde Plantillas y Runbooks.")
         return
 
     todos_docs = sorted(list(doc_store.keys()))

@@ -49,6 +49,7 @@ def renderizar_modulo_consultas(doc_store: dict):
                 <div class="empty-state-console-icon">&gt;_ Buscador</div>
                 <div class="empty-state-title">Búsqueda de documentos</div>
                 <div class="empty-state-subtitle">Escribe un término para buscar entre tus documentos técnicos.</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:8px;">Ejemplos: BALANCER001, 10.24.0.125, JWT, Failover, SN-8842-A</div>
             </div>""", unsafe_allow_html=True)
         else:
             t0_d = time.perf_counter()
@@ -82,7 +83,7 @@ def renderizar_modulo_consultas(doc_store: dict):
                     hide_index=True
                 )
             else:
-                st.info(f"No hay servidores que coincidan con '{active_duck_term}'.")
+                st.info(f"No hay servidores que coincidan con '{active_duck_term}'. Pruebe con otro término (ej: BALANCER001, 10.24.0.125, JWT).")
 
             st.markdown(f"##### Documentos Encontrados ({len(doc_matches_found)})")
             if doc_matches_found:
@@ -94,7 +95,7 @@ def renderizar_modulo_consultas(doc_store: dict):
                         <div style="font-size:0.83rem;line-height:1.55;color:var(--text-secondary);background:var(--bg-surface-subtle);padding:10px 12px;border-radius:6px;border:1px solid var(--border-subtle);">{snip}</div>
                     </div>""", unsafe_allow_html=True)
             else:
-                st.info(f"No se encontraron documentos para '{active_duck_term}'.")
+                st.info(f"No se encontraron documentos para '{active_duck_term}'. Pruebe con términos más generales o revise la ortografía.")
 
             st.markdown("---")
             col_bt, col_bb = st.columns([3.5, 1.5], vertical_alignment="center")
@@ -145,6 +146,7 @@ def renderizar_modulo_consultas(doc_store: dict):
                 <div class="empty-state-console-icon">Pregunta a Gemini :1</div>
                 <div class="empty-state-title">Asistente de Operaciones</div>
                 <div class="empty-state-subtitle">Haz preguntas sobre tu infraestructura y documentos.</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:8px;">Ejemplos: ¿Cuál es el estado de BALANCER001?, ¿Qué documentos hay sobre DRP?, ¿Cuándo fue el último parchado?</div>
             </div>""", unsafe_allow_html=True)
         else:
             col_rt, col_rb = st.columns([4, 1])
