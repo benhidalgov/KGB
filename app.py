@@ -122,6 +122,54 @@ if str(st.query_params.get("health") or "").strip() == "check":
     st.stop()
 st.markdown(cargar_estilos_css(tema_actual_app), unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
+
+# Atajos de teclado globales: g+d documentos, g+c consultas, g+a arquitectura,
+# g+p plantillas, g+m modo lectura. Escriben en ?nav= y app.py las procesa.
+st.html("""
+<script>
+(function() {
+    var mapa = {
+        'd': 'Documentación Técnica',
+        'c': 'Consultas y Búsqueda',
+        'a': 'Arquitectura',
+        'p': 'Plantillas y Runbooks',
+        'm': 'Modo Lectura'
+    };
+    var secuencia = [];
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+        secuencia.push(e.key.toLowerCase());
+        if (secuencia.length > 2) secuencia.shift();
+        if (secuencia.join('') === 'gd') {
+            e.preventDefault();
+            var url = new URL(window.location);
+            url.searchParams.set('nav', 'Documentación Técnica');
+            window.history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString());
+        } else if (secuencia.join('') === 'gc') {
+            e.preventDefault();
+            var url = new URL(window.location);
+            url.searchParams.set('nav', 'Consultas y Búsqueda');
+            window.history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString());
+        } else if (secuencia.join('') === 'ga') {
+            e.preventDefault();
+            var url = new URL(window.location);
+            url.searchParams.set('nav', 'Arquitectura');
+            window.history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString());
+        } else if (secuencia.join('') === 'gp') {
+            e.preventDefault();
+            var url = new URL(window.location);
+            url.searchParams.set('nav', 'Plantillas y Runbooks');
+            window.history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString());
+        } else if (secuencia.join('') === 'gm') {
+            e.preventDefault();
+            var url = new URL(window.location);
+            url.searchParams.set('nav', 'Modo Lectura');
+            window.history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString());
+        }
+    });
+})();
+</script>
+""", unsafe_allow_html=True)
 _verificar_entorno()
 _aplicar_migraciones_una_vez()
 
@@ -200,6 +248,16 @@ if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_s
         st.stop()
     else:
         st.session_state["zen_studio_activo"] = False
+
+# Atajos de teclado globales: leer ?nav= y cambiar la sección activa.
+_nav_global = str(st.query_params.get("nav") or "").strip()
+if _nav_global:
+    try:
+        st.query_params.clear()
+    except Exception:
+        pass
+    st.session_state["nav_seccion_activa"] = _nav_global
+    st.rerun()
 
 # -------------------------------------------------------------
 # 4. PANEL LATERAL (SIDEBAR) - NAVEGACIÓN Y CONTROL
