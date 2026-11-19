@@ -603,11 +603,40 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
         _guardar_prefs_zen({"tema": tema_lectura, "tam_fuente": tam_fuente})
 
     with col_zt_exit:
-        if st.button("Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
+        if st.button("Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones (tecla Esc)"):
             st.session_state["zen_studio_activo"] = False
             # El router (app.py) decide por nav_seccion_activa; sin esto el
             # siguiente rerun vuelve a entrar en Zen y queda en bucle.
             st.session_state["nav_seccion_activa"] = "Consultas y Búsqueda"
+            st.rerun()
+
+    # Botones de atajos de teclado del lector zen: se muestran para que los
+    # usuarios los descubran y los usen; pulsar uno equivale a teclear la
+    # tecla correspondiente (app.py lee el parámetro zen_nav al rerun).
+    cols_atajos = st.columns(6)
+    with cols_atajos[0]:
+        if st.button("Anterior (k)", key="zen_atajo_prev", width="stretch", help="Documento anterior (tecla k o flecha arriba)"):
+            st.query_params["zen_nav"] = "prev"
+            st.rerun()
+    with cols_atajos[1]:
+        if st.button("Siguiente (j)", key="zen_atajo_next", width="stretch", help="Documento siguiente (tecla j o flecha abajo)"):
+            st.query_params["zen_nav"] = "next"
+            st.rerun()
+    with cols_atajos[2]:
+        if st.button("Fuente +", key="zen_atajo_font_bigger", width="stretch", help="Tamaño de fuente más grande (tecla + o =)"):
+            st.query_params["zen_nav"] = "font_bigger"
+            st.rerun()
+    with cols_atajos[3]:
+        if st.button("Fuente -", key="zen_atajo_font_smaller", width="stretch", help="Tamaño de fuente más pequeño (tecla -)"):
+            st.query_params["zen_nav"] = "font_smaller"
+            st.rerun()
+    with cols_atajos[4]:
+        if st.button("Reset (0)", key="zen_atajo_font_reset", width="stretch", help="Restaurar tamaño de fuente por defecto (tecla 0)"):
+            st.query_params["zen_nav"] = "font_reset"
+            st.rerun()
+    with cols_atajos[5]:
+        if st.button("Salir (Esc)", key="zen_atajo_exit", width="stretch", help="Volver a la consola de operaciones (tecla Esc)"):
+            st.query_params["zen_nav"] = "exit"
             st.rerun()
 
     # Selector para cambiar de documento sin salir del Modo Lectura.
