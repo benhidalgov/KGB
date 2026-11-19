@@ -144,9 +144,8 @@ if not es_usuario_autenticado():
 # -------------------------------------------------------------
 # 3. INICIALIZACIÓN DE ESTADO Y ALMACÉN DOCUMENTAL
 # -------------------------------------------------------------
-for k, default_v in [("historial_busquedas", [])]:
-    if k not in st.session_state:
-        st.session_state[k] = default_v
+if "historial_busquedas" not in st.session_state:
+    st.session_state["historial_busquedas"] = []
 
 if "doc_store" not in st.session_state:
     st.session_state.doc_store = {}
