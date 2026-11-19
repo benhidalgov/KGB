@@ -460,6 +460,90 @@ def resaltar_termino_en_html(html_o_md: str, termino: str) -> tuple[str, int]:
     return html_o_md, 0
 
 
+# Paletas de lectura del Zen Studio: colores de tema, fuera de la funcion para
+# no reconstruirlas en cada render y separar datos de presentacion.
+PALETAS_LECTURA = {
+    "Sepia": {
+        "bg": "#F5EEDC", "fg": "#342A1E", "fg_subtle": "#544635",
+        "border": "#DECFA8", "code_bg": "#EADFCA", "card_bg": "#EFE6D2",
+    },
+    "Grafito": {
+        "bg": "#1C1E22", "fg": "#EDEDEC", "fg_subtle": "#A8A7A0",
+        "border": "rgba(255, 255, 255, 0.15)", "code_bg": "rgba(255, 255, 255, 0.08)",
+        "card_bg": "#24272D",
+    },
+    "Cálido": {
+        "bg": "#FAF7F2", "fg": "#1C1B19", "fg_subtle": "#484540",
+        "border": "#E5E0D5", "code_bg": "#EFEBE2", "card_bg": "#F4EFE6",
+    },
+}
+
+# CSS del lector zen como plantilla con placeholders: se renderiza una vez por
+# tema/tamaño con .format(). Los estilos estaticos viven aqui (fuera de un
+# f-string gigante embebido en Python) y los colores provienen de
+# PALETAS_LECTURA.
+_CSS_ZEN = """
+<style>
+.zen-reader-canvas {{
+    background-color: {bg} !important;
+    border: 1px solid {border} !important;
+    color: {fg} !important;
+    font-size: {font_size} !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}}
+.zen-reader-canvas p,
+.zen-reader-canvas li,
+.zen-reader-canvas div,
+.zen-reader-canvas span,
+.zen-reader-canvas td,
+.zen-reader-canvas th {{
+    color: {fg_subtle} !important;
+    font-size: {font_size} !important;
+    line-height: 1.75 !important;
+}}
+.zen-reader-canvas h1,
+.zen-reader-canvas h2,
+.zen-reader-canvas h3,
+.zen-reader-canvas h4,
+.zen-reader-canvas h5,
+.zen-reader-canvas h6,
+.zen-reader-canvas strong,
+.zen-reader-canvas b {{
+    color: {fg} !important;
+    font-family: var(--font-serif) !important;
+}}
+.zen-reader-canvas code,
+.zen-reader-canvas pre {{
+    background-color: {code_bg} !important;
+    color: {fg} !important;
+    border: 1px solid {border} !important;
+    font-size: 0.88em !important;
+}}
+.zen-reader-canvas blockquote {{
+    border-left: 3px solid {border} !important;
+    color: {fg_subtle} !important;
+    padding-left: 12px !important;
+    margin-left: 0 !important;
+}}
+.zen-reader-canvas hr {{
+    border: none !important;
+    border-top: 1px solid {border} !important;
+    margin: 20px 0 !important;
+}}
+.zen-reader-canvas table {{
+    border: 1px solid {border} !important;
+}}
+.zen-toc-card {{
+    background-color: {card_bg} !important;
+    border: 1px solid {border} !important;
+}}
+.zen-toc-item {{
+    color: {fg_subtle} !important;
+}}
+</style>
+""".strip()
+
+
 def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | None, u_ver: int = 1, u_edit: str = "Técnico", u_time: str = "N/A"):
     """Renderiza el entorno inmersivo Zen Studio con TOC interactivo, buscador interno, personalización de lectura y visor multimodal."""
     st.html("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>")
@@ -494,95 +578,10 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
             st.rerun()
 
     font_size_val = "17px" if "Grande" in tam_fuente else ("13px" if "Compacto" in tam_fuente else "15px")
-
-    paletas_lectura = {
-        "Sepia": {
-            "bg": "#F5EEDC",
-            "fg": "#342A1E",
-            "fg_subtle": "#544635",
-            "border": "#DECFA8",
-            "code_bg": "#EADFCA",
-            "card_bg": "#EFE6D2",
-        },
-        "Grafito": {
-            "bg": "#1C1E22",
-            "fg": "#EDEDEC",
-            "fg_subtle": "#A8A7A0",
-            "border": "rgba(255, 255, 255, 0.15)",
-            "code_bg": "rgba(255, 255, 255, 0.08)",
-            "card_bg": "#24272D",
-        },
-        "Cálido": {
-            "bg": "#FAF7F2",
-            "fg": "#1C1B19",
-            "fg_subtle": "#484540",
-            "border": "#E5E0D5",
-            "code_bg": "#EFEBE2",
-            "card_bg": "#F4EFE6",
-        },
-    }
-    p_lec = paletas_lectura.get(tema_lectura, paletas_lectura["Cálido"])
-
-    css_zen = f"""
-    <style>
-    .zen-reader-canvas {{
-        background-color: {p_lec['bg']} !important;
-        border: 1px solid {p_lec['border']} !important;
-        color: {p_lec['fg']} !important;
-        font-size: {font_size_val} !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-    }}
-    .zen-reader-canvas p,
-    .zen-reader-canvas li,
-    .zen-reader-canvas div,
-    .zen-reader-canvas span,
-    .zen-reader-canvas td,
-    .zen-reader-canvas th {{
-        color: {p_lec['fg_subtle']} !important;
-        font-size: {font_size_val} !important;
-        line-height: 1.75 !important;
-    }}
-    .zen-reader-canvas h1,
-    .zen-reader-canvas h2,
-    .zen-reader-canvas h3,
-    .zen-reader-canvas h4,
-    .zen-reader-canvas h5,
-    .zen-reader-canvas h6,
-    .zen-reader-canvas strong,
-    .zen-reader-canvas b {{
-        color: {p_lec['fg']} !important;
-        font-family: var(--font-serif) !important;
-    }}
-    .zen-reader-canvas code,
-    .zen-reader-canvas pre {{
-        background-color: {p_lec['code_bg']} !important;
-        color: {p_lec['fg']} !important;
-        border: 1px solid {p_lec['border']} !important;
-        font-size: 0.88em !important;
-    }}
-    .zen-reader-canvas blockquote {{
-        border-left: 3px solid {p_lec['border']} !important;
-        color: {p_lec['fg_subtle']} !important;
-        padding-left: 12px !important;
-        margin-left: 0 !important;
-    }}
-    .zen-reader-canvas hr {{
-        border: none !important;
-        border-top: 1px solid {p_lec['border']} !important;
-        margin: 20px 0 !important;
-    }}
-    .zen-reader-canvas table {{
-        border: 1px solid {p_lec['border']} !important;
-    }}
-    .zen-toc-card {{
-        background-color: {p_lec['card_bg']} !important;
-        border: 1px solid {p_lec['border']} !important;
-    }}
-    .zen-toc-item {{
-        color: {p_lec['fg_subtle']} !important;
-    }}
-    </style>
-    """.strip()
+    p_lec = PALETAS_LECTURA.get(tema_lectura, PALETAS_LECTURA["Cálido"])
+    css_zen = _CSS_ZEN.format(bg=p_lec["bg"], fg=p_lec["fg"], fg_subtle=p_lec["fg_subtle"],
+                              border=p_lec["border"], code_bg=p_lec["code_bg"],
+                              card_bg=p_lec["card_bg"], font_size=font_size_val)
     st.markdown(css_zen, unsafe_allow_html=True)
 
     col_toc, col_canvas = st.columns([1.1, 3.4], gap="medium")
