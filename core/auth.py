@@ -29,6 +29,35 @@ _MAX_INTENTOS = 5
 _VENTANA_BLOQUEO_S = 60.0
 _MAX_CLAVES_INTENTOS = 4096
 _REVALIDAR_SEG = 60.0
+
+# Persistencia de intentos fallidos en disco para sobrevivir a reinicios.
+_INTENTOS_FILE_PATH = os.path.join(os.path.dirname(AUTH_USERS_PATH), "intentos_fallidos.json")
+
+
+def _cargar_intentos_desde_disco() -> Dict[str, list]:
+    """Carga los intentos fallidos desde el archivo de persistencia."""
+    if os.path.exists(_INTENTOS_FILE_PATH):
+        try:
+            with open(_INTENTOS_FILE_PATH, encoding="utf-8") as f:
+                datos = json.load(f)
+            if isinstance(datos, dict):
+                return datos
+        except Exception:
+            pass
+    return {}
+
+
+def _guardar_intentos_en_disco(datos: Dict[str, list]) -> None:
+    """Guarda los intentos fallidos de forma atomica."""
+    try:
+        escribir_atomico(_INTENTOS_FILE_PATH, json.dumps(datos, indent=2, ensure_ascii=False))
+    except Exception:
+        pass
+
+
+# Cargar intentos fallidos persistidos al importar el modulo (sobrevive a reinicios).
+_INTENTOS_FALLIDOS = _cargar_intentos_desde_disco()
+
 try:
     _MAX_INACTIVIDAD_SEG = float(os.environ.get("SESSION_TIMEOUT_MIN", "30")) * 60
 except ValueError:
@@ -37,6 +66,11 @@ except ValueError:
 
 def _esta_bloqueado(clave: str) -> bool:
     ahora = time.time()
+    # Cargar desde disco si no está en memoria (después de un reinicio).
+    if clave not in _INTENTOS_FALLIDOS:
+        datos_disco = _cargar_intentos_desde_disco()
+        if clave in datos_disco:
+            _INTENTOS_FALLIDOS[clave] = datos_disco[clave]
     vigentes = [t for t in _INTENTOS_FALLIDOS.get(clave, []) if ahora - t < _VENTANA_BLOQUEO_S]
     _INTENTOS_FALLIDOS[clave] = vigentes
     return len(vigentes) >= _MAX_INTENTOS
@@ -44,28 +78,28 @@ def _esta_bloqueado(clave: str) -> bool:
 
 def _registrar_fallo(clave: str):
     global _INTENTOS_FALLIDOS
-    _INTENTOS_FALLIDOS.setdefault(clave, []).append(time.time())
-    if len(_INTENTOS_FALLIDOS) < _MAX_CLAVES_INTENTOS:
-        return
-    # Un atacante que envia usuarios aleatorios nunca vuelve a consultar la
-    # clave objetivo, asi que el podado de _esta_bloqueado no lo alcanza.
     ahora = time.time()
-    vigentes = {
-        k: [t for t in v if ahora - t < _VENTANA_BLOQUEO_S]
-        for k, v in _INTENTOS_FALLIDOS.items()
-    }
-    vigentes = {k: v for k, v in vigentes.items() if v}
-    if len(vigentes) >= _MAX_CLAVES_INTENTOS:
-        # Descartar primero las claves con menos fallos: una cuenta bloqueada
-        # (5 intentos) no debe caer antes que el ruido de un solo intento.
-        orden = sorted(vigentes, key=lambda k: (len(vigentes[k]), min(vigentes[k])))
-        for k in orden[:len(vigentes) - _MAX_CLAVES_INTENTOS + 1]:
-            vigentes.pop(k, None)
-    _INTENTOS_FALLIDOS = vigentes
+    _INTENTOS_FALLIDOS.setdefault(clave, []).append(ahora)
+
+    if len(_INTENTOS_FALLIDOS) >= _MAX_CLAVES_INTENTOS:
+        # Podar claves antiguas para no crecer sin límite.
+        vigentes = {
+            k: [t for t in v if ahora - t < _VENTANA_BLOQUEO_S]
+            for k, v in _INTENTOS_FALLIDOS.items()
+        }
+        vigentes = {k: v for k, v in vigentes.items() if v}
+        if len(vigentes) >= _MAX_CLAVES_INTENTOS:
+            orden = sorted(vigentes, key=lambda k: (len(vigentes[k]), min(vigentes[k])))
+            for k in orden[:len(vigentes) - _MAX_CLAVES_INTENTOS + 1]:
+                vigentes.pop(k, None)
+        _INTENTOS_FALLIDOS = vigentes
+
+    _guardar_intentos_en_disco(_INTENTOS_FALLIDOS)
 
 
 def _limpiar_fallos(clave: str):
     _INTENTOS_FALLIDOS.pop(clave, None)
+    _guardar_intentos_en_disco(_INTENTOS_FALLIDOS)
 
 
 def _obtener_password_maestra(usuario: str) -> str:
