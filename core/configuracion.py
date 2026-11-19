@@ -44,9 +44,9 @@ USERS_PATH = os.path.join(DATA_DIR, "users.json")
 
 # Límites de ingesta: protegen contra paquetes ZIP y archivos desproporcionados
 # que agotarían la memoria del contenedor.
-MAX_SUBIDA_BYTES = 100 * 1024 * 1024   # por archivo cargado
-MAX_ENTRADA_BYTES = 25 * 1024 * 1024   # por entrada descomprimida de un ZIP
-MAX_LOTE_BYTES = 250 * 1024 * 1024     # total descomprimido por ZIP
+MAX_SUBIDA_BYTES = 200 * 1024 * 1024   # por archivo cargado
+MAX_ENTRADA_BYTES = 125 * 1024 * 1024  # por entrada descomprimida de un ZIP
+MAX_LOTE_BYTES = 500 * 1024 * 1024     # total descomprimido por ZIP
 
 # Tope del log local de auditoría: al superarlo se rota a audit_log.json.1
 # (una sola generación; PostgreSQL sigue siendo la fuente de verdad completa).
