@@ -1,4 +1,5 @@
 import base64
+import json
 import mimetypes
 import os
 import re
@@ -11,7 +12,7 @@ from core.auditoria import cargar_hoja_excel_dataframe, guardar_nueva_version, o
 logger = logging.getLogger("infra_copilot.visor")
 from core.procesador import IMAGE_EXTENSIONS, preparar_markdown_con_imagenes, normalizar_titulo_display, enmascarar_data_uris, restaurar_data_uris
 from core.auth import tiene_permiso
-from core.configuracion import DOCS_DIR
+from core.configuracion import DOCS_DIR, escribir_atomico
 
 # mimetypes resuelve el MIME en cada plataforma; estos cinco no son fiables sin
 # ayuda: OOXML no está en la tabla de stdlib (depende del SO), .webp sólo está
@@ -478,6 +479,32 @@ PALETAS_LECTURA = {
     },
 }
 
+# Ruta y helpers para persistir preferencias del lector zen entre sesiones.
+_ZEN_PREFS_PATH = os.path.join(os.path.dirname(DOCS_DIR), "zen_prefs.json")
+_ZEN_PREFS_DEFAULT = {"tema": "Cálido", "tam_fuente": "Normal (15px)"}
+
+
+def _cargar_prefs_zen() -> dict:
+    """Lee preferencias del lector zen desde data/zen_prefs.json."""
+    if os.path.exists(_ZEN_PREFS_PATH):
+        try:
+            with open(_ZEN_PREFS_PATH, encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+    return dict(_ZEN_PREFS_DEFAULT)
+
+
+def _guardar_prefs_zen(prefs: dict) -> None:
+    """Guarda preferencias del lector zen de forma atómica."""
+    try:
+        escribir_atomico(_ZEN_PREFS_PATH, json.dumps(prefs, indent=2, ensure_ascii=False))
+    except Exception:
+        pass
+
+
 # CSS del lector zen como plantilla con placeholders: se renderiza una vez por
 # tema/tamaño con .format(). Los estilos estaticos viven aqui (fuera de un
 # f-string gigante embebido en Python) y los colores provienen de
@@ -546,6 +573,10 @@ _CSS_ZEN = """
 
 def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | None, u_ver: int = 1, u_edit: str = "Técnico", u_time: str = "N/A", doc_store: dict | None = None):
     """Renderiza el entorno inmersivo Zen Studio con TOC interactivo, buscador interno, personalización de lectura y visor multimodal."""
+    # Cargar preferencias persistidas (tema y tamaño de fuente entre sesiones).
+    _prefs_zen = _cargar_prefs_zen()
+    st.session_state.setdefault("zen_theme_selector", _prefs_zen.get("tema", "Cálido"))
+    st.session_state.setdefault("zen_font_size_selector", _prefs_zen.get("tam_fuente", "Normal (15px)"))
     st.html("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>")
 
     col_zt_title, col_zt_search, col_zt_theme, col_zt_exit = st.columns([3.2, 2.4, 2.2, 1.2], vertical_alignment="center")
@@ -568,6 +599,8 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
             tema_lectura = st.selectbox("Tema", ["Cálido", "Sepia", "Grafito"], label_visibility="collapsed", key="zen_theme_selector")
         with col_zt_th2:
             tam_fuente = st.selectbox("Tamaño", ["Normal (15px)", "Grande (17px)", "Compacto (13px)"], label_visibility="collapsed", key="zen_font_size_selector")
+        # Persistir preferencias al cambiar tema o tamaño de fuente.
+        _guardar_prefs_zen({"tema": tema_lectura, "tam_fuente": tam_fuente})
 
     with col_zt_exit:
         if st.button("Salir", type="primary", width="stretch", key="btn_exit_zen_studio", help="Vuelve a la consola de operaciones"):
