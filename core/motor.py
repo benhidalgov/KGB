@@ -72,7 +72,14 @@ def _obtener_conexion_duckdb():
 
             # 2. Fallback a archivo CSV local
             if not cargado and os.path.exists(CSV_PATH):
-                _DUCKDB_CON.execute(f"CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM read_csv_auto('{CSV_PATH}')")
+                # CSV_PATH es server-controlled, pero validarlo contra data/
+                # convierte la suposición en una garantía comprobable: si algún
+                # día deriva de input nunca saldrá de la raíz de datos.
+                _csv_real = os.path.realpath(CSV_PATH)
+                _data_dir_real = os.path.realpath(os.path.dirname(CSV_PATH)) + os.sep
+                if not _csv_real.startswith(_data_dir_real):
+                    raise ValueError(f"CSV_PATH fuera de data/: {CSV_PATH}")
+                _DUCKDB_CON.execute(f"CREATE OR REPLACE TABLE mantenimientos AS SELECT * FROM read_csv_auto('{_csv_real}')")
             elif not cargado:
                 _DUCKDB_CON.execute("""
                     CREATE OR REPLACE TABLE mantenimientos (
