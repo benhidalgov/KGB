@@ -81,6 +81,14 @@ def _renderizar_boton_descarga(doc_name: str, version: int, contenido_md: str = 
         )
 
 
+def _invalidar_widgets_doc(doc_name: str) -> None:
+    """Descarta widgets de edición de un documento para que no conserven selección
+    ni texto previo tras un rollback o una clasificación en lote."""
+    for clave in (f"textarea_edit_{doc_name}", f"ms_tags_edit_{doc_name}",
+                  f"ms_tags_edit_xl_{doc_name}"):
+        st.session_state.pop(clave, None)
+
+
 def renderizar_pestana_documentacion(doc_store: dict):
     """Renderiza la pestaña completa de Documentación Técnica estructurada en 3 subpestañas."""
     st.subheader("Documentos y Diagramas")
@@ -280,7 +288,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                                 nv = guardar_nueva_version(doc_sel, nuevo_m, aut_rb.strip(), f"[Rollback a v{it_sel['version']}] {mot_rb.strip()}", doc_store)
                                 # El text_area del editor conservaba el texto previo
                                 # al rollback y "Guardar Versión" lo revertía.
-                                st.session_state.pop(f"textarea_edit_{doc_sel}", None)
+                                _invalidar_widgets_doc(doc_sel)
                                 st.toast(f"Restaurado a v{it_sel['version']} (v{nv})")
                                 st.rerun()
 
@@ -545,8 +553,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             # Los multiselect del editor conservaban la selección
                             # previa al lote y "Guardar Versión" la pisaba.
                             for d_lote in doc_tags_map:
-                                st.session_state.pop(f"ms_tags_edit_{d_lote}", None)
-                                st.session_state.pop(f"ms_tags_edit_xl_{d_lote}", None)
+                                _invalidar_widgets_doc(d_lote)
                             st.session_state["batch_select_default"] = False
                             st.session_state["batch_tagger_ver"] = st.session_state.get("batch_tagger_ver", 0) + 1
                             st.toast(f"{n_act} documentos clasificados.")
