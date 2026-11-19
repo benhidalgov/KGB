@@ -672,6 +672,32 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     </script>
     """)
 
+    # Persistencia de posición de scroll por documento (localStorage del navegador).
+    _doc_name_js = json.dumps(doc_name)
+    st.html("""
+    <script>
+    (function() {
+        var key = "zen_scroll_" + __DOC_NAME__;
+        var saved = localStorage.getItem(key);
+        if (saved) {
+            setTimeout(function() {
+                try { window.scrollTo(0, parseInt(saved, 10)); } catch(e) {}
+            }, 100);
+        }
+        var timer;
+        window.onscroll = function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                try { localStorage.setItem(key, window.scrollY.toString()); } catch(e) {}
+            }, 200);
+        };
+        window.addEventListener('beforeunload', function() {
+            try { localStorage.setItem(key, window.scrollY.toString()); } catch(e) {}
+        });
+    })();
+    </script>
+    """.replace("__DOC_NAME__", _doc_name_js))
+
     col_toc, col_canvas = st.columns([1.1, 3.4], gap="medium")
 
     with col_toc:
