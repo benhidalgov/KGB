@@ -345,8 +345,13 @@ def cargar_hoja_excel_dataframe(filepath: str, sheet_name: str, mtime: float = 0
 
 def obtener_bytes_snapshot(doc_name: str, filename_snapshot: str) -> bytes | None:
     """Recupera los bytes binarios de un snapshot histórico."""
-    p = os.path.join(HISTORY_DIR, doc_name, filename_snapshot) if filename_snapshot else ""
-    return open(p, "rb").read() if p and os.path.exists(p) else None
+    if not filename_snapshot:
+        return None
+    p = os.path.join(HISTORY_DIR, doc_name, filename_snapshot)
+    if not os.path.exists(p):
+        return None
+    with open(p, "rb") as f:
+        return f.read()
 
 
 def _leer_eventos_locales() -> list:
