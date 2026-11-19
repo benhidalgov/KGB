@@ -30,6 +30,7 @@ from core.vault import (
     eliminar_secreto,
     ErrorBoveda,
 )
+from core.notificaciones import renderizar_notificaciones_sidebar
 
 # Extensiones que acepta la ingesta directa (antes el `type=` del widget). El
 # widget ya no lo declara: esa validación corre ANTES del script dentro de
@@ -328,5 +329,7 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                                         st.error("No se pudo eliminar la clave.")
                                 except ErrorBoveda as eb:
                                     st.error(f"Error al eliminar: {eb}")
+
+        renderizar_notificaciones_sidebar()
 
         return seccion_sel
