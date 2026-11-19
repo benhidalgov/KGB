@@ -481,7 +481,7 @@ PALETAS_LECTURA = {
 
 # Ruta y helpers para persistir preferencias del lector zen entre sesiones.
 _ZEN_PREFS_PATH = os.path.join(os.path.dirname(DOCS_DIR), "zen_prefs.json")
-_ZEN_PREFS_DEFAULT = {"tema": "Cálido", "tam_fuente": "Normal (15px)"}
+_ZEN_PREFS_DEFAULT = {"tema": "Cálido", "tam_fuente": "Normal (15px)", "historial": []}
 
 
 def _cargar_prefs_zen() -> dict:
@@ -625,6 +625,21 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
         if nuevo_doc != doc_actual:
             st.session_state["zen_doc_sel"] = nuevo_doc
             st.rerun()
+
+    # Historial de documentos leídos (últimos 5, persistido entre sesiones).
+    historial_zen = list(_prefs_zen.get("historial", []))
+    if doc_name in historial_zen:
+        historial_zen.remove(doc_name)
+    historial_zen.insert(0, doc_name)
+    historial_zen = historial_zen[:5]
+    _prefs_zen["historial"] = historial_zen
+    _guardar_prefs_zen(_prefs_zen)
+
+    if len(historial_zen) > 1:
+        recientes = [d for d in historial_zen if d != doc_name]
+        st.markdown("##### Recientes")
+        for d in recientes:
+            st.markdown(f"- {normalizar_titulo_display(d)}", unsafe_allow_html=False)
 
     font_size_val = "17px" if "Grande" in tam_fuente else ("13px" if "Compacto" in tam_fuente else "15px")
     p_lec = PALETAS_LECTURA.get(tema_lectura, PALETAS_LECTURA["Cálido"])
