@@ -12,6 +12,7 @@ from excel_cleaner import procesar_excel_limpio
 from core.configuracion import DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR, DOCS_CACHE_DIR
 from core.tags import asignar_tags_documento
 from core.auditoria import guardar_nueva_version, inicializar_version_inicial_si_no_existe
+from core.validacion import validar_ruta_segura
 
 logger = logging.getLogger("infra_copilot.procesador")
 
@@ -170,19 +171,6 @@ def generar_ficha_diagrama(image_filename: str, orig_rel_path: str = "", sha256_
 """
 
 
-def _ruta_contenida_en_datos(cand: str) -> str | None:
-    """Devuelve la ruta resuelta solo si cae dentro de las raíces de datos permitidas.
-
-    Sin esto, un md editado a mano con `**Archivo Binario:** ..\\..\\.env`
-    exfiltraba cualquier archivo del servidor vía botón de descarga del visor.
-    """
-    raices = [os.path.realpath(r) + os.sep for r in (DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR)]
-    real = os.path.realpath(cand)
-    if any(real.startswith(r) for r in raices) and os.path.isfile(real):
-        return real
-    return None
-
-
 def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
     """Localiza la ruta del archivo binario original asociado a un documento Markdown."""
     # 1. Chequeo directo en DOCS_DIR y ORIGINALS_DIR.
@@ -217,7 +205,10 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
             m = re.search(pattern, md_content)
             if m:
                 rel = m.group(1).replace("/", os.sep)
-                cand = _ruta_contenida_en_datos(os.path.join(DOCS_DIR, rel))
+                cand = validar_ruta_segura(
+                    os.path.join(DOCS_DIR, rel),
+                    (DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR),
+                )
                 if cand:
                     return cand
 
@@ -225,7 +216,10 @@ def obtener_ruta_original(doc_name: str, md_content: str = "") -> str | None:
         if m_orig:
             orig_s = m_orig.group(1)
             for base_dir in (INBOX_DIR, ORIGINALS_DIR, ""):
-                cand = _ruta_contenida_en_datos(os.path.join(base_dir, orig_s))
+                cand = validar_ruta_segura(
+                    os.path.join(base_dir, orig_s),
+                    (DOCS_DIR, ASSETS_DIR, ORIGINALS_DIR, INBOX_DIR),
+                )
                 if cand:
                     return cand
 

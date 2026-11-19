@@ -14,6 +14,7 @@ from core.procesador import enmascarar_data_uris, restaurar_data_uris, normaliza
 from core.vault import obtener_secreto
 from core.tags import obtener_tags_documento
 from core.db import es_postgres_disponible, obtener_mantenimientos_pg_df
+from core.validacion import es_consulta_sql_solo_lectura
 
 _DUCKDB_CON = None
 _DUCKDB_LAST_MTIME = -1.0
@@ -144,29 +145,12 @@ def _obtener_texto_normalizado(doc_name: str, content: str) -> tuple[str, str]:
 
 
 def _es_sql_solo_lectura(query_sql: str) -> bool:
-    """Raíz única de validación: una sola sentencia de lectura sobre DuckDB."""
-    texto = " ".join(query_sql.strip().split())
-    if not texto:
-        return False
-    cuerpo = texto[:-1].rstrip() if texto.endswith(";") else texto
-    if ";" in cuerpo or not cuerpo:
-        return False
-    partes = cuerpo.split(None, 1)
-    if partes[0].lower() not in ("select", "with", "describe", "show", "explain"):
-        return False
-    # Tablas-función que leen el filesystem: SELECT * FROM read_text('.vault.key')
-    # es "solo lectura" pero exfiltraría archivos del servidor.
-    if re.search(r"\b(?:read_\w+|glob|parquet_scan|csv_scan|iceberg_scan|delta_scan)\s*\(", cuerpo.lower()):
-        return False
-    prohibidas = (
-        "insert", "update", "delete", "drop", "create", "alter",
-        "copy", "attach", "detach", "call", "install", "load",
-        "pragma", "export", "import", "set", "reset",
-    )
-    # Chequeo sobre el cuerpo sin literales de cadena: 'WHERE descripcion LIKE
-    # '%update%'' es lectura legítima y no debe rechazarse.
-    sin_literals = re.sub(r"'[^']*'", "''", cuerpo.lower())
-    return not re.search(r"\b(?:%s)\b" % "|".join(prohibidas), sin_literals)
+    """Raíz única de validación: una sola sentencia de lectura sobre DuckDB.
+
+    Deleg en la implementación centralizada de core.validacion para evitar
+    duplicar lógica de seguridad en varios módulos.
+    """
+    return es_consulta_sql_solo_lectura(query_sql)
 
 
 def ejecutar_consulta_sql(query_sql: str) -> pd.DataFrame:
