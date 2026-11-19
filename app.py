@@ -163,7 +163,7 @@ if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_s
         u_edit_z = hist_z[-1]["autor"] if hist_z else "Técnico"
         u_time_z = hist_z[-1]["timestamp"] if hist_z else "N/A"
         ruta_orig_z = obtener_ruta_original(doc_z, cont_z)
-        renderizar_zen_studio(doc_z, cont_z, ruta_orig_z, u_ver_z, u_edit_z, u_time_z)
+        renderizar_zen_studio(doc_z, cont_z, ruta_orig_z, u_ver_z, u_edit_z, u_time_z, st.session_state.doc_store)
         st.stop()
     else:
         st.session_state["zen_studio_activo"] = False

@@ -544,7 +544,7 @@ _CSS_ZEN = """
 """.strip()
 
 
-def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | None, u_ver: int = 1, u_edit: str = "Técnico", u_time: str = "N/A"):
+def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | None, u_ver: int = 1, u_edit: str = "Técnico", u_time: str = "N/A", doc_store: dict | None = None):
     """Renderiza el entorno inmersivo Zen Studio con TOC interactivo, buscador interno, personalización de lectura y visor multimodal."""
     st.html("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>")
 
@@ -575,6 +575,22 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
             # El router (app.py) decide por nav_seccion_activa; sin esto el
             # siguiente rerun vuelve a entrar en Zen y queda en bucle.
             st.session_state["nav_seccion_activa"] = "Consultas y Búsqueda"
+            st.rerun()
+
+    # Selector para cambiar de documento sin salir del Modo Lectura.
+    if doc_store:
+        docs_opciones = sorted(doc_store.keys())
+        doc_actual = doc_name
+        idx_actual = docs_opciones.index(doc_actual) if doc_actual in docs_opciones else 0
+        nuevo_doc = st.selectbox(
+            "Cambiar documento:",
+            docs_opciones,
+            index=idx_actual,
+            key="zen_cambiar_documento",
+            format_func=normalizar_titulo_display,
+        )
+        if nuevo_doc != doc_actual:
+            st.session_state["zen_doc_sel"] = nuevo_doc
             st.rerun()
 
     font_size_val = "17px" if "Grande" in tam_fuente else ("13px" if "Compacto" in tam_fuente else "15px")
