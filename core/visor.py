@@ -648,6 +648,30 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
                               card_bg=p_lec["card_bg"], font_size=font_size_val)
     st.markdown(css_zen, unsafe_allow_html=True)
 
+    # Atajos de teclado del lector zen: j/k documento siguiente/anterior,
+    # Esc salir, +/- cambiar tamaño de fuente, 0 restablecer. Modifican
+    # los parámetros de URL y la app los procesa en el siguiente rerun.
+    st.html("""
+    <script>
+    (function() {
+        var mapa = {
+            'j': 'next', 'k': 'prev', 'ArrowDown': 'next', 'ArrowUp': 'prev',
+            '+': 'font_bigger', '=': 'font_bigger', '-': 'font_smaller',
+            '0': 'font_reset', 'Escape': 'exit'
+        };
+        document.addEventListener('keydown', function(e) {
+            var accion = mapa[e.key];
+            if (!accion) return;
+            if (e.target.tagName && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+            e.preventDefault();
+            var url = new URL(window.location);
+            url.searchParams.set('zen_nav', accion);
+            window.history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString());
+        });
+    })();
+    </script>
+    """)
+
     col_toc, col_canvas = st.columns([1.1, 3.4], gap="medium")
 
     with col_toc:

@@ -154,6 +154,35 @@ if "doc_store" not in st.session_state:
 procesar_parametros_arquitectura(st.session_state.doc_store)
 
 # 3.1 Modo Zen Studio (Lector Inmersivo de Documentos)
+# 3.1.1 Atajos de teclado del Zen Studio (parámetros de URL enviados por JS del visor).
+_zen_nav = str(st.query_params.get("zen_nav") or "").strip()
+if _zen_nav and st.session_state.get("zen_studio_activo"):
+    docs = sorted(st.session_state.doc_store.keys())
+    doc_actual = st.session_state.get("zen_doc_sel", "")
+    idx_actual = docs.index(doc_actual) if doc_actual in docs else 0
+    if _zen_nav == "next" and docs:
+        st.session_state["zen_doc_sel"] = docs[(idx_actual + 1) % len(docs)]
+    elif _zen_nav == "prev" and docs:
+        st.session_state["zen_doc_sel"] = docs[(idx_actual - 1) % len(docs)]
+    elif _zen_nav == "exit":
+        st.session_state["zen_studio_activo"] = False
+        st.session_state["nav_seccion_activa"] = "Consultas y Búsqueda"
+    elif _zen_nav in ("font_bigger", "font_smaller", "font_reset"):
+        _tamanos = ["Compacto (13px)", "Normal (15px)", "Grande (17px)"]
+        actual = st.session_state.get("zen_font_size_selector", "Normal (15px)")
+        idx = _tamanos.index(actual) if actual in _tamanos else 1
+        if _zen_nav == "font_bigger":
+            st.session_state["zen_font_size_selector"] = _tamanos[min(idx + 1, len(_tamanos) - 1)]
+        elif _zen_nav == "font_smaller":
+            st.session_state["zen_font_size_selector"] = _tamanos[max(idx - 1, 0)]
+        else:
+            st.session_state["zen_font_size_selector"] = "Normal (15px)"
+    try:
+        st.query_params.clear()
+    except Exception:
+        pass
+    st.rerun()
+
 if st.session_state.get("zen_studio_activo") and st.session_state.get("zen_doc_sel"):
     doc_z = st.session_state["zen_doc_sel"]
     if doc_z in st.session_state.doc_store:
