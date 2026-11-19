@@ -309,7 +309,15 @@ def renderizar_pestana_documentacion(doc_store: dict):
                         if evs:
                             df_aud = pd.DataFrame(evs)
                             df_aud_disp = df_aud[df_aud["documento"] == doc_sel] if st.checkbox("Filtrar solo este documento", value=True, key=f"chk_aud_{doc_sel}") else df_aud
-                            st.dataframe(df_aud_disp.rename(columns={"timestamp": "Timestamp", "documento": "Documento", "accion": "Acción", "version_anterior": "Versión Ant.", "version_nueva": "Versión Nueva", "editor_responsable": "Editor", "motivo_justificacion": "Motivo"}), width="stretch", hide_index=True)
+                            total_eventos = len(df_aud_disp)
+                            tam_pagina = st.selectbox("Eventos por página:", [10, 20, 50, 100], index=1, key=f"aud_tam_pagina_{doc_sel}")
+                            total_paginas = max(1, (total_eventos + tam_pagina - 1) // tam_pagina)
+                            pagina = st.number_input("Página:", min_value=1, max_value=total_paginas, value=1, step=1, key=f"aud_pagina_{doc_sel}")
+                            inicio = (pagina - 1) * tam_pagina
+                            fin = min(inicio + tam_pagina, total_eventos)
+                            df_pagina = df_aud_disp.iloc[inicio:fin]
+                            st.caption(f"Mostrando {inicio + 1 if total_eventos else 0}-{fin} de {total_eventos} eventos")
+                            st.dataframe(df_pagina.rename(columns={"timestamp": "Timestamp", "documento": "Documento", "accion": "Acción", "version_anterior": "Versión Ant.", "version_nueva": "Versión Nueva", "editor_responsable": "Editor", "motivo_justificacion": "Motivo"}), width="stretch", hide_index=True)
 
     # -------------------------------------------------------------
     # SUBPESTAÑA 2: EDITAR DOCUMENTO ACTIVO

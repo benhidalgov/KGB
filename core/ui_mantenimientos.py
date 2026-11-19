@@ -62,7 +62,14 @@ def renderizar_modulo_mantenimientos(df_mantenimientos_cache: pd.DataFrame):
 
     total_reg = len(df_filtrado)
     st.markdown(f"<div style='font-size:0.85rem;margin-bottom:8px;font-weight:500;'><span class='badge-info'>{total_reg} registros encontrados</span></div>", unsafe_allow_html=True)
-    st.dataframe(df_filtrado, width="stretch", hide_index=True)
+    if not df_filtrado.empty:
+        tam_pagina_m = st.selectbox("Registros por página:", [25, 50, 100, 200], index=1, key="maint_tam_pagina")
+        total_paginas_m = max(1, (total_reg + tam_pagina_m - 1) // tam_pagina_m)
+        pagina_m = st.number_input("Página:", min_value=1, max_value=total_paginas_m, value=1, step=1, key="maint_pagina")
+        inicio_m = (pagina_m - 1) * tam_pagina_m
+        fin_m = min(inicio_m + tam_pagina_m, total_reg)
+        st.caption(f"Mostrando {inicio_m + 1}-{fin_m} de {total_reg} registros")
+        st.dataframe(df_filtrado.iloc[inicio_m:fin_m], width="stretch", hide_index=True)
 
     if not ES_PRODUCCION and tiene_permiso("puede_ejecutar_sql"):
         with st.expander("Escribir Consulta SQL (solo lectura)"):
