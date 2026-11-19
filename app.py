@@ -116,6 +116,10 @@ if ES_PRODUCCION:
     except Exception:
         pass
 tema_actual_app = st.session_state.get("tema_visual", "Claro")
+# Health check para balanceadores de carga y Docker (sin autenticacion).
+if str(st.query_params.get("health") or "").strip() == "check":
+    st.markdown("OK")
+    st.stop()
 st.markdown(cargar_estilos_css(tema_actual_app), unsafe_allow_html=True)
 st.markdown('<div class="accent-top-bar"></div>', unsafe_allow_html=True)
 _verificar_entorno()
