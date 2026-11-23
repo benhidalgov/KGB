@@ -1070,3 +1070,88 @@ html {
     scrollbar-width: thin;
     scrollbar-color: var(--border-medium) transparent;
 }
+
+/* 19. Badges de tipo de documento por extensión (color por familia) */
+.badge-ext-md { background-color: var(--pastel-blue-bg); color: var(--pastel-blue-text); border: 1px solid var(--pastel-blue-border); }
+.badge-ext-pdf { background-color: var(--pastel-crit-bg); color: var(--pastel-crit-text); border: 1px solid var(--pastel-crit-border); }
+.badge-ext-xlsx { background-color: var(--pastel-green-bg); color: var(--pastel-green-text); border: 1px solid var(--pastel-green-border); }
+.badge-ext-img { background-color: var(--pastel-blue-bg); color: var(--pastel-blue-text); border: 1px solid var(--pastel-blue-border); }
+.badge-ext-csv { background-color: var(--pastel-neutral-bg); color: var(--pastel-neutral-text); border: 1px solid var(--pastel-neutral-border); }
+.badge-ext-zip { background-color: var(--pastel-amber-bg); color: var(--pastel-amber-text); border: 1px solid var(--pastel-amber-border); }
+
+/* 20. Badges de rol en sidebar */
+.badge-rol-admin { background-color: var(--pastel-crit-bg); color: var(--pastel-crit-text); border: 1px solid var(--pastel-crit-border); }
+.badge-rol-operador { background-color: var(--pastel-blue-bg); color: var(--pastel-blue-text); border: 1px solid var(--pastel-blue-border); }
+.badge-rol-auditor { background-color: var(--pastel-neutral-bg); color: var(--pastel-neutral-text); border: 1px solid var(--pastel-neutral-border); }
+
+/* 21. Estados vacíos con borde de acento de color */
+.empty-state-accent {
+    border-left: 4px solid var(--btn-primary-bg) !important;
+    border-style: solid !important;
+}
+.empty-state-accent .empty-state-console-icon {
+    color: var(--btn-primary-bg) !important;
+    border-color: var(--btn-primary-bg) !important;
+}
+
+/* 22. Pestañas de subnavegación con subrayado de color en la activa */
+div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    gap: 4px !important;
+}
+div[data-testid="stTabs"] [data-baseweb="tab"] {
+    border-bottom: 2px solid transparent !important;
+    padding-bottom: 4px !important;
+    transition: border-color 0.15s ease !important;
+}
+div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {
+    border-bottom: 2px solid var(--btn-primary-bg) !important;
+    color: var(--btn-primary-bg) !important;
+}
+
+/* 23. Alerta de documento sin categoría con borde izquierdo ámbar */
+.doc-sin-categoria {
+    border-left: 4px solid var(--pastel-amber-bg) !important;
+    padding-left: 12px !important;
+}
+.doc-sin-categoria .badge-warn {
+    background-color: var(--pastel-amber-bg) !important;
+    color: var(--pastel-amber-text) !important;
+    border: 1px solid var(--pastel-amber-border) !important;
+}
+
+/* 24. Estado de documento con borde izquierdo de color según versión */
+.doc-version-borde {
+    border-left: 4px solid var(--border-subtle) !important;
+    padding-left: 12px !important;
+}
+.doc-version-borde-texto {
+    border-left-color: var(--btn-primary-bg) !important;
+}
+.doc-version-borde-crit {
+    border-left-color: var(--pastel-crit-bg) !important;
+}
+
+/* 25. Sidebar colapsable (estado controlado por sesión) */
+.sidebar-collapsed [data-testid="stSidebar"] {
+    display: none !important;
+}
+.sidebar-collapsed .stApp {
+    margin-left: 0 !important;
+}
+.btn-toggle-sidebar {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 9999;
+    background-color: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-text) !important;
+    border: 1px solid var(--btn-primary-bg) !important;
+    border-radius: 4px !important;
+    padding: 4px 10px !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+.btn-toggle-sidebar:hover {
+    background-color: var(--btn-primary-hover) !important;
+}

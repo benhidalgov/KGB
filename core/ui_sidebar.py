@@ -42,6 +42,16 @@ EXT_SUBIDAS = (".pdf", ".docx", ".xlsx", ".csv", ".txt", ".md", ".pptx", ".png",
 def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
     """Renderiza el panel lateral: navegación principal por módulos, usuario, ingesta y bóveda."""
     with st.sidebar:
+        # Sidebar colapsable: si está colapsado, ocultar todo el contenido y retornar temprano.
+        if st.session_state.get("sidebar_colapsado", False):
+            st.markdown("""
+            <style>
+            [data-testid="stSidebar"] { display: none !important; }
+            .stApp, [data-testid="stAppViewContainer"] { margin-left: 0 !important; }
+            </style>
+            """, unsafe_allow_html=True)
+            return st.session_state.get("nav_seccion_activa", "Consultas y Búsqueda")
+
         # 1. Selector de Modo Claro / Modo Oscuro
         def _cb_cambiar_tema_sidebar():
             nuevo = st.session_state.get("segmented_theme_sidebar")
@@ -73,12 +83,16 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
         with st.container(border=True):
             col_u_info, col_u_out = st.columns([2.2, 1.1], vertical_alignment="center")
             with col_u_info:
+                rol = user_act.get("rol", "")
+                rol_clase = {"Administrador": "badge-rol-admin", "Operador": "badge-rol-operador", "Auditor": "badge-rol-auditor"}.get(rol, "badge-rol-auditor")
+                rol_etiqueta = {"Administrador": "ADMIN", "Operador": "OPER", "Auditor": "AUD"}.get(rol, rol[:3].upper())
                 st.markdown(
                     f'<span style="display:inline-flex; align-items:center; gap:8px; line-height:1;">'
                     f'<span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:var(--bg-surface-subtle); border:1px solid var(--border-subtle); color:var(--text-secondary); flex-shrink:0;">'
                     f'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
                     f'</span>'
                     f'<span style="font-family:var(--font-mono); font-size:0.82rem; font-weight:600; color:var(--text-primary);">{user_act.get("username", "usuario")}</span>'
+                    f'<span class="{rol_clase}" style="font-size:0.65rem;padding:1px 6px;margin-left:6px;">[{rol_etiqueta}]</span>'
                     f'</span>',
                     unsafe_allow_html=True
                 )
@@ -329,6 +343,11 @@ def renderizar_sidebar(user_act: dict, doc_store: dict) -> str:
                                         st.error("No se pudo eliminar la clave.")
                                 except ErrorBoveda as eb:
                                     st.error(f"Error al eliminar: {eb}")
+
+        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+        if st.button("≡ Colapsar menú", key="btn_colapsar_sidebar", width="stretch", help="Ocultar menú lateral para ganar espacio"):
+            st.session_state["sidebar_colapsado"] = True
+            st.rerun()
 
         renderizar_notificaciones_sidebar()
 

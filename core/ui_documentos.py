@@ -220,11 +220,21 @@ def renderizar_pestana_documentacion(doc_store: dict):
             tags_doc = obtener_tags_documento(doc_sel)
             tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.72rem;padding:1px 5px;">[{html.escape(str(t))}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-warn" style="font-size:0.72rem;padding:1px 5px;">[Sin Categoría]</span>'
             ext_badge = os.path.splitext(doc_sel)[1].upper().replace(".", "") or "MD"
+            ext_clase = {
+                "MD": "badge-ext-md", "PDF": "badge-ext-pdf",
+                "XLSX": "badge-ext-xlsx", "XLS": "badge-ext-xlsx",
+                "PNG": "badge-ext-img", "JPG": "badge-ext-img",
+                "JPEG": "badge-ext-img", "SVG": "badge-ext-img",
+                "WEBP": "badge-ext-img", "CSV": "badge-ext-csv",
+                "ZIP": "badge-ext-zip",
+            }.get(ext_badge, "badge-tag")
+            version_clase = "doc-version-borde-texto" if u_ver == 1 else "doc-version-borde"
+            sin_cat_clase = "doc-sin-categoria" if not tags_doc else ""
 
             st.markdown(f"""
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 8px 0;margin:2px 0 8px 0;font-size:0.8rem;border-bottom:1px solid var(--border-subtle);">
+            <div class="{version_clase} {sin_cat_clase}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 8px 0;margin:2px 0 8px 0;font-size:0.8rem;border-bottom:1px solid var(--border-subtle);">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                    <span class="badge-tag" style="font-size:0.68rem;padding:1px 5px;">[{ext_badge}]</span>
+                    <span class="{ext_clase}" style="font-size:0.68rem;padding:1px 5px;">[{ext_badge}]</span>
                     <span class="badge-ok" style="font-size:0.68rem;padding:1px 5px;">v{u_ver}</span>
                     {tags_badges}
                     <span style="color:var(--border-strong);">|</span>

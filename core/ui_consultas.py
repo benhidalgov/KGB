@@ -45,7 +45,8 @@ def renderizar_modulo_consultas(doc_store: dict):
 
         if not active_duck_term:
             st.markdown("""
-            <div class="empty-state-container">
+            <div class="empty-state-container empty-state-accent">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <div class="empty-state-console-icon">&gt;_ Buscador</div>
                 <div class="empty-state-title">Búsqueda de documentos</div>
                 <div class="empty-state-subtitle">Escribe un término para buscar entre tus documentos técnicos.</div>
@@ -142,7 +143,8 @@ def renderizar_modulo_consultas(doc_store: dict):
         st.markdown("---")
         if not st.session_state.historial_busquedas:
             st.markdown("""
-            <div class="empty-state-container">
+            <div class="empty-state-container empty-state-accent">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M12 18h.01M16 18h.01M12 22h.01M12 16h.01M9 14c-1.5-1-2.5-2.5-2.5-4.5c0-2.2 1.4-4.2 3.5-5 0 0 0-1 0-1l1.5-1l1.5 1c0 0 0 1 0 1c2.1 0.8 3.5 2.8 3.5 5c0 2-1 3.5-2.5 4.5zM21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0z"/></svg>
                 <div class="empty-state-console-icon">Pregunta a Gemini :1</div>
                 <div class="empty-state-title">Asistente de Operaciones</div>
                 <div class="empty-state-subtitle">Haz preguntas sobre tu infraestructura y documentos.</div>

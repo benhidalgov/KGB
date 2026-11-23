@@ -169,7 +169,7 @@ st.html("""
     });
 })();
 </script>
-""", unsafe_allow_html=True)
+""", unsafe_allow_javascript=True)
 _verificar_entorno()
 _aplicar_migraciones_una_vez()
 
@@ -265,6 +265,12 @@ if _nav_global:
 user_act = obtener_usuario_actual()
 mtime_csv = os.path.getmtime(CSV_PATH) if os.path.exists(CSV_PATH) else 0.0
 df_mantenimientos_cache = obtener_dataframe_mantenimientos(mtime_csv)
+
+# Botón de toggle de sidebar: se muestra solo cuando está colapsado, para expandirlo.
+if st.session_state.get("sidebar_colapsado", False):
+    if st.button("≡ Expandir menú", key="btn_expandir_sidebar", width="stretch", help="Mostrar menú lateral"):
+        st.session_state["sidebar_colapsado"] = False
+        st.rerun()
 
 seccion_activa = renderizar_sidebar(user_act, st.session_state.doc_store)
 
