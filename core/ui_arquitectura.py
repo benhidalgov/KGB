@@ -9,6 +9,7 @@ import re
 import streamlit as st
 
 from core.configuracion import ARQ_HTML_PATH
+from core.procesador import obtener_tags_frontmatter
 
 _CACHE = {"mtime": 0.0, "html": ""}
 
@@ -55,17 +56,20 @@ def _categoria_de_servicio(nombre: str) -> str:
 
 
 def _buscar_documentos(servicio: str, doc_store: dict) -> list:
-    """Documentos del servicio, probando también su categoría como boost.
+    """Documentos del servicio, probando también su categoría y tags frontmatter como boost.
 
     La categoría del modelo ("Monitoreo", "POS / Cajas"…) es la tag que el
     servicio ya trae: sumarla a la consulta sube la cobertura de servicios con
-    coincidencia. Se fusiona por score máximo, así la consulta más larga (que
-    pierde el +30 de frase) nunca empeora el resultado.
+    coincidencia. Los tags frontmatter YAML de los documentos (p. ej.
+    `tags: [canales, sql-server]`) permiten relacionar un documento con el
+    servicio que lleva ese mismo tag aunque no mencione el nombre en el texto.
+
+    Se fusiona por score máximo, así la consulta más larga (que pierde el +30
+    de frase) nunca empeora el resultado.
 
     Relevancia: sólo entra el documento que menciona el propio servicio (está
-    en la query base) o el que alcanza _UMBRAL_RELACION solo con la categoría;
-    sin ese corte, la tag genérica inflaba el score de documentos ajenos. Las
-    dos consultas pasan por _consulta_sin_ruido (ver ahí el porqué).
+    en la query base) o el que alcanza _UMBRAL_RELACION solo con la categoría
+    o con un tag frontmatter coincidente.
     """
     from core.motor import buscar_en_documentos
 
@@ -79,6 +83,23 @@ def _buscar_documentos(servicio: str, doc_store: dict) -> list:
                 consulta + " " + _consulta_sin_ruido(categoria), doc_store):
             if s > fusion.get(n, ("", -1))[1]:
                 fusion[n] = (c, s)
+
+    # Match por tags frontmatter YAML: un documento con tag que coincida con el
+    # nombre del servicio o su categoría se relaciona aunque no lo mencione en
+    # el texto. Normalizamos ambos lados (minúsculas, sin espacios) para
+    # comparar.
+    servicio_norm = servicio.lower().replace(" ", "").replace("-", "").replace("_", "")
+    categoria_norm = categoria.lower().replace(" ", "").replace("-", "").replace("_", "") if categoria else ""
+    for doc_name in doc_store:
+        if _DOCS_PERSONALES.search(doc_name):
+            continue
+        for tag in obtener_tags_frontmatter(doc_name):
+            tag_norm = tag.lower().replace(" ", "").replace("-", "").replace("_", "")
+            if tag_norm and (tag_norm == servicio_norm or tag_norm == categoria_norm):
+                if _UMBRAL_RELACION > fusion.get(doc_name, ("", -1))[1]:
+                    fusion[doc_name] = (doc_name, _UMBRAL_RELACION)
+                break
+
     relevantes = [(n, c, s) for n, (c, s) in fusion.items()
                   if not _DOCS_PERSONALES.search(n)
                   and (n in menciona or s >= _UMBRAL_RELACION)]
