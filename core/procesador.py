@@ -66,11 +66,10 @@ def reconstruir_frontmatter_con_tags(md_content: str, tags_nuevos: list[str]) ->
     """Reconstruye el frontmatter YAML de un documento Markdown con los tags dados.
 
     Si el documento ya tiene frontmatter, reemplaza la línea de tags (o la
-    añade si no existe). Si no tiene frontmatter y hay tags, crea uno nuevo.
-    Devuelve el contenido con el frontmatter actualizado.
+    elimina si tags_nuevos está vacío). Si no tiene frontmatter y hay tags,
+    crea uno nuevo. Devuelve el contenido con el frontmatter actualizado.
     """
     tags_str = ", ".join(tags_nuevos) if tags_nuevos else ""
-    linea_tags = f"tags: [{tags_str}]"
 
     if md_content.startswith("---\n"):
         try:
@@ -81,20 +80,22 @@ def reconstruir_frontmatter_con_tags(md_content: str, tags_nuevos: list[str]) ->
             encontrado = False
             for linea in bloque.splitlines():
                 if re.match(r"\s*tags\s*:", linea, re.IGNORECASE):
-                    nueva_lineas.append(linea_tags)
                     encontrado = True
+                    if tags_str:
+                        nueva_lineas.append(f"tags: [{tags_str}]")
+                    # Si tags_nuevos está vacío, se omite la línea (se elimina)
                 else:
                     nueva_lineas.append(linea)
-            if not encontrado:
-                nueva_lineas.append(linea_tags)
+            if tags_str and not encontrado:
+                nueva_lineas.append(f"tags: [{tags_str}]")
             nuevo_bloque = "\n".join(nueva_lineas)
             return f"---\n{nuevo_bloque}\n---\n{resto}"
         except ValueError:
             pass
 
-    # Sin frontmatter válido: crear uno nuevo si hay tags
+    # Sin frontmatter válido: crear uno nuevo solo si hay tags
     if tags_str:
-        return f"---\n{linea_tags}\n---\n{md_content}"
+        return f"---\ntags: [{tags_str}]\n---\n{md_content}"
     return md_content
 
 

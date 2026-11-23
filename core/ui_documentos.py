@@ -18,9 +18,9 @@ from core.procesador import (
     sanitizar_nombre_descarga,
     obtener_ruta_original,
     limpiar_cache_documentos,
-    extraer_tags_frontmatter,
     obtener_tags_frontmatter,
     reconstruir_frontmatter_con_tags,
+    indexar_tags_documento,
 )
 from core.tags import (
     obtener_categorias_disponibles,
