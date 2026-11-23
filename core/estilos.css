@@ -13,14 +13,14 @@
     --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
     --font-mono: 'Geist Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
 
-    /* Superficies y Canvas (Paleta Calida y Descanso Visual - Base Light) */
-    --bg-canvas: #FAF9F6;
+    /* Superficies y Canvas (Base limpia y Descanso Visual) */
+    --bg-canvas: #FFFFFF;
     --bg-surface: #FFFFFF;
-    --bg-surface-subtle: #F4F3EE;
-    --bg-surface-hover: #EFEFEA;
-    --border-subtle: #E8E8E3;
-    --border-medium: #D5D5CE;
-    --border-strong: #999990;
+    --bg-surface-subtle: #F1F5F9;
+    --bg-surface-hover: #E2E8F0;
+    --border-subtle: #E2E8F0;
+    --border-medium: #CBD5E1;
+    --border-strong: #94A3B8;
 
     /* Textos de Alto Contraste y Descanso Visual */
     --text-primary: #18181B;
@@ -28,40 +28,40 @@
     --text-muted: #71717A;
 
     /* Botones */
-    --btn-primary-bg: #1D5CA8;
+    --btn-primary-bg: #2563EB;
     --btn-primary-text: #FFFFFF;
-    --btn-primary-hover: #2767A8;
+    --btn-primary-hover: #1D4ED8;
 
     --btn-secondary-bg: #FFFFFF;
-    --btn-secondary-text: #6E7A85;
-    --btn-secondary-border: #DCDCD7;
+    --btn-secondary-text: #475569;
+    --btn-secondary-border: #CBD5E1;
     --btn-secondary-hover: #F4F4F0;
 
     /* Entradas de Formulario */
     --input-bg: #FFFFFF;
-    --input-border: #8E8E85; /* 3.3:1 sobre blanco: borde que identifica el control (WCAG 1.4.11) */
+    --input-border: #CBD5E1;
     --input-text: #18181B;
 
-    /* Acentos Pastel Suaves */
-    --pastel-green-bg: #EBF5EE;
-    --pastel-green-text: #276738;
-    --pastel-green-border: #CDE6D3;
+    /* Acentos Pastel Suaves (estados y badges) */
+    --pastel-green-bg: #DCFCE7;
+    --pastel-green-text: #15803D;
+    --pastel-green-border: #86EFAC;
 
-    --pastel-amber-bg: #FEF7E6;
-    --pastel-amber-text: #8C5900;
-    --pastel-amber-border: #F9E4B7;
+    --pastel-amber-bg: #FEF3C7;
+    --pastel-amber-text: #92400E;
+    --pastel-amber-border: #FCD34D;
 
-    --pastel-crit-bg: #FDF0F0;
-    --pastel-crit-text: #9C2A2A;
-    --pastel-crit-border: #F7CACA;
+    --pastel-crit-bg: #FEE2E2;
+    --pastel-crit-text: #991B1B;
+    --pastel-crit-border: #FCA5A5;
 
-    --pastel-blue-bg: #EEF4FE;
-    --pastel-blue-text: #1D5CA8;
-    --pastel-blue-border: #C8DCFA;
+    --pastel-blue-bg: #DBEAFE;
+    --pastel-blue-text: #1D4ED8;
+    --pastel-blue-border: #BFDBFE;
 
-    --pastel-neutral-bg: #F3F3F0;
-    --pastel-neutral-text: #52525B;
-    --pastel-neutral-border: #E2E2DC;
+    --pastel-neutral-bg: #F3F4F6;
+    --pastel-neutral-text: #4B5563;
+    --pastel-neutral-border: #D1D5DB;
 }
 
 /* 2. Jerarquia Tipografica Global y Canvas */
