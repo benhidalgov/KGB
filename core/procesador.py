@@ -18,6 +18,49 @@ logger = logging.getLogger("infra_copilot.procesador")
 
 _DATA_URI_RE = re.compile(r"data:image/[^;,\s]+;base64,[A-Za-z0-9+/=\s]+")
 
+# Cache de tags extraídos del frontmatter YAML de documentos Markdown.
+# Clave: nombre del documento, valor: lista de tags normalizados (minúsculas, sin duplicados).
+DOC_TAGS: dict[str, list[str]] = {}
+
+
+def extraer_tags_frontmatter(md_content: str) -> list[str]:
+    """Extrae tags del frontmatter YAML al inicio de un documento Markdown.
+
+    Formato esperado:
+        ---
+        tags: [arquitectura, base-de-datos, sql-server]
+        ...
+
+    Devuelve una lista de tags normalizados (sin duplicados, minúsculas).
+    """
+    if not md_content or not md_content.startswith("---\n"):
+        return []
+    try:
+        fin = md_content.index("\n---\n", 4)
+        bloque = md_content[4:fin]
+    except ValueError:
+        return []
+    tags: list[str] = []
+    for linea in bloque.splitlines():
+        m = re.match(r"\s*tags\s*:\s*\[(.*)\]\s*$", linea, re.IGNORECASE)
+        if m:
+            for tag in m.group(1).split(","):
+                t = tag.strip().strip("\"'").strip().lower()
+                if t and t not in tags:
+                    tags.append(t)
+            break
+    return tags
+
+
+def indexar_tags_documento(doc_name: str, md_content: str) -> None:
+    """Extrae y guarda los tags frontmatter de un documento en el caché global."""
+    DOC_TAGS[doc_name] = extraer_tags_frontmatter(md_content)
+
+
+def obtener_tags_frontmatter(doc_name: str) -> list[str]:
+    """Devuelve los tags frontmatter de un documento (vacía si no tiene)."""
+    return list(DOC_TAGS.get(doc_name, []))
+
 
 def enmascarar_data_uris(texto: str) -> tuple[str, list[str]]:
     """Sustituye los data URIs base64 por marcadores para no resaltar dentro del
@@ -425,6 +468,8 @@ def cargar_documentos_locales(doc_store: dict, force: bool = False) -> dict:
                     doc_store[fname] = cargar_documento_individual(doc_file)
                 except Exception as e:
                     logger.warning("[PROCESADOR] No se pudo cargar '%s': %s", fname, e)
+            # Indexar tags frontmatter del documento Markdown cargado.
+            indexar_tags_documento(fname, doc_store.get(fname, ""))
 
         if os.path.exists(ASSETS_DIR):
             for asset_file in glob.glob(os.path.join(ASSETS_DIR, "*.*")):
@@ -437,6 +482,7 @@ def cargar_documentos_locales(doc_store: dict, force: bool = False) -> dict:
                             doc_store[ficha_name] = cargar_documento_individual(asset_file)
                         except Exception as e:
                             logger.warning("[PROCESADOR] No se pudo cargar el activo '%s': %s", asset_file, e)
+                    indexar_tags_documento(ficha_name, doc_store.get(ficha_name, ""))
     return doc_store
  
 
