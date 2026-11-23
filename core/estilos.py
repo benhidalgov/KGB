@@ -11,16 +11,16 @@ from core.configuracion import ESTILOS_CSS_PATH
 # botones, alertas, .stApp) ya leen var(), así que en Claro no había nada
 # que sobreescribir — sólo el font-weight de alertas, que no está en el CSS.
 _PALETA_OSCURO = {
-    "canvas": "#0F172A", "surface": "#1E293B", "subtle": "#334155", "hover": "#475569",
-    "border_s": "rgba(255, 255, 255, 0.12)", "border_m": "rgba(255, 255, 255, 0.22)", "border_st": "rgba(255, 255, 255, 0.36)",
+    "canvas": "#0F172A", "surface": "#1E293B", "subtle": "#334155", "hover": "#3F4F5F",
+    "border_s": "#334155", "border_m": "#475569", "border_st": "#64748B",
     "text_p": "#F8FAFC", "text_s": "#CBD5E1", "text_m": "#94A3B8",
-    "btn_p_bg": "#2563EB", "btn_p_tx": "#FFFFFF", "btn_p_hv": "#1D4ED8",
-    "btn_s_bg": "#334155", "btn_s_tx": "#9CA3AF", "btn_s_bd": "rgba(255, 255, 255, 0.18)", "btn_s_hv": "#475569",
-    "inp_bg": "#334155", "inp_bd": "rgba(255, 255, 255, 0.34)", "inp_tx": "#F8FAFC",
-    "grn_bg": "rgba(16, 185, 129, 0.16)", "grn_tx": "#34D399", "grn_bd": "rgba(16, 185, 129, 0.35)",
-    "amb_bg": "rgba(217, 119, 6, 0.16)", "amb_tx": "#F59E0B", "amb_bd": "rgba(217, 119, 6, 0.35)",
+    "btn_p_bg": "#2563EB", "btn_p_tx": "#FFFFFF", "btn_p_hv": "#3B82F6",
+    "btn_s_bg": "#475569", "btn_s_tx": "#E2E8F0", "btn_s_bd": "#64748B", "btn_s_hv": "#64748B",
+    "inp_bg": "#1E293B", "inp_bd": "#475569", "inp_tx": "#F8FAFC",
+    "grn_bg": "rgba(16, 185, 129, 0.16)", "grn_tx": "#34D399", "grn_bd": "rgba(34, 197, 94, 0.35)",
+    "amb_bg": "rgba(217, 119, 6, 0.16)", "amb_tx": "#F59E0B", "amb_bd": "rgba(245, 158, 11, 0.35)",
     "crit_bg": "rgba(220, 38, 38, 0.16)", "crit_tx": "#F87171", "crit_bd": "rgba(239, 68, 68, 0.4)",
-    "blu_bg": "rgba(59, 130, 246, 0.16)", "blu_tx": "#60A5FA", "blu_bd": "rgba(59, 130, 246, 0.35)",
+    "blu_bg": "rgba(59, 130, 246, 0.16)", "blu_tx": "#60A5FA", "blu_bd": "rgba(96, 165, 250, 0.35)",
     "neu_bg": "rgba(255, 255, 255, 0.08)", "neu_tx": "#D1D5DB", "neu_bd": "rgba(255, 255, 255, 0.18)",
 }
 
