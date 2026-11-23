@@ -218,7 +218,7 @@ def check_arquitectura_html():
     assert "svg text { fill: var(--text); }" in claro, "el texto SVG debe seguir el tema"
     assert 'class="paso" style="--i:' in claro, "los pasos del flujo deben escalonarse"
     assert "prefers-reduced-motion" in claro, "el movimiento debe respetar la preferencia"
-    assert "addEventListener('wheel'" in claro and "passive: false" in claro, "falta el zoom con rueda"
+    assert "addEventListener('wheel'" not in claro, "el zoom con rueda debe estar eliminado"
     assert "function resetZoom" in claro and "#escena, #escena-flujo" in claro, "falta el paneo"
     assert 'class="idx"' in claro and 'class="regla"' in claro, "falta la numeracion de capa"
     assert 'class="banda"' in claro, "falta la franja de encabezado"
@@ -465,6 +465,83 @@ def check_filtro_relacionados_ui():
             f"falta el aviso de sin coincidencias: {warns}"
         assert not any(s.key == "tab4_doc_selector" for s in at2.selectbox), \
             "sin relacionados no debe haber selector de documento"
+
+
+def check_ui_documentos_lazy_loading():
+    """Especificación (ui_documentos lazy loading):
+    1. Por defecto se renderiza únicamente la subpestaña 'Ver Documentos'.
+       Los widgets de edición (textarea_edit_*) y lote (radio_batch_scope) no se cargan.
+    2. Al conmutar a 'Editar Documento', se cargan los controles de edición y se
+       omiten los controles exclusivos del visor (tab4_cat_selector, tab4_type_selector).
+    3. Al conmutar a 'Clasificación en Lote', se carga el editor por lotes y se
+       omiten los componentes de visor y edición.
+    4. Manejo de estado vacío: renderiza limpiamente sin documentos."""
+    with tempfile.TemporaryDirectory() as td:
+        os.makedirs(os.path.join(td, "history"))
+        os.makedirs(os.path.join(td, "docs"))
+        cuerpo = (
+            _parches_aud_tags(td)
+            + _sesion_app("Operador")
+            + "from core.ui_documentos import renderizar_pestana_documentacion\n"
+            + "renderizar_pestana_documentacion({'doc1.md': '# Doc 1', 'doc2.md': '# Doc 2'})\n"
+        )
+        at = _app_test(cuerpo)
+        at.run()
+        assert not at.exception, f"render inicial debe completarse: {at.exception}"
+
+        # 1. Pestaña por defecto: 'Ver Documentos'
+        assert at.radio(key="pestana_documentos_activa").value == "Ver Documentos", \
+            "el valor inicial debe ser 'Ver Documentos'"
+        assert at.selectbox(key="tab4_doc_selector") is not None, "debe existir el selector de documento en visor"
+        assert at.selectbox(key="tab4_cat_selector") is not None, "debe existir filtro de categorías en visor"
+        assert not any("textarea_edit" in (w.key or "") for w in at.text_area), \
+            "lazy loading: no debe instanciarse el textarea del editor en 'Ver Documentos'"
+        assert not any(r.key == "radio_batch_scope" for r in at.radio), \
+            "lazy loading: no debe instanciarse el filtro de lote en 'Ver Documentos'"
+
+        # 2. Conmutar a 'Editar Documento'
+        at.radio(key="pestana_documentos_activa").set_value("Editar Documento").run()
+        assert not at.exception, f"render tras cambiar a editor: {at.exception}"
+        assert at.text_area(key="textarea_edit_doc1.md") is not None, \
+            "debe renderizarse el textarea del editor para doc1.md"
+        assert not any(s.key == "tab4_cat_selector" for s in at.selectbox), \
+            "lazy loading: no debe existir selector de categorías en 'Editar Documento'"
+        assert not any(s.key == "tab4_type_selector" for s in at.selectbox), \
+            "lazy loading: no debe existir selector de tipo en 'Editar Documento'"
+        assert not any(r.key == "radio_batch_scope" for r in at.radio), \
+            "lazy loading: no debe existir radio de lote en 'Editar Documento'"
+
+        # 3. Conmutar a 'Clasificación en Lote'
+        opciones_radio = at.radio(key="pestana_documentos_activa").options
+        opcion_lote = next(opt for opt in opciones_radio if "Clasificación en Lote" in opt)
+        at.radio(key="pestana_documentos_activa").set_value(opcion_lote).run()
+        assert not at.exception, f"render tras cambiar a lote: {at.exception}"
+        assert at.radio(key="radio_batch_scope") is not None, \
+            "debe renderizarse el radio de alcance de lote"
+        assert any(b.key == "btn_batch_sel_all" for b in at.button), \
+            "debe renderizarse botón de selección en lote"
+        assert not any(s.key == "tab4_cat_selector" for s in at.selectbox), \
+            "lazy loading: no debe existir selector de categorías en lote"
+        assert not any("textarea_edit" in (w.key or "") for w in at.text_area), \
+            "lazy loading: no debe existir textarea en lote"
+
+        # 4. Manejo de estado vacío sin documentos
+        at_vacio = _app_test(
+            _parches_aud_tags(td)
+            + _sesion_app("Operador")
+            + "from core.ui_documentos import renderizar_pestana_documentacion\n"
+            + "renderizar_pestana_documentacion({})\n"
+        )
+        at_vacio.run()
+        assert not at_vacio.exception, f"render con doc_store vacío debe manejarse sin excepción: {at_vacio.exception}"
+
+
+def check_app_arranque_sin_excepcion():
+    """Especificación (app.py): el punto de entrada principal compila y arranca
+    sin excepciones en AppTest (verifica st.html, configuración y migraciones)."""
+    at = AppTest.from_file(os.path.join(ROOT, "app.py"))
+    at.run(timeout=15)
+    assert not at.exception, f"app.py debe arrancar sin excepciones: {at.exception}"
 
 
 def check_preflight_produccion():
@@ -886,22 +963,24 @@ def check_ronda_pares_bajas():
         at.run()
         at.run()
         assert not at.exception, f"render Operador: {at.exception}"
-        at.text_area(key="textarea_edit_a.md")
         assert not any(cb.key == "chk_aud_a.md" for cb in at.checkbox), \
             "el Operador no debe ver el Registro de Actividad"
+        at.radio(key="pestana_documentos_activa").set_value("Editar Documento").run()
+        at.text_area(key="textarea_edit_a.md")
 
         # Auditor: nada editable y el Registro de Actividad sí está disponible.
         at = _docs_app("Auditor")
         at.run()
         at.run()
         assert not at.exception, f"render Auditor: {at.exception}"
+        at.checkbox(key="chk_aud_a.md")
+        at.radio(key="pestana_documentos_activa").set_value("Editar Documento").run()
         assert any("no permite editar documentos" in i.value for i in at.info), \
             "la pestaña de edición debe mostrar el aviso de permiso"
         assert not any(w.key == "textarea_edit_a.md" for w in at.text_area), \
             "el Auditor no debe recibir el textarea del editor"
         assert not any("Guardar Versión" in b.label for b in at.button), \
             "el Auditor no debe ver el botón de guardar versión"
-        at.checkbox(key="chk_aud_a.md")
 
     # (b) El bloque de rollback no se renderiza sin puede_rollback.
     assert 'it_sel["version"] != u_ver and tiene_permiso("puede_rollback")' in inspect.getsource(ui_doc), \
@@ -1271,6 +1350,8 @@ if __name__ == "__main__":
     check_ui_busqueda_limpiable()
     check_ui_filtro_categoria_sin_reset()
     check_filtro_relacionados_ui()
+    check_ui_documentos_lazy_loading()
+    check_app_arranque_sin_excepcion()
     check_plantillas_permiso_y_escapes()
     check_ronda_pares_escrituras()
     check_ronda_pares_sidebar()

@@ -479,7 +479,6 @@ JS = """
   });
 
   [vistaCapas, vistaFlujo].forEach(function (svg) {
-    svg.addEventListener('wheel', function (e) { alRodar(e, svg); }, { passive: false });
     svg.addEventListener('pointerdown', function (e) { alPresionar(e, svg); });
   });
   window.addEventListener('pointermove', alMover);
