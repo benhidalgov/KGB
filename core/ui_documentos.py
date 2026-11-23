@@ -131,47 +131,36 @@ def renderizar_pestana_documentacion(doc_store: dict):
         def _fmt_cat_op(c):
             return f"[Sin Categoría] ({len(docs_pendientes)} pendientes)" if c == "[Sin Categoría]" else c
 
-        col_t4_s, col_t4_c, col_t4_t, col_t4_d = st.columns([3.2, 1.3, 1.1, 0.8], gap="small", vertical_alignment="bottom")
-        with col_t4_c:
+        # Fila de filtros unificada: categoría, tipo y rango de fechas en una sola fila
+        col_f1, col_f2, col_f3, col_t4_s = st.columns([1.5, 1.5, 1.0, 3.0], gap="small", vertical_alignment="bottom")
+        with col_f1:
             filtro_cat_t3 = st.selectbox("Categoría:", opts_cat_t3, key="tab4_cat_selector", format_func=_fmt_cat_op)
-        with col_t4_t:
-            filtro_t4 = st.selectbox(
-                "Tipo:",
-                ["Todos", "Diagramas", "Excel", "Documentos", "Markdown"],
-                key="tab4_type_selector"
+        with col_f2:
+            filtro_t4 = st.selectbox("Tipo:", ["Todos", "Diagramas", "Excel", "Documentos", "Markdown"], key="tab4_type_selector")
+        with col_f3:
+            rango_fecha_doc = st.date_input(
+                "Rango de Fechas:",
+                value=(),
+                min_value=min_doc_d,
+                max_value=datetime.date.today(),
+                key="tab4_date_range_selector",
             )
-        with col_t4_d:
-            with st.popover("Fecha", use_container_width=True):
-                # Rango vacío por defecto: el rango sembrado con el max del día
-                # de arranque filtraba fuera cualquier documento subido después.
-                rango_fecha_doc = st.date_input(
-                    "Rango de Fechas:",
-                    value=(),
-                    min_value=min_doc_d,
-                    max_value=datetime.date.today(),
-                    key="tab4_date_range_selector"
-                )
 
         # Filtro que llega del diagrama de arquitectura (clic en un servicio).
         rel_arq = st.session_state.get("arq_docs_relacionados")
         docs_rel = (rel_arq or {}).get("docs") or []
-        if rel_arq is not None:
-            etiqueta_rel = rel_arq.get("etiqueta") or ""
-            col_rel_txt, col_rel_btn = st.columns([4, 1], vertical_alignment="center")
-            with col_rel_txt:
-                if docs_rel:
-                    nombres_rel = ", ".join(normalizar_titulo_display(d) for d in docs_rel)
-                    st.caption(
-                        f"Documentación relacionada con «{etiqueta_rel}» · "
-                        f"{len(docs_rel)} documento(s): {nombres_rel}"
-                    )
-                else:
-                    st.warning(f"Sin documentos relacionados con «{etiqueta_rel}».")
-            with col_rel_btn:
-                if st.button("Quitar filtro", key="arq_quitar_relacionados"):
-                    st.session_state.pop("arq_docs_relacionados", None)
-                    st.rerun()
+        etiqueta_rel = rel_arq.get("etiqueta") if rel_arq else ""
 
+        # Documentación relacionada del diagrama: solo se ve un aviso compacto,
+        # sin banner, para no añadir capas visuales en la fila de filtros.
+        if rel_arq is not None:
+            if docs_rel:
+                nombres_rel = ", ".join(normalizar_titulo_display(d) for d in docs_rel)
+                st.caption(f"Documentación relacionada con «{etiqueta_rel}» · {len(docs_rel)} documento(s): {nombres_rel}")
+            else:
+                st.warning(f"Sin documentos relacionados con «{etiqueta_rel}».")
+
+        # Construir la lista de documentos visibles antes del selector
         docs_disp = []
         for d in sorted(doc_store.keys()):
             if rel_arq is not None and d not in docs_rel:
@@ -201,6 +190,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 continue
             docs_disp.append(d)
 
+        # Selector de documento (fuera del bloque que lo usa)
         with col_t4_s:
             doc_sel = st.selectbox(
                 f"Documento Seleccionado ({len(docs_disp)} disponibles):",
@@ -209,16 +199,20 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 key="tab4_doc_selector"
             ) if docs_disp else None
 
+            if rel_arq is not None:
+                if st.button("Quitar filtro", key="arq_quitar_relacionados"):
+                    st.session_state.pop("arq_docs_relacionados", None)
+                    st.rerun()
+
         if doc_sel:
             doc_cont = doc_store.get(doc_sel, "")
             historial = inicializar_version_inicial_si_no_existe(doc_sel, doc_cont)
             u_ver = len(historial)
             u_edit = historial[-1]["autor"] if historial else "Desconocido"
             u_time = historial[-1]["timestamp"] if historial else "N/A"
-            f_carga = historial[0]["timestamp"].split()[0] if (historial and " " in historial[0]["timestamp"]) else "N/A"
             ruta_orig = obtener_ruta_original(doc_sel, doc_cont)
             tags_doc = obtener_tags_documento(doc_sel)
-            tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.72rem;padding:1px 5px;">[{html.escape(str(t))}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-warn" style="font-size:0.72rem;padding:1px 5px;">[Sin Categoría]</span>'
+            tags_badges = " ".join([f'<span class="badge-info" style="font-size:0.65rem;padding:0 4px;">[{html.escape(str(t))}]</span>' for t in tags_doc]) if tags_doc else '<span class="badge-warn" style="font-size:0.65rem;padding:0 4px;">[Sin Categoría]</span>'
             ext_badge = os.path.splitext(doc_sel)[1].upper().replace(".", "") or "MD"
             ext_clase = {
                 "MD": "badge-ext-md", "PDF": "badge-ext-pdf",
@@ -232,17 +226,15 @@ def renderizar_pestana_documentacion(doc_store: dict):
             sin_cat_clase = "doc-sin-categoria" if not tags_doc else ""
 
             st.markdown(f"""
-            <div class="{version_clase} {sin_cat_clase}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 8px 0;margin:2px 0 8px 0;font-size:0.8rem;border-bottom:1px solid var(--border-subtle);">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                    <span class="{ext_clase}" style="font-size:0.68rem;padding:1px 5px;">[{ext_badge}]</span>
-                    <span class="badge-ok" style="font-size:0.68rem;padding:1px 5px;">v{u_ver}</span>
+            <div class="{version_clase} {sin_cat_clase}" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 6px 0;margin:2px 0 6px 0;font-size:0.78rem;border-bottom:1px solid var(--border-subtle);gap:6px;">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span class="{ext_clase}" style="font-size:0.62rem;padding:0 4px;">[{ext_badge}]</span>
+                    <span class="badge-ok" style="font-size:0.62rem;padding:0 4px;">v{u_ver}</span>
                     {tags_badges}
-                    <span style="color:var(--border-strong);">|</span>
-                    <span style="color:var(--text-secondary);">Editor: <b style="color:var(--text-primary);">{html.escape(str(u_edit))}</b></span>
-                    <span style="color:var(--border-strong);">|</span>
-                    <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.74rem;">{u_time}</span>
+                    <span style="color:var(--text-secondary);font-size:0.72rem;">Editor: <b style="color:var(--text-primary);font-size:0.72rem;">{html.escape(str(u_edit))}</b></span>
+                    <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.68rem;">· {u_time}</span>
                 </div>
-                <div style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);">{doc_sel}</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-family:var(--font-mono);">{doc_sel}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -254,71 +246,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
             with col_dli:
                 st.caption(f"Descarga la versión activa actual (**v{u_ver}**).")
 
-            with st.expander(f"Historial de Cambios ({u_ver} versiones)", expanded=False):
-                df_h = pd.DataFrame(historial)
-                cols_h = [c for c in ["version", "timestamp", "autor", "comentario", "caracteres", "sha256"] if c in df_h.columns]
-                df_h = df_h[cols_h].rename(columns={"version": "Versión", "timestamp": "Fecha y Hora", "autor": "Editor", "comentario": "Motivo", "caracteres": "Caracteres", "sha256": "Firma"})
-                st.dataframe(df_h, width="stretch", hide_index=True)
-
-                st.markdown("---")
-                opts_ver = {f"v{i['version']} - {i['timestamp']} ({i['autor']}): {i['comentario']}": i for i in reversed(historial)}
-                v_sel_lbl = st.selectbox("Elige una versión para ver o descargar:", list(opts_ver.keys()), key=f"select_hist_ver_{doc_sel}")
-                it_sel = opts_ver[v_sel_lbl]
-                c_snap = obtener_contenido_version(doc_sel, it_sel["archivo_snapshot"])
-                ex_snap = it_sel.get("archivo_excel_snapshot")
-
-                col_hv1, col_hv2 = st.columns(2)
-                with col_hv1:
-                    _renderizar_boton_descarga(doc_sel, it_sel["version"], c_snap, ex_snap, key=f"btn_dl_h_{doc_sel}_{it_sel['version']}", desde_historial=True)
-                with col_hv2:
-                    st.caption(f"Guardado el **{it_sel['timestamp']}** por **{it_sel['autor']}**.")
-
-                if it_sel["version"] != u_ver and tiene_permiso("puede_rollback"):
-                    st.markdown("---")
-                    st.markdown(f"##### Volver a la Versión v{it_sel['version']}")
-                    col_ra, col_rm = st.columns([1, 2])
-                    with col_ra:
-                        aut_rb = st.text_input("Tu nombre (*)", key=f"author_rb_{doc_sel}_{it_sel['version']}")
-                    with col_rm:
-                        mot_rb = st.text_input("Motivo (*)", key=f"motive_rb_{doc_sel}_{it_sel['version']}")
-                    if st.button(f"Volver a la Versión v{it_sel['version']}", type="primary", key=f"btn_rb_{doc_sel}_{it_sel['version']}"):
-                        if not tiene_permiso("puede_rollback"):
-                            st.error("Tu rol no permite ejecutar rollbacks.")
-                        elif not aut_rb.strip() or not mot_rb.strip():
-                            st.error("Escribe tu nombre y el motivo.")
-                        elif doc_sel.lower().endswith(('.docx', '.doc', '.pdf', '.pptx')):
-                            st.error("Rollback no disponible en binarios: el contenido de texto se regenera al recargar. Restaura desde el archivo original.")
-                        else:
-                            es_libro = doc_sel.lower().endswith(('.xlsx', '.xls'))
-                            snap_xl_path = os.path.join(HISTORY_DIR, doc_sel, ex_snap) if ex_snap else ""
-                            if es_libro and not (snap_xl_path and os.path.exists(snap_xl_path)):
-                                # Restaurar solo el texto dejaba el .xlsx actual en
-                                # disco y el toast "Restaurado" mentía.
-                                st.error("Esta versión no conserva el snapshot del libro Excel: no se puede restaurar sin desincronizar el archivo. Elige otra versión.")
-                            else:
-                                if es_libro:
-                                    shutil.copy2(snap_xl_path, os.path.join(DOCS_DIR, doc_sel))
-                                    nuevo_m = procesar_excel_limpio(os.path.join(DOCS_DIR, doc_sel))
-                                else:
-                                    nuevo_m = c_snap
-                                nv = guardar_nueva_version(doc_sel, nuevo_m, aut_rb.strip(), f"[Rollback a v{it_sel['version']}] {mot_rb.strip()}", doc_store)
-                                # El text_area del editor conservaba el texto previo
-                                # al rollback y "Guardar Versión" lo revertía.
-                                _invalidar_widgets_doc(doc_sel)
-                                st.toast(f"Restaurado a v{it_sel['version']} (v{nv})")
-                                st.rerun()
-
-                if len(historial) >= 2:
-                    with st.expander("Comparar dos versiones (Diff)", expanded=False):
-                        c_d1, c_d2 = st.columns(2)
-                        n_vers = [f"v{i['version']} - {i['timestamp']} ({i['autor']})" for i in historial]
-                        map_v = {n_vers[idx]: historial[idx] for idx in range(len(historial))}
-                        with c_d1:
-                            v_base = st.selectbox("Versión Base:", n_vers, index=0, key=f"diff_base_{doc_sel}")
-                        with c_d2:
-                            v_comp = st.selectbox("Versión Comparada:", n_vers, index=len(n_vers)-1, key=f"diff_comp_{doc_sel}")
-                        st.code(generar_diff_texto(obtener_contenido_version(doc_sel, map_v[v_base]["archivo_snapshot"]), obtener_contenido_version(doc_sel, map_v[v_comp]["archivo_snapshot"]), v_base, v_comp), language="diff")
-
+                # Bloque de Auditoría (solo si el rol lo permite)
                 if tiene_permiso("puede_ver_auditoria"):
                     with st.expander("Registro de Actividad", expanded=False):
                         evs = obtener_todos_los_eventos_auditoria()
@@ -334,6 +262,69 @@ def renderizar_pestana_documentacion(doc_store: dict):
                             df_pagina = df_aud_disp.iloc[inicio:fin]
                             st.caption(f"Mostrando {inicio + 1 if total_eventos else 0}-{fin} de {total_eventos} eventos")
                             st.dataframe(df_pagina.rename(columns={"timestamp": "Timestamp", "documento": "Documento", "accion": "Acción", "version_anterior": "Versión Ant.", "version_nueva": "Versión Nueva", "editor_responsable": "Editor", "motivo_justificacion": "Motivo"}), width="stretch", hide_index=True)
+
+                # Bloque de Rollback / Comparación / Historial (contenido del visor del documento)
+                if len(historial) >= 2:
+                    with st.expander("Comparar dos versiones (Diff)", expanded=False):
+                        c_d1, c_d2 = st.columns(2)
+                        n_vers = [f"v{i['version']} - {i['timestamp']} ({i['autor']})" for i in historial]
+                        map_v = {n_vers[idx]: historial[idx] for idx in range(len(historial))}
+                        with c_d1:
+                            v_base = st.selectbox("Versión Base:", n_vers, index=0, key=f"diff_base_{doc_sel}")
+                        with c_d2:
+                            v_comp = st.selectbox("Versión Comparada:", n_vers, index=len(n_vers)-1, key=f"diff_comp_{doc_sel}")
+                        st.code(generar_diff_texto(obtener_contenido_version(doc_sel, map_v[v_base]["archivo_snapshot"]), obtener_contenido_version(doc_sel, map_v[v_comp]["archivo_snapshot"]), v_base, v_comp), language="diff")
+
+                if tiene_permiso("puede_rollback"):
+                    with st.expander("Historial de Cambios", expanded=False):
+                        df_h = pd.DataFrame(historial)
+                        cols_h = [c for c in ["version", "timestamp", "autor", "comentario", "caracteres", "sha256"] if c in df_h.columns]
+                        df_h = df_h[cols_h].rename(columns={"version": "Versión", "timestamp": "Fecha y Hora", "autor": "Editor", "comentario": "Motivo", "caracteres": "Caracteres", "sha256": "Firma"})
+                        st.dataframe(df_h, width="stretch", hide_index=True)
+
+                        st.markdown("---")
+                        opts_ver = {f"v{i['version']} - {i['timestamp']} ({i['autor']}): {i['comentario']}": i for i in reversed(historial)}
+                        v_sel_lbl = st.selectbox("Elige una versión para ver o descargar:", list(opts_ver.keys()), key=f"select_hist_ver_{doc_sel}")
+                        it_sel = opts_ver[v_sel_lbl]
+                        c_snap = obtener_contenido_version(doc_sel, it_sel["archivo_snapshot"])
+                        ex_snap = it_sel.get("archivo_excel_snapshot")
+
+                        col_hv1, col_hv2 = st.columns(2)
+                        with col_hv1:
+                            _renderizar_boton_descarga(doc_sel, it_sel["version"], c_snap, ex_snap, key=f"btn_dl_h_{doc_sel}_{it_sel['version']}", desde_historial=True)
+                        with col_hv2:
+                            st.caption(f"Guardado el **{it_sel['timestamp']}** por **{it_sel['autor']}**.")
+
+                        if it_sel["version"] != u_ver and tiene_permiso("puede_rollback"):
+                            st.markdown("---")
+                            st.markdown(f"##### Volver a la Versión v{it_sel['version']}")
+                            col_ra, col_rm = st.columns([1, 2])
+                            with col_ra:
+                                aut_rb = st.text_input("Tu nombre (*)", key=f"author_rb_{doc_sel}_{it_sel['version']}")
+                            with col_rm:
+                                mot_rb = st.text_input("Motivo (*)", key=f"motive_rb_{doc_sel}_{it_sel['version']}")
+                            if st.button(f"Volver a la Versión v{it_sel['version']}", type="primary", key=f"btn_rb_{doc_sel}_{it_sel['version']}"):
+                                if not tiene_permiso("puede_rollback"):
+                                    st.error("Tu rol no permite ejecutar rollbacks.")
+                                elif not aut_rb.strip() or not mot_rb.strip():
+                                    st.error("Escribe tu nombre y el motivo.")
+                                elif doc_sel.lower().endswith(('.docx', '.doc', '.pdf', '.pptx')):
+                                    st.error("Rollback no disponible en binarios: el contenido de texto se regenera al recargar. Restaura desde el archivo original.")
+                                else:
+                                    es_libro = doc_sel.lower().endswith(('.xlsx', '.xls'))
+                                    snap_xl_path = os.path.join(HISTORY_DIR, doc_sel, ex_snap) if ex_snap else ""
+                                    if es_libro and not (snap_xl_path and os.path.exists(snap_xl_path)):
+                                        st.error("Esta versión no conserva el snapshot del libro Excel: no se puede restaurar sin desincronizar el archivo. Elige otra versión.")
+                                    else:
+                                        if es_libro:
+                                            shutil.copy2(snap_xl_path, os.path.join(DOCS_DIR, doc_sel))
+                                            nuevo_m = procesar_excel_limpio(os.path.join(DOCS_DIR, doc_sel))
+                                        else:
+                                            nuevo_m = c_snap
+                                        nv = guardar_nueva_version(doc_sel, nuevo_m, aut_rb.strip(), f"[Rollback a v{it_sel['version']}] {mot_rb.strip()}", doc_store)
+                                        _invalidar_widgets_doc(doc_sel)
+                                        st.toast(f"Restaurado a v{it_sel['version']} (v{nv})")
+                                        st.rerun()
 
     # -------------------------------------------------------------
     # SUBPESTAÑA 2: EDITAR DOCUMENTO ACTIVO

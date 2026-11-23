@@ -84,7 +84,8 @@ def check_xss_escapado():
     # Modo Lectura (Zen): el índice toca los encabezados del Markdown crudo y el
     # campo Editor trae el autor de la historia; ambos deben escaparse en el sink.
     md_veneno = f"# {payload}\n\nTexto tecnico.\n"
-    with mock.patch.object(visor.st, "markdown") as mk_md:
+    with mock.patch.object(visor.st, "markdown") as mk_md, \
+         mock.patch.object(visor, "_guardar_prefs_zen"):
         visor.renderizar_zen_studio("doc_veneno.md", md_veneno, None, 3, payload, "2026-01-01 00:00:00")
     html_zen = "\n".join(
         str(c.args[0]) for c in mk_md.call_args_list
