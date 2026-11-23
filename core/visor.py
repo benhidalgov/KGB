@@ -577,7 +577,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     _prefs_zen = _cargar_prefs_zen()
     st.session_state.setdefault("zen_theme_selector", _prefs_zen.get("tema", "Cálido"))
     st.session_state.setdefault("zen_font_size_selector", _prefs_zen.get("tam_fuente", "Normal (15px)"))
-    st.html("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; }</style>")
+    st.html("<style>section[data-testid=\"stSidebar\"], header[data-testid=\"stHeader\"] { display: none !important; } [data-testid=\"stMainBlockContainer\"] { max-width: 98vw !important; padding: 0.6rem 1.4rem !important; } .zen-controles { display: flex; align-items: center; gap: 8px; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 6px 10px; } .zen-controles .stSelectbox > div > div { background-color: var(--bg-surface) !important; border: 1px solid var(--border-medium) !important; border-radius: 4px !important; font-size: 0.82rem !important; } .zen-controles .stSelectbox > div > div:hover { border-color: var(--border-medium) !important; } .zen-controles .stSelectbox svg { fill: var(--text-secondary) !important; } .zen-search-input input { padding: 6px 10px !important; font-size: 0.85rem !important; }</style>")
 
     col_zt_title, col_zt_search, col_zt_theme, col_zt_exit = st.columns([3.2, 2.4, 2.2, 1.2], vertical_alignment="center")
 
@@ -585,26 +585,28 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
         st.markdown(f"""
         <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
             <span class="badge-ok" style="font-size:0.7rem;padding:2px 8px;font-weight:600;">[Modo Lectura]</span>
-            <span style="font-family:var(--font-serif);font-size:1.2rem;font-weight:500;color:var(--text-primary);">{normalizar_titulo_display(doc_name)}</span>
-            <span class="badge-info" style="font-size:0.68rem;">v{u_ver}</span>
+            <span style="font-family:var(--font-serif);font-size:1.2rem;font-weight:600;color:var(--text-primary);">{normalizar_titulo_display(doc_name)}</span>
+            <span class="badge-info" style="font-size:0.68rem;padding:2px 6px;font-weight:500;">v{u_ver}</span>
         </div>
         """, unsafe_allow_html=True)
 
     with col_zt_search:
         col_search_in, col_search_clear = col_zt_search.columns([5, 1])
         with col_search_in:
-            zen_search_query = st.text_input("Buscar en doc:", label_visibility="collapsed", key="zen_search_in_doc")
+            zen_search_query = st.text_input("Buscar en documento:", placeholder="Buscar en este documento...", label_visibility="collapsed", key="zen_search_in_doc")
         with col_search_clear:
             if st.button("Limpiar", key="zen_buscar_limpiar", width="stretch", help="Borrar el término de búsqueda y volver al documento completo"):
                 st.session_state["zen_search_in_doc"] = ""
                 st.rerun()
 
     with col_zt_theme:
+        st.markdown('<div class="zen-controles">', unsafe_allow_html=True)
         col_zt_th1, col_zt_th2 = st.columns(2)
         with col_zt_th1:
             tema_lectura = st.selectbox("Tema", ["Cálido", "Sepia", "Grafito"], label_visibility="collapsed", key="zen_theme_selector")
         with col_zt_th2:
             tam_fuente = st.selectbox("Tamaño", ["Normal (15px)", "Grande (17px)", "Compacto (13px)"], label_visibility="collapsed", key="zen_font_size_selector")
+        st.markdown('</div>', unsafe_allow_html=True)
         # Persistir preferencias al cambiar tema o tamaño de fuente.
         _guardar_prefs_zen({"tema": tema_lectura, "tam_fuente": tam_fuente})
 
@@ -705,7 +707,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
         });
     })();
     </script>
-    """)
+    """, unsafe_allow_javascript=True)
 
     # Persistencia de posición de scroll por documento (localStorage del navegador).
     _doc_name_js = json.dumps(doc_name)
@@ -731,7 +733,7 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
         });
     })();
     </script>
-    """.replace("__DOC_NAME__", _doc_name_js))
+    """.replace("__DOC_NAME__", _doc_name_js), unsafe_allow_javascript=True)
 
     col_toc, col_canvas = st.columns([1.1, 3.4], gap="medium")
 
