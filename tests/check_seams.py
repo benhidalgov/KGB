@@ -219,6 +219,7 @@ def check_arquitectura_html():
     assert 'class="paso" style="--i:' in claro, "los pasos del flujo deben escalonarse"
     assert "prefers-reduced-motion" in claro, "el movimiento debe respetar la preferencia"
     assert "addEventListener('wheel'" not in claro, "el zoom con rueda debe estar eliminado"
+    assert 'id="zoom-ayuda"' in claro and "+ − 0: zoom" in claro, "falta la pista visual de atajos de zoom"
     assert "function resetZoom" in claro and "#escena, #escena-flujo" in claro, "falta el paneo"
     assert 'class="idx"' in claro and 'class="regla"' in claro, "falta la numeracion de capa"
     assert 'class="banda"' in claro, "falta la franja de encabezado"

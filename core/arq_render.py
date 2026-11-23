@@ -82,6 +82,7 @@ CSS = """
   #zoom:hover { color: var(--text); }
   #zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
   #zoom[hidden] { display: none; }
+  #zoom-ayuda { margin-left: 8px; font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--muted); white-space: nowrap; }
 
   .band { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
   .banda { fill: var(--band); }
@@ -932,6 +933,7 @@ def render_html(modelo: dict) -> str:
         '    <button class="tab" type="button" role="tab" data-vista="flujo" aria-selected="false" aria-controls="vista-flujo">Flujo</button>\n'
         "  </div>\n"
         '  <button id="zoom" type="button" hidden aria-label="Restablecer el zoom"></button>\n'
+        '  <span id="zoom-ayuda" style="font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--muted); margin-left: 8px; white-space: nowrap;">+ − 0: zoom</span>\n'
         "</header>\n"
         + envolver_svg("vista-capas", piezas_capas, alto_capas, "c",
                        "Esquema de arquitectura por capas")
