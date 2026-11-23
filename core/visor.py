@@ -593,10 +593,11 @@ def renderizar_zen_studio(doc_name: str, md_content: str, ruta_original: str | N
     with col_zt_search:
         col_search_in, col_search_clear = col_zt_search.columns([5, 1])
         with col_search_in:
-            zen_search_query = st.text_input("Buscar en documento:", placeholder="Buscar en este documento...", label_visibility="collapsed", key="zen_search_in_doc")
+            st.session_state.setdefault("zen_search_version", 0)
+            zen_search_query = st.text_input("Buscar en documento:", placeholder="Buscar en este documento...", label_visibility="collapsed", key=f"zen_search_in_doc_{st.session_state.zen_search_version}")
         with col_search_clear:
             if st.button("Limpiar", key="zen_buscar_limpiar", width="stretch", help="Borrar el término de búsqueda y volver al documento completo"):
-                st.session_state["zen_search_in_doc"] = ""
+                st.session_state["zen_search_version"] += 1
                 st.rerun()
 
     with col_zt_theme:
