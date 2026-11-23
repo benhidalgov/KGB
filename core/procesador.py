@@ -62,6 +62,42 @@ def obtener_tags_frontmatter(doc_name: str) -> list[str]:
     return list(DOC_TAGS.get(doc_name, []))
 
 
+def reconstruir_frontmatter_con_tags(md_content: str, tags_nuevos: list[str]) -> str:
+    """Reconstruye el frontmatter YAML de un documento Markdown con los tags dados.
+
+    Si el documento ya tiene frontmatter, reemplaza la línea de tags (o la
+    añade si no existe). Si no tiene frontmatter y hay tags, crea uno nuevo.
+    Devuelve el contenido con el frontmatter actualizado.
+    """
+    tags_str = ", ".join(tags_nuevos) if tags_nuevos else ""
+    linea_tags = f"tags: [{tags_str}]"
+
+    if md_content.startswith("---\n"):
+        try:
+            fin = md_content.index("\n---\n", 4)
+            bloque = md_content[4:fin]
+            resto = md_content[fin + 5:]
+            nueva_lineas = []
+            encontrado = False
+            for linea in bloque.splitlines():
+                if re.match(r"\s*tags\s*:", linea, re.IGNORECASE):
+                    nueva_lineas.append(linea_tags)
+                    encontrado = True
+                else:
+                    nueva_lineas.append(linea)
+            if not encontrado:
+                nueva_lineas.append(linea_tags)
+            nuevo_bloque = "\n".join(nueva_lineas)
+            return f"---\n{nuevo_bloque}\n---\n{resto}"
+        except ValueError:
+            pass
+
+    # Sin frontmatter válido: crear uno nuevo si hay tags
+    if tags_str:
+        return f"---\n{linea_tags}\n---\n{md_content}"
+    return md_content
+
+
 def enmascarar_data_uris(texto: str) -> tuple[str, list[str]]:
     """Sustituye los data URIs base64 por marcadores para no resaltar dentro del
     binario: rompería el src de la imagen y contaría coincidencias ficticias."""

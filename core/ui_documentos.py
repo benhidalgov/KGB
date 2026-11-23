@@ -18,6 +18,9 @@ from core.procesador import (
     sanitizar_nombre_descarga,
     obtener_ruta_original,
     limpiar_cache_documentos,
+    extraer_tags_frontmatter,
+    obtener_tags_frontmatter,
+    reconstruir_frontmatter_con_tags,
 )
 from core.tags import (
     obtener_categorias_disponibles,
@@ -104,16 +107,18 @@ def renderizar_pestana_documentacion(doc_store: dict):
     cats_disp_t3 = obtener_categorias_disponibles()
 
     lbl_lote = f"Clasificación en Lote ({len(docs_pendientes)} pendientes)" if docs_pendientes else "Clasificación en Lote"
-    subtab_visor, subtab_editor, subtab_lote = st.tabs([
-        "Ver Documentos",
-        "Editar Documento",
-        lbl_lote
-    ])
+    pestaña_activa = st.radio(
+        "Sección:",
+        ["Ver Documentos", "Editar Documento", lbl_lote],
+        key="pestana_documentos_activa",
+        horizontal=True,
+        label_visibility="collapsed",
+    )
 
     # -------------------------------------------------------------
     # SUBPESTAÑA 1: VISOR Y EXPLORADOR DOCUMENTAL
     # -------------------------------------------------------------
-    with subtab_visor:
+    if pestaña_activa == "Ver Documentos":
         mapa_fechas = {d: obtener_fecha_carga_documento(d) for d in doc_store.keys()}
         fechas_v = [f for f in mapa_fechas.values() if f]
         min_doc_d = min(fechas_v) if fechas_v else datetime.date.today()
@@ -323,12 +328,11 @@ def renderizar_pestana_documentacion(doc_store: dict):
     # -------------------------------------------------------------
     # SUBPESTAÑA 2: EDITAR DOCUMENTO ACTIVO
     # -------------------------------------------------------------
-    with subtab_editor:
+    elif pestaña_activa == "Editar Documento":
         doc_act_edit = st.session_state.get("tab4_doc_selector")
-        # El selector no se renderiza si el filtro dejó la lista vacía: sin esta
-        # validación el editor seguía abriendo el último documento filtrado fuera.
-        if doc_act_edit not in docs_disp:
-            doc_act_edit = docs_disp[0] if docs_disp else None
+        # Con lazy loading docs_disp no existe en esta rama; se valida contra todos_docs.
+        if doc_act_edit not in todos_docs:
+            doc_act_edit = todos_docs[0] if todos_docs else None
         if not tiene_permiso("puede_editar_docs"):
             st.info("Tu rol no permite editar documentos.")
         elif not doc_act_edit:
@@ -420,6 +424,16 @@ def renderizar_pestana_documentacion(doc_store: dict):
                 with col_te2:
                     nueva_cat_e = st.text_input("Agregar Nueva Categoría:", key=f"input_new_cat_edit_{doc_act_edit}")
 
+                # Tags frontmatter YAML para mapeo de arquitectura
+                tags_ft_actuales = obtener_tags_frontmatter(doc_act_edit)
+                tags_ft_str = st.text_input(
+                    "Tags de Arquitectura (YAML frontmatter):",
+                    value=", ".join(tags_ft_actuales),
+                    key=f"input_tags_ft_edit_{doc_act_edit}",
+                    help="Etiquetas separadas por comas, p. ej.: canales, sql-server, arquitectura. Se usan para relacionar este documento en el diagrama de arquitectura.",
+                )
+                tags_ft_nuevos = [t.strip().lower() for t in tags_ft_str.split(",") if t.strip()]
+
                 val_txt = doc_cont_e[:100_000] if len(doc_cont_e) > 100_000 else doc_cont_e
                 txt_edit = st.text_area("Contenido (Markdown)", value=val_txt, height=450, key=f"textarea_edit_{doc_act_edit}")
                 if len(doc_cont_e) > 100_000:
@@ -432,11 +446,14 @@ def renderizar_pestana_documentacion(doc_store: dict):
                     elif not aut_e or not aut_e.strip() or not mot_e or not mot_e.strip():
                         st.error("Escribe tu nombre y el motivo.")
                     else:
-                        nv = guardar_nueva_version(doc_act_edit, txt_edit, aut_e.strip(), mot_e.strip(), doc_store)
+                        # Reconstruir frontmatter YAML con los tags de arquitectura editados
+                        txt_edit_con_tags = reconstruir_frontmatter_con_tags(txt_edit, tags_ft_nuevos)
+                        nv = guardar_nueva_version(doc_act_edit, txt_edit_con_tags, aut_e.strip(), mot_e.strip(), doc_store)
                         tags_finales = list(tags_e_sel)
                         if nueva_cat_e.strip():
                             tags_finales.append(nueva_cat_e.strip())
                         asignar_tags_documento(doc_act_edit, tags_finales)
+                        indexar_tags_documento(doc_act_edit, txt_edit_con_tags)
                         limpiar_cache_consultas()
                         if nv == u_ver_e:
                             st.toast(f"Categorías actualizadas para {doc_act_edit}")
@@ -449,7 +466,7 @@ def renderizar_pestana_documentacion(doc_store: dict):
     # -------------------------------------------------------------
     # SUBPESTAÑA 3: CLASIFICACIÓN EN LOTE
     # -------------------------------------------------------------
-    with subtab_lote:
+    else:
         st.markdown("#### Clasificar Documentos")
         st.caption("Asigna categorías a varios documentos a la vez o usa las sugerencias.")
 
