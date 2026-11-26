@@ -9,8 +9,8 @@ Usar el venv del repo, no el Python global.
 - App: `.\.venv\Scripts\python.exe -m streamlit run app.py` (o `.\run_app.ps1`).
 - Compilar: `$f = @('app.py','excel_cleaner.py','tools\gen_arq.py') + (Get-ChildItem core\*.py, tests\*.py).FullName; .\.venv\Scripts\python.exe -m py_compile $f`
 - No hay pytest. Los tests son scripts sueltos que imprimen `[OK]`:
-  `foreach ($t in 'check_seams','check_bugfixes','check_nivel1','check_auditoria_log','check_auth_versionado','check_security_high','check_visor_imagenes') { .\.venv\Scripts\python.exe "tests\$t.py" }`
-- `azure-pipelines.yml` corre los mismos 7 checks de la batería (`check_seams`, `check_bugfixes`, `check_security_high`, `check_nivel1`, `check_auditoria_log`, `check_auth_versionado`, `check_visor_imagenes`), así que el CI cubre regresiones de arquitectura y de bugs previos.
+  `foreach ($t in 'check_seams','check_bugfixes','check_nivel1','check_auditoria_log','check_auth_versionado','check_security_high','check_visor_imagenes','check_botones') { .\.venv\Scripts\python.exe "tests\$t.py" }`
+- `azure-pipelines.yml` corre los mismos 8 checks de la batería (`check_seams`, `check_bugfixes`, `check_security_high`, `check_nivel1`, `check_auditoria_log`, `check_auth_versionado`, `check_visor_imagenes`, `check_botones`), así que el CI cubre regresiones de arquitectura, de bugs previos y de los botones de la consola.
 - PowerShell imprime `Exited with code 1` por warnings de Streamlit en stderr. El veredicto es el `[OK]` del script, no el código de salida.
 - Los checks aíslan con `tempfile` y mocks y no necesitan PostgreSQL, Docker ni navegador; `check_seams` corre la UI con `streamlit.testing.v1.AppTest`.
 

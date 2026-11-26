@@ -23,4 +23,5 @@ steps:
     python tests/check_auditoria_log.py
     python tests/check_auth_versionado.py
     python tests/check_visor_imagenes.py
+    python tests/check_botones.py
   displayName: 'Checks de seguridad y regresión'
