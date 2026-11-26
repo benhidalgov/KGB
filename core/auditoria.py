@@ -208,6 +208,9 @@ def inicializar_version_inicial_si_no_existe(doc_name: str, contenido_actual: st
 @_versionado_bloqueado
 def guardar_nueva_version(doc_name: str, nuevo_contenido: str, autor: str, comentario: str, doc_store: dict) -> int:
     """Guarda una nueva revisión incrementando la versión (vN+1) registrando SHA-256."""
+    # El visor llama con st.session_state.get("doc_store"): sin esa clave en la
+    # sesión el None llegaba hasta doc_store.get y reventaba el guardado.
+    doc_store = doc_store or {}
     doc_hist_dir = os.path.join(HISTORY_DIR, doc_name)
     os.makedirs(doc_hist_dir, exist_ok=True)
     nuevo_hash = calcular_sha256_texto(nuevo_contenido)
